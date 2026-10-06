@@ -15,13 +15,13 @@ function sleep(ms: number): Promise<void> {
  */
 export async function simulate<S extends z.ZodType>(
   schema: S,
-  produce: () => unknown,
+  produce: () => unknown | Promise<unknown>,
 ): Promise<z.infer<S>> {
   await sleep(MIN_LATENCY_MS + Math.random() * (MAX_LATENCY_MS - MIN_LATENCY_MS));
   if (Math.random() < NETWORK_ERROR_RATE) {
     throw new ApiError({ code: 'NETWORK_ERROR', message: networkErrorMessage });
   }
-  return schema.parse(produce());
+  return schema.parse(await produce());
 }
 
 export function mockError(code: string, message: string, status: number, details?: unknown): ApiError {

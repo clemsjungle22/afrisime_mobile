@@ -10,10 +10,12 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, SnackbarHost, Text } from '@/components/ui';
+import { bootstrapSession } from '@/features/auth/session';
+import { useCartSync } from '@/features/cart/sync';
 import { wireOnlineManager } from '@/lib/network';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/theme';
@@ -54,7 +56,13 @@ export default function RootLayout() {
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
   });
-  const ready = fontsLoaded || fontError !== null;
+  const [sessionReady, setSessionReady] = useState(false);
+  const ready = (fontsLoaded || fontError !== null) && sessionReady;
+
+  // Session restaurée depuis le stockage chiffré avant d'afficher l'app (pas d'écran « visiteur » fugace).
+  useEffect(() => {
+    void bootstrapSession().finally(() => setSessionReady(true));
+  }, []);
 
   useEffect(() => {
     // En cas d'échec des polices, on continue avec la police système plutôt que de bloquer.
@@ -73,8 +81,15 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
+        <CartSync />
         <SnackbarHost />
       </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
+}
+
+/** Synchronisation du panier avec le compte (sans rendu). */
+function CartSync() {
+  useCartSync();
+  return null;
 }

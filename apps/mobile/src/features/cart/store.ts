@@ -4,6 +4,7 @@ import {
   type CartValidateRequest,
   type ProductSummary,
   type ValidatedCart,
+  type ValidatedCartLine,
   type Variant,
 } from '@afrisime/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -45,6 +46,8 @@ type CartState = {
   restore: (line: LocalCartLine, index: number) => void;
   /** Aligne le panier local sur la revalidation serveur (« J'ai compris »). */
   applyValidation: (validated: ValidatedCart) => void;
+  /** Remplace tout le panier (fusion avec le panier serveur à la connexion). */
+  replaceLines: (lines: LocalCartLine[]) => void;
   clear: () => void;
 };
 
@@ -128,6 +131,8 @@ export const useCart = create<CartState>()(
           return { lines };
         }),
 
+      replaceLines: (lines) => set({ lines }),
+
       clear: () => set({ lines: [] }),
     }),
     {
@@ -165,3 +170,19 @@ export function estimateSubtotal(lines: LocalCartLine[]): number {
 }
 
 export const useCartCount = () => useCart((s) => countItems(s.lines));
+
+/** Snapshot local à partir d'une ligne revalidée par le serveur (ligne connue seulement du serveur). */
+export function snapshotFromServer(line: ValidatedCartLine): LineSnapshot {
+  return {
+    productSlug: line.productSlug,
+    name: line.productName,
+    brand: line.brand,
+    variantLabel: line.variantLabel,
+    unitPrice: line.unitPrice,
+    color: line.color,
+    imageUrl: line.imageUrl,
+    availability: line.availability,
+    leadTimeDays: line.leadTimeDays,
+    minQuantity: line.minQuantity,
+  };
+}

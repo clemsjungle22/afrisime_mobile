@@ -85,3 +85,15 @@ export const ValidatedCart = z.object({
   validatedAt: z.string().datetime(),
 });
 export type ValidatedCart = z.infer<typeof ValidatedCart>;
+
+/** Panier serveur du client connecté : GET/PUT /v1/cart (PUT remplace tout, donc idempotent). */
+export const ServerCart = z.object({
+  lines: z.array(CartLine).max(200),
+  updatedAt: z.string().datetime(),
+});
+export type ServerCart = z.infer<typeof ServerCart>;
+
+export const ServerCartPut = z.object({
+  lines: z.array(CartLine).max(200),
+});
+export type ServerCartPut = z.infer<typeof ServerCartPut>;

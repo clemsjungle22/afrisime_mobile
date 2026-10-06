@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { EmptyState, ErrorState, Screen, Text } from '@/components/ui';
+import { useMe } from '@/features/auth/hooks';
+import { useSession } from '@/features/auth/session';
 import { comingSoon } from '@/lib/comingSoon';
 import { useIsOffline } from '@/lib/network';
 import { showSnackbar } from '@/stores/snackbar';
@@ -23,6 +25,8 @@ export function CartScreen() {
   const applyValidation = useCart((s) => s.applyValidation);
   const offline = useIsOffline();
   const validation = useCartValidation();
+  const authenticated = useSession((s) => s.status === 'authenticated');
+  const me = useMe();
   const [checkingOut, setCheckingOut] = useState(false);
   const listRef = useRef<FlashListRef<LocalCartLine>>(null);
 
@@ -66,6 +70,16 @@ export function CartScreen() {
 
   /** Revalide juste avant de continuer : on ne passe jamais au paiement sur un panier non vérifié. */
   const onCheckout = async () => {
+    // Commander nécessite un compte au profil complet (CGU acceptées, agence choisie).
+    if (!authenticated) {
+      showSnackbar({ message: 'Connectez-vous pour passer commande. Votre panier est conservé.' });
+      router.push('/login');
+      return;
+    }
+    if (me.data && !me.data.profileComplete) {
+      router.push('/profile-setup');
+      return;
+    }
     setCheckingOut(true);
     try {
       const result = await validation.refetch();

@@ -24,16 +24,57 @@ export type RequestOptions<S extends z.ZodType> = {
    * peut être réessayée comme un GET. À n'utiliser que si le serveur ne modifie rien.
    */
   safe?: boolean;
+  /** false pour les routes d'authentification (pas de jeton, pas de renouvellement sur 401). */
+  auth?: boolean;
   signal?: AbortSignal;
   timeoutMs?: number;
 };
 
-/** Fournit le jeton d'accès courant (branché par la feature auth ; refresh à venir). */
-type TokenGetter = () => Promise<string | null> | string | null;
-let getAccessToken: TokenGetter = () => null;
+/**
+ * Pont vers la session (branché par la feature auth). Le client ne connaît ni le stockage
+ * des jetons ni l'écran de connexion : il demande un jeton valide et signale l'expiration.
+ */
+export type AuthBridge = {
+  /** Jeton d'accès valide (renouvelé au besoin), null pour un visiteur. */
+  getAccessToken: () => Promise<string | null>;
+  /**
+   * Renouvelle la session (un seul appel en vol, partagé). Retourne le nouveau jeton,
+   * null si la session est invalide. Lève une erreur réseau si le serveur est injoignable.
+   */
+  refresh: () => Promise<string | null>;
+  /** La session ne peut pas être renouvelée : repasser en visiteur. */
+  onSessionExpired: () => void;
+};
 
-export function setAccessTokenGetter(getter: TokenGetter): void {
-  getAccessToken = getter;
+const guestBridge: AuthBridge = {
+  getAccessToken: async () => null,
+  refresh: async () => null,
+  onSessionExpired: () => undefined,
+};
+let authBridge: AuthBridge = guestBridge;
+
+export function setAuthBridge(bridge: AuthBridge | null): void {
+  authBridge = bridge ?? guestBridge;
+}
+
+/**
+ * Exécute un appel authentifié : sur 401, renouvelle la session UNE fois puis rejoue l'appel.
+ * Partagé par le client HTTP et les mocks pour un comportement identique.
+ */
+export async function withAuth<T>(run: (token: string | null) => Promise<T>, enabled = true): Promise<T> {
+  if (!enabled) return run(null);
+  const token = await authBridge.getAccessToken();
+  try {
+    return await run(token);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401 || token === null) throw error;
+    const renewed = await authBridge.refresh();
+    if (!renewed) {
+      authBridge.onSessionExpired();
+      throw error;
+    }
+    return run(renewed);
+  }
 }
 
 export function newIdempotencyKey(): string {
@@ -87,6 +128,7 @@ async function attempt<S extends z.ZodType>(
   method: Method,
   url: string,
   options: RequestOptions<S>,
+  token: string | null,
 ): Promise<z.infer<S>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? apiConfig.timeoutMs);
@@ -96,7 +138,6 @@ async function attempt<S extends z.ZodType>(
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
-  const token = await getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let response: Response;
@@ -171,5 +212,8 @@ export function request<S extends z.ZodType>(
   const method = options.method ?? 'GET';
   const url = buildUrl(path, options.query);
   const canRetry = method === 'GET' || options.safe === true || options.idempotencyKey !== undefined;
-  return withRetry(() => attempt(method, url, options), { canRetry, signal: options.signal });
+  return withRetry(
+    () => withAuth((token) => attempt(method, url, options, token), options.auth !== false),
+    { canRetry, signal: options.signal },
+  );
 }
