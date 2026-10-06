@@ -90,12 +90,16 @@ export const Category: z.ZodType<Category> = z.lazy(() =>
   }),
 );
 
-export const ProductSort = z.enum(['relevance', 'price_asc', 'price_desc', 'newest', 'popular']);
+export const ProductSort = z.enum(['relevance', 'popular', 'newest', 'price_asc', 'price_desc']);
 export type ProductSort = z.infer<typeof ProductSort>;
 
-/** Paramètres de GET /v1/products */
+/** Offres filtrables : promotions, nouveautés, formats pro (B2B). */
+export const ProductOffer = z.enum(['promotion', 'new', 'pro']);
+export type ProductOffer = z.infer<typeof ProductOffer>;
+
+/** Paramètres de GET /v1/products (un filtre = une valeur au MVP). */
 export const ProductListQuery = z.object({
-  q: z.string().optional(),
+  q: z.string().trim().min(1).max(100).optional(),
   category: z.string().optional(),
   brand: z.string().optional(),
   minPrice: Money.optional(),
@@ -103,7 +107,7 @@ export const ProductListQuery = z.object({
   availability: Availability.optional(),
   packaging: z.string().optional(),
   origin: ProductOrigin.optional(),
-  offer: z.boolean().optional(),
+  offer: ProductOffer.optional(),
   sort: ProductSort.optional(),
   cursor: z.string().optional(),
   limit: z.number().int().min(1).max(50).optional(),
@@ -115,6 +119,36 @@ export const FacetValue = z.object({
   label: z.string(),
   count: z.number().int().nonnegative(),
 });
+export type FacetValue = z.infer<typeof FacetValue>;
 
-export const Facets = z.record(z.string(), z.array(FacetValue));
+/**
+ * Compteurs par filtre, calculés par le serveur. Chaque facette est comptée en appliquant
+ * tous les AUTRES filtres actifs (on voit ce que donnerait chaque valeur).
+ */
+export const Facets = z.object({
+  category: z.array(FacetValue),
+  brand: z.array(FacetValue),
+  availability: z.array(FacetValue),
+  packaging: z.array(FacetValue),
+  origin: z.array(FacetValue),
+  offer: z.array(FacetValue),
+});
 export type Facets = z.infer<typeof Facets>;
+export type FacetKey = keyof Facets;
+
+export const PriceBounds = z.object({ min: Money, max: Money });
+export type PriceBounds = z.infer<typeof PriceBounds>;
+
+/** Réponse de GET /v1/products. */
+export const ProductListResponse = z.object({
+  items: z.array(ProductSummary),
+  nextCursor: z.string().nullable(),
+  /** Nombre total de résultats pour ces filtres (bouton « Voir N produits »). */
+  total: z.number().int().nonnegative(),
+  facets: Facets,
+  /** Bornes de prix des résultats (hors filtre de prix), null si aucun prix. */
+  priceBounds: PriceBounds.nullable(),
+  /** Requête corrigée utilisée par le serveur si `q` semblait mal orthographiée. */
+  correctedQuery: z.string().nullable(),
+});
+export type ProductListResponse = z.infer<typeof ProductListResponse>;

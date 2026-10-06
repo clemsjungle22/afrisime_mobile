@@ -1,4 +1,5 @@
 export { Badge, type BadgeTone } from './Badge';
+export { BottomSheet } from './BottomSheet';
 export { Button, type ButtonProps } from './Button';
 export { Chip } from './Chip';
 export { OfflineBanner } from './OfflineBanner';

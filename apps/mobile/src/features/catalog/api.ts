@@ -2,9 +2,8 @@ import {
   Category,
   Home,
   ProductDetail,
-  ProductSummary,
-  paginated,
-  type Paginated,
+  ProductListResponse,
+  SearchSuggestResponse,
   type ProductListQuery,
 } from '@afrisime/shared';
 import { z } from 'zod';
@@ -16,11 +15,11 @@ import { mockCatalogApi } from '@/api/mock/catalog';
 export type CatalogApi = {
   getHome(signal?: AbortSignal): Promise<Home>;
   listCategories(signal?: AbortSignal): Promise<Category[]>;
-  listProducts(query?: ProductListQuery, signal?: AbortSignal): Promise<Paginated<ProductSummary>>;
+  listProducts(query?: ProductListQuery, signal?: AbortSignal): Promise<ProductListResponse>;
   getProduct(slug: string, signal?: AbortSignal): Promise<ProductDetail>;
+  suggest(q: string, signal?: AbortSignal): Promise<SearchSuggestResponse>;
 };
 
-export const ProductPage = paginated(ProductSummary);
 export const CategoryList = z.array(Category);
 
 const httpCatalogApi: CatalogApi = {
@@ -31,10 +30,13 @@ const httpCatalogApi: CatalogApi = {
     return request('/v1/categories', { schema: CategoryList, signal });
   },
   listProducts(query = {}, signal) {
-    return request('/v1/products', { query, schema: ProductPage, signal });
+    return request('/v1/products', { query, schema: ProductListResponse, signal });
   },
   getProduct(slug, signal) {
     return request(`/v1/products/${encodeURIComponent(slug)}`, { schema: ProductDetail, signal });
+  },
+  suggest(q, signal) {
+    return request('/v1/search/suggest', { query: { q }, schema: SearchSuggestResponse, signal });
   },
 };
 

@@ -25,7 +25,7 @@ export function HomeScreen() {
     (c: HomeCategory) => router.push({ pathname: '/boutique', params: { category: c.slug } }),
     [],
   );
-  const openShop = useCallback(() => router.push('/boutique'), []);
+  const openSearch = useCallback(() => router.push('/search'), []);
 
   return (
     <Screen padded={false}>
@@ -38,7 +38,7 @@ export function HomeScreen() {
         >
           <Image source={logo} style={styles.logo} contentFit="contain" accessibilityLabel="AfriSime" />
         </View>
-        <SearchEntry onPress={openShop} />
+        <SearchEntry onPress={openSearch} />
       </View>
       <OfflineBanner updatedAt={home.dataUpdatedAt} />
 
