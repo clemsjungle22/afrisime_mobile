@@ -2,7 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
-import { fontFamilies, useTheme } from '@/theme';
+import { useCartCount } from '@/features/cart/store';
+import { fontFamilies, palette, useTheme } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -14,6 +15,7 @@ function tabIcon(active: IconName, inactive: IconName) {
 
 export default function TabsLayout() {
   const theme = useTheme();
+  const cartCount = useCartCount();
   return (
     <Tabs
       screenOptions={{
@@ -37,7 +39,13 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="panier"
-        options={{ title: 'Panier', tabBarIcon: tabIcon('cart', 'cart-outline') }}
+        options={{
+          title: 'Panier',
+          tabBarIcon: tabIcon('cart', 'cart-outline'),
+          tabBarBadge: cartCount > 0 ? (cartCount > 99 ? '99+' : cartCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: palette.accent500, color: palette.brand950, fontFamily: fontFamilies.bold },
+          tabBarAccessibilityLabel: cartCount > 0 ? `Panier, ${cartCount} article${cartCount > 1 ? 's' : ''}` : 'Panier',
+        }}
       />
       <Tabs.Screen
         name="commandes"

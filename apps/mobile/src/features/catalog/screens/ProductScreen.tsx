@@ -1,11 +1,13 @@
 import { formatFCFA, type ProductDetail, type ProductSummary, type Variant } from '@afrisime/shared';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { Badge, Button, EmptyState, ErrorState, OfflineBanner, Skeleton, Text } from '@/components/ui';
+import { useCart } from '@/features/cart/store';
 import { comingSoon } from '@/lib/comingSoon';
+import { showSnackbar } from '@/stores/snackbar';
 import { openProduct } from '@/lib/links';
 import { useTheme } from '@/theme';
 import { isApiError } from '@/api/errors';
@@ -62,9 +64,8 @@ function ProductLoader({ slug }: { slug: string }) {
   );
 }
 
-const actionFeature: Record<AvailabilityAction, string> = {
-  add_to_cart: 'Le panier',
-  order: 'La commande de produits sur commande',
+/** Actions pas encore livrées (les ajouts au panier sont gérés à part). */
+const actionFeature: Record<Exclude<AvailabilityAction, 'add_to_cart' | 'order'>, string> = {
   notify_me: "L'alerte de retour en stock",
   request_quote: 'La demande de devis',
 };
@@ -85,6 +86,21 @@ function ProductContent({ product }: { product: ProductDetail }) {
   }, []);
 
   const onPressRelated = useCallback((p: ProductSummary) => openProduct(p.slug), []);
+  const addToCart = useCart((s) => s.add);
+
+  const onAction = () => {
+    const action = availability.action;
+    if (action === 'add_to_cart' || action === 'order') {
+      const total = addToCart(product, variant, quantity);
+      showSnackbar({
+        message: total > quantity ? `Ajouté — ${total} dans votre panier` : 'Ajouté au panier',
+        actionLabel: 'Voir le panier',
+        onAction: () => router.navigate('/panier'),
+      });
+      return;
+    }
+    comingSoon(actionFeature[action]);
+  };
 
   // Estimation affichée seulement : le total qui fait foi est recalculé par le serveur au checkout.
   const estimate = variant.price !== null && availability.purchasable ? variant.price * quantity : null;
@@ -175,7 +191,7 @@ function ProductContent({ product }: { product: ProductDetail }) {
           variant={availability.purchasable ? 'primary' : 'secondary'}
           size="lg"
           fullWidth
-          onPress={() => comingSoon(actionFeature[availability.action])}
+          onPress={onAction}
         />
       </View>
     </View>

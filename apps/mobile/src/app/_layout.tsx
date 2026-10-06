@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Button, Text } from '@/components/ui';
+import { Button, SnackbarHost, Text } from '@/components/ui';
 import { wireOnlineManager } from '@/lib/network';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/theme';
@@ -73,6 +73,7 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: theme.colors.background },
           }}
         />
+        <SnackbarHost />
       </PersistQueryClientProvider>
     </SafeAreaProvider>
   );

@@ -5,5 +5,6 @@ export { Chip } from './Chip';
 export { OfflineBanner } from './OfflineBanner';
 export { Screen, type ScreenProps } from './Screen';
 export { Skeleton } from './Skeleton';
+export { SnackbarHost } from './SnackbarHost';
 export { EmptyState, ErrorState } from './StateViews';
 export { Text, type TextProps } from './Text';

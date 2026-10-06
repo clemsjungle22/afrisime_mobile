@@ -15,6 +15,8 @@ type SeedVariant = {
   leadTimeDays?: number;
   minQuantity?: number;
   isPro?: boolean;
+  /** Stock limité (unités), absent = non limité. */
+  stock?: number;
 };
 
 type Seed = {
@@ -41,7 +43,7 @@ const seeds: Seed[] = [
     variants: [
       { label: 'Sac 5 kg', packaging: 'sac', price: 4750, compareAtPrice: 5200 },
       { label: 'Sac 25 kg', packaging: 'sac', price: 22500 },
-      { label: 'Sac 50 kg', packaging: 'sac', price: 43500, isPro: true },
+      { label: 'Sac 50 kg', packaging: 'sac', price: 43500, isPro: true, stock: 5 },
     ],
   },
   {
@@ -53,7 +55,7 @@ const seeds: Seed[] = [
     description: 'Maïs blanc sec, idéal pour la pâte et la farine.',
     variants: [
       { label: 'Sac 10 kg', packaging: 'sac', price: 3500 },
-      { label: 'Sac 100 kg', packaging: 'sac', price: 31000, isPro: true },
+      { label: 'Sac 100 kg', packaging: 'sac', price: 31000, isPro: true, stock: 4 },
     ],
   },
   {
@@ -102,7 +104,7 @@ const seeds: Seed[] = [
     category: 'huiles',
     description: 'Format professionnel pour restaurants et revendeurs.',
     badges: ['b2b'],
-    variants: [{ label: 'Bidon 25 L', packaging: 'bidon', price: 29500, isPro: true }],
+    variants: [{ label: 'Bidon 25 L', packaging: 'bidon', price: 29500, isPro: true, stock: 3 }],
   },
   {
     slug: 'huile-de-palme-rouge',
@@ -325,6 +327,13 @@ function toDetail(seed: Seed, index: number): ProductDetail {
 }
 
 const details: ProductDetail[] = seeds.map(toDetail);
+
+/** Stock limité par variante (simulé). Absent = non limité. */
+export const mockStock: ReadonlyMap<string, number> = new Map(
+  seeds.flatMap((s) =>
+    s.variants.flatMap((v, i) => (v.stock !== undefined ? [[`var_${s.slug}_${i}`, v.stock] as const] : [])),
+  ),
+);
 
 export function toSummary(p: ProductDetail): ProductSummary {
   const {

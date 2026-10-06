@@ -19,6 +19,11 @@ export type RequestOptions<S extends z.ZodType> = {
    * à chaque retry. Obligatoire sur POST /orders, /payments, /credit/repayments, etc.
    */
   idempotencyKey?: string;
+  /**
+   * Requête sans effet de bord malgré sa méthode (ex. POST /v1/cart/validate) :
+   * peut être réessayée comme un GET. À n'utiliser que si le serveur ne modifie rien.
+   */
+  safe?: boolean;
   signal?: AbortSignal;
   timeoutMs?: number;
 };
@@ -165,6 +170,6 @@ export function request<S extends z.ZodType>(
 ): Promise<z.infer<S>> {
   const method = options.method ?? 'GET';
   const url = buildUrl(path, options.query);
-  const canRetry = method === 'GET' || options.idempotencyKey !== undefined;
+  const canRetry = method === 'GET' || options.safe === true || options.idempotencyKey !== undefined;
   return withRetry(() => attempt(method, url, options), { canRetry, signal: options.signal });
 }
