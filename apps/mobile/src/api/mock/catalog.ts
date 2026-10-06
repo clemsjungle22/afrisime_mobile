@@ -1,10 +1,14 @@
-import { ProductDetail, ProductSummary, paginated, type ProductListQuery } from '@afrisime/shared';
-import { withRetry } from '../client';
+import { Category, Home, ProductDetail, ProductSummary, paginated } from '@afrisime/shared';
+import { z } from 'zod';
 import type { CatalogApi } from '@/features/catalog/api';
-import { mockProducts, toSummary } from './data/products';
+import { withRetry } from '../client';
+import { mockCategories } from './data/categories';
+import { buildMockHome } from './data/home';
+import { countByCategory, mockProducts, toSummary } from './data/products';
 import { mockError, simulate } from './simulate';
 
 const ProductPage = paginated(ProductSummary);
+const CategoryList = z.array(Category);
 
 function normalize(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -14,9 +18,28 @@ function sortValue(p: ProductDetail): number {
   return p.priceFrom ?? Number.MAX_SAFE_INTEGER;
 }
 
+/** Lecture : retry autorisé, comme pour un GET réel. */
+function read<T>(run: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  return withRetry(run, { canRetry: true, signal });
+}
+
 export const mockCatalogApi: CatalogApi = {
-  listProducts(query: ProductListQuery = {}, signal?: AbortSignal) {
-    return withRetry(
+  getHome(signal) {
+    return read(() => simulate(Home, () => buildMockHome()), signal);
+  },
+
+  listCategories(signal) {
+    return read(
+      () =>
+        simulate(CategoryList, () =>
+          mockCategories.map((c) => ({ ...c, productCount: countByCategory(c.slug) })),
+        ),
+      signal,
+    );
+  },
+
+  listProducts(query = {}, signal) {
+    return read(
       () =>
         simulate(ProductPage, () => {
           let items = mockProducts;
@@ -34,26 +57,25 @@ export const mockCatalogApi: CatalogApi = {
 
           const limit = query.limit ?? 20;
           const start = query.cursor ? Number(query.cursor) : 0;
-          const page = items.slice(start, start + limit);
           const next = start + limit;
           return {
-            items: page.map(toSummary),
+            items: items.slice(start, next).map(toSummary),
             nextCursor: next < items.length ? String(next) : null,
           };
         }),
-      { canRetry: true, signal },
+      signal,
     );
   },
 
-  getProduct(slug: string, signal?: AbortSignal) {
-    return withRetry(
+  getProduct(slug, signal) {
+    return read(
       () =>
         simulate(ProductDetail, () => {
           const product = mockProducts.find((p) => p.slug === slug);
           if (!product) throw mockError('NOT_FOUND', 'Ce produit est introuvable.', 404);
           return product;
         }),
-      { canRetry: true, signal },
+      signal,
     );
   },
 };

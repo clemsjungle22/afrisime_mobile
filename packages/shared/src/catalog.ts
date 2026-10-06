@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { Money } from './money';
 
+/** Couleur hexadécimale #rrggbb, paramétrée côté back-office. */
+export const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
 /**
  * Les 4 états de disponibilité produit. Chacun a un rendu et une action distincts dans l'app :
  * available → ajouter au panier ; on_order → commander avec délai ;
@@ -46,6 +49,8 @@ export const ProductSummary = z.object({
   discountPercent: z.number().int().min(0).max(100).nullable(),
   defaultVariant: Variant,
   variantsCount: z.number().int().positive(),
+  /** Couleur du rayon, utilisée pour la vignette quand il n'y a pas de photo. */
+  color: HexColor,
 });
 export type ProductSummary = z.infer<typeof ProductSummary>;
 
@@ -54,7 +59,8 @@ export const ProductDetail = ProductSummary.extend({
   categoryId: z.string(),
   images: z.array(z.string().url()),
   variants: z.array(Variant).min(1),
-  relatedSlugs: z.array(z.string()),
+  /** « Souvent achetés avec » : résumés inclus pour éviter N requêtes. */
+  related: z.array(ProductSummary),
 });
 export type ProductDetail = z.infer<typeof ProductDetail>;
 
@@ -62,7 +68,11 @@ export type Category = {
   id: string;
   slug: string;
   name: string;
+  description: string | null;
   imageUrl: string | null;
+  /** Couleur du rayon (vignettes, tuiles). */
+  color: string;
+  productCount: number;
   children: Category[];
 };
 
@@ -72,7 +82,10 @@ export const Category: z.ZodType<Category> = z.lazy(() =>
     id: z.string(),
     slug: z.string(),
     name: z.string(),
+    description: z.string().nullable(),
     imageUrl: z.string().url().nullable(),
+    color: HexColor,
+    productCount: z.number().int().nonnegative(),
     children: z.array(Category),
   }),
 );

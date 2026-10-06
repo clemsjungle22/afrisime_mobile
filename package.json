@@ -8,7 +8,7 @@
   "scripts": {
     "mobile": "npm run start -w @afrisime/mobile",
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/mobile",
-    "test": "npm test -w @afrisime/shared"
+    "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile"
   },
   "engines": {
     "node": ">=20"

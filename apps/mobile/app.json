@@ -25,7 +25,10 @@
     },
     "scheme": "afrisime",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-image",
+      "expo-font",
+      "expo-splash-screen"
     ],
     "experiments": {
       "typedRoutes": true

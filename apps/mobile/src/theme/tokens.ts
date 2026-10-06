@@ -1,22 +1,31 @@
 /**
- * Tokens de design AfriSime, dérivés du vert profond de la marque (#0f3d2e).
- * Accent or chaud et variante sombre : proposition à faire valider par AfriSime.
+ * Tokens de design AfriSime, repris du site web (afrisime-site-kappa.vercel.app).
+ * Le site n'a pas de mode sombre : la variante sombre est dérivée de la même palette.
  */
 
+/** Palette brute du site (variables CSS --color-*). */
 export const palette = {
-  green50: '#e8f3ee',
-  green100: '#c6e2d4',
-  green200: '#9fceb7',
-  green300: '#6fb594',
-  green400: '#3f9973',
-  green500: '#227f5a',
-  green600: '#186848',
-  green700: '#13533b',
-  green800: '#0f3d2e', // couleur de marque
-  green900: '#0a2a20',
-  gold400: '#f0b93a',
-  gold500: '#e0a526',
-  gold600: '#b8841a',
+  brand50: '#f2f8f4',
+  brand100: '#e3efe8',
+  brand200: '#c6e0d2',
+  brand600: '#2e7d5b',
+  brand700: '#1b6247',
+  brand800: '#14503b',
+  brand900: '#0f3d2e', // couleur de marque
+  brand950: '#0a2a20',
+  accent100: '#fbeed6',
+  accent500: '#e8a33d',
+  accent600: '#c9811a',
+  canvas: '#f7f9f8',
+  ink: '#17221d',
+  muted: '#56665f',
+  line: '#dbe4df',
+  danger: '#b42318',
+  danger50: '#fdecea',
+  warning: '#9a6200',
+  warning50: '#fff4dc',
+  info: '#1f5f8b',
+  info50: '#e7f1f8',
   white: '#ffffff',
   black: '#000000',
 } as const;
@@ -36,61 +45,90 @@ export type ColorTokens = {
   onPrimarySoft: string;
   accent: string;
   onAccent: string;
+  accentSoft: string;
+  onAccentSoft: string;
   success: string;
+  successSoft: string;
   warning: string;
+  warningSoft: string;
   error: string;
+  errorSoft: string;
   info: string;
+  infoSoft: string;
   disabled: string;
   onDisabled: string;
   tabInactive: string;
+  skeleton: string;
+  /** Fond derrière le logo (le logo est vert sur transparent). */
+  logoBackground: string;
+  /** Fin des dégradés de rayon (comme le site). */
+  gradientEnd: string;
 };
 
 export const lightColors: ColorTokens = {
-  background: '#f6f8f6',
+  background: palette.canvas,
   surface: palette.white,
-  surfaceAlt: '#eef2ef',
-  border: '#d9e0db',
-  text: '#13201a',
-  textMuted: '#55635b',
+  surfaceAlt: palette.brand50,
+  border: palette.line,
+  text: palette.ink,
+  textMuted: palette.muted,
   textInverse: palette.white,
-  primary: palette.green800,
-  primaryPressed: palette.green900,
+  primary: palette.brand900,
+  primaryPressed: palette.brand950,
   onPrimary: palette.white,
-  primarySoft: palette.green50,
-  onPrimarySoft: palette.green800,
-  accent: palette.gold500,
-  onAccent: '#1a1300',
-  success: '#1e7d45',
-  warning: '#a35f00',
-  error: '#c62828',
-  info: '#1565c0',
-  disabled: '#dfe4e1',
+  primarySoft: palette.brand50,
+  onPrimarySoft: palette.brand700,
+  accent: palette.accent500,
+  onAccent: palette.brand950,
+  accentSoft: palette.accent100,
+  onAccentSoft: '#7a4a08',
+  success: palette.brand600,
+  successSoft: palette.brand100,
+  warning: palette.warning,
+  warningSoft: palette.warning50,
+  error: palette.danger,
+  errorSoft: palette.danger50,
+  info: palette.info,
+  infoSoft: palette.info50,
+  disabled: '#e4eae6',
   onDisabled: '#7d8a83',
-  tabInactive: '#6b7a72',
+  tabInactive: palette.muted,
+  skeleton: '#e6ece8',
+  logoBackground: 'transparent',
+  gradientEnd: palette.brand950,
 };
 
 export const darkColors: ColorTokens = {
-  background: '#0b1410',
-  surface: '#121e18',
-  surfaceAlt: '#1a2a22',
-  border: '#2a3b32',
-  text: '#eef3f0',
-  textMuted: '#a3b3aa',
-  textInverse: '#0b1410',
-  primary: palette.green300,
-  primaryPressed: palette.green400,
-  onPrimary: '#062016',
-  primarySoft: '#173a2c',
-  onPrimarySoft: palette.green100,
-  accent: palette.gold400,
-  onAccent: '#1a1300',
-  success: '#4cc27e',
-  warning: '#f0a43a',
-  error: '#ef6b6b',
-  info: '#6aa8f0',
-  disabled: '#24332b',
-  onDisabled: '#6f7f76',
-  tabInactive: '#8a9a91',
+  background: '#0b1712',
+  surface: '#12211a',
+  surfaceAlt: '#183026',
+  border: '#27392f',
+  text: '#eef4f0',
+  textMuted: '#a5b5ad',
+  textInverse: palette.brand950,
+  primary: palette.brand200,
+  primaryPressed: palette.brand100,
+  onPrimary: palette.brand950,
+  primarySoft: '#183a2c',
+  onPrimarySoft: palette.brand200,
+  accent: palette.accent500,
+  onAccent: palette.brand950,
+  accentSoft: '#3a2a10',
+  onAccentSoft: '#f5c87e',
+  success: '#5fbf8f',
+  successSoft: '#173a2c',
+  warning: '#f0b54a',
+  warningSoft: '#3a2c10',
+  error: '#f07a6e',
+  errorSoft: '#3d1a17',
+  info: '#79b4dc',
+  infoSoft: '#142c3d',
+  disabled: '#22332a',
+  onDisabled: '#6f8077',
+  tabInactive: '#8fa198',
+  skeleton: '#1e3128',
+  logoBackground: palette.brand50,
+  gradientEnd: '#050f0b',
 };
 
 export const spacing = {
@@ -112,14 +150,25 @@ export const radius = {
 /** Zone tactile minimale (Android : 48 dp). */
 export const minTouchSize = 48;
 
+/** Plus Jakarta Sans (police du site), une famille par graisse : fiable sur Android. */
+export const fontFamilies = {
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  semibold: 'PlusJakartaSans_600SemiBold',
+  bold: 'PlusJakartaSans_700Bold',
+  extrabold: 'PlusJakartaSans_800ExtraBold',
+} as const;
+
 export const typography = {
-  display: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  title: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
-  subtitle: { fontSize: 17, lineHeight: 24, fontWeight: '600' },
-  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' },
-  bodyStrong: { fontSize: 15, lineHeight: 22, fontWeight: '600' },
-  label: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
-  caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  display: { fontFamily: fontFamilies.extrabold, fontSize: 28, lineHeight: 34 },
+  title: { fontFamily: fontFamilies.bold, fontSize: 22, lineHeight: 28 },
+  subtitle: { fontFamily: fontFamilies.bold, fontSize: 17, lineHeight: 24 },
+  body: { fontFamily: fontFamilies.regular, fontSize: 15, lineHeight: 22 },
+  bodyStrong: { fontFamily: fontFamilies.semibold, fontSize: 15, lineHeight: 22 },
+  label: { fontFamily: fontFamilies.semibold, fontSize: 15, lineHeight: 20 },
+  price: { fontFamily: fontFamilies.extrabold, fontSize: 16, lineHeight: 22 },
+  caption: { fontFamily: fontFamilies.medium, fontSize: 13, lineHeight: 18 },
+  micro: { fontFamily: fontFamilies.semibold, fontSize: 11, lineHeight: 14 },
 } as const;
 
 export type TypographyVariant = keyof typeof typography;
