@@ -16,6 +16,8 @@ export default function AppLayout() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="product/[slug]" options={{ title: '' }} />
+      <Stack.Screen name="checkout/index" options={{ title: 'Commande' }} />
+      <Stack.Screen name="checkout/address" options={{ title: 'Nouvelle adresse' }} />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'fade' }} />
     </Stack>
   );

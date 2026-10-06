@@ -1,4 +1,4 @@
-import type { CartLine, UserProfile } from '@afrisime/shared';
+import type { Address, CartLine, UserProfile } from '@afrisime/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -10,6 +10,7 @@ export type MockDb = {
   /** Nonce du refresh token valide par utilisateur (rotation : l'ancien est invalidé). */
   refreshNonces: Record<string, string>;
   carts: Record<string, { lines: CartLine[]; updatedAt: string }>;
+  addresses: Record<string, Address[]>;
 };
 
 const KEY = 'afrisime-mock-db';
@@ -29,8 +30,28 @@ export const SEED_USER: UserProfile = {
   createdAt: '2026-01-15T09:00:00.000Z',
 };
 
+export const SEED_ADDRESS: Address = {
+  id: 'adr_kossi_maison',
+  label: 'Maison',
+  recipientName: 'Kossi Mensah',
+  phone: '+22890000001',
+  district: 'Tokoin',
+  city: 'Lomé',
+  landmark: 'Derrière la pharmacie du Rond-point, portail bleu',
+  instructions: null,
+  location: null,
+  isDefault: true,
+  zoneId: 'zone_1',
+  zoneName: 'Zone 1 · Centre',
+};
+
 function emptyDb(): MockDb {
-  return { users: { [SEED_USER.id]: SEED_USER }, refreshNonces: {}, carts: {} };
+  return {
+    users: { [SEED_USER.id]: SEED_USER },
+    refreshNonces: {},
+    carts: {},
+    addresses: { [SEED_USER.id]: [SEED_ADDRESS] },
+  };
 }
 
 let cache: MockDb | null = null;

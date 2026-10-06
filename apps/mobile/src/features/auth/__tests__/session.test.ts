@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { withAuth } from '@/api/client';
 import { ApiError } from '@/api/errors';
 import { useCart } from '@/features/cart/store';
+import { queryClient } from '@/lib/queryClient';
 import { authApi } from '../api';
 import { bootstrapSession, refreshAccessToken, signIn, signOut, useSession } from '../session';
 
@@ -32,6 +33,9 @@ function verifyResult(accessToken: string, expiresIn = 900): OtpVerifyResponse {
 }
 
 const unauthorized = () => new ApiError({ code: 'UNAUTHENTICATED', message: 'Session expirée', status: 401 });
+
+// Le cache global garde ses entrées 24 h (minuteur) : on le vide pour libérer le worker.
+afterAll(() => queryClient.clear());
 
 beforeEach(async () => {
   refreshMock.mockReset();

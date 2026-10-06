@@ -6,7 +6,6 @@ import { View } from 'react-native';
 import { EmptyState, ErrorState, Screen, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
-import { comingSoon } from '@/lib/comingSoon';
 import { useIsOffline } from '@/lib/network';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
@@ -97,7 +96,7 @@ export function CartScreen() {
         showSnackbar({ message: 'Retirez les articles indisponibles pour continuer.' });
         return;
       }
-      comingSoon('La validation de commande (livraison et paiement)');
+      router.push('/checkout');
     } finally {
       setCheckingOut(false);
     }

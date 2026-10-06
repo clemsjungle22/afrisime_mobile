@@ -29,7 +29,13 @@
       "expo-image",
       "expo-font",
       "expo-splash-screen",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AfriSime utilise votre position, si vous l’acceptez, pour aider le livreur à trouver votre adresse."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

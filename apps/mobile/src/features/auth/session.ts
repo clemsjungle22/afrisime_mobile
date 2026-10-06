@@ -129,10 +129,18 @@ export async function signIn(result: OtpVerifyResponse): Promise<void> {
  * des jetons, du panier local et des données personnelles en cache. Le catalogue reste en cache.
  */
 export async function signOut(): Promise<void> {
+  let guard: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([authApi.logout(), new Promise((resolve) => setTimeout(resolve, 4000))]);
+    await Promise.race([
+      authApi.logout(),
+      new Promise((resolve) => {
+        guard = setTimeout(resolve, 4000);
+      }),
+    ]);
   } catch {
     // Révocation impossible (hors ligne) : le jeton expirera côté serveur.
+  } finally {
+    clearTimeout(guard);
   }
   await writeStored(null).catch(() => undefined);
   useCart.getState().clear();
