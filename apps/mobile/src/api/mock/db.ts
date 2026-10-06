@@ -1,4 +1,4 @@
-import type { Address, CartLine, UserProfile } from '@afrisime/shared';
+import type { Address, CartLine, Order, UserProfile } from '@afrisime/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -11,6 +11,27 @@ export type MockDb = {
   refreshNonces: Record<string, string>;
   carts: Record<string, { lines: CartLine[]; updatedAt: string }>;
   addresses: Record<string, Address[]>;
+  /** Commandes par utilisateur (statut de base ; la progression simulée est calculée à la lecture). */
+  orders: Record<string, Order[]>;
+  payments: Record<string, MockPayment>;
+  /** Clés d'idempotence : même clé + même corps = même réponse ; corps différent = 409. */
+  idempotency: Record<string, { route: string; bodyHash: string; resourceId: string }>;
+  orderCounter: number;
+};
+
+export type MockPayment = {
+  id: string;
+  orderId: string;
+  userId: string;
+  method: 'tmoney' | 'flooz';
+  phone: string;
+  amount: number;
+  createdAt: string;
+  expiresAt: string;
+  /** Issue simulée selon le numéro de test. */
+  outcome: 'succeed' | 'fail' | 'expire';
+  /** Statut final une fois atteint (figé). */
+  settled: 'succeeded' | 'failed' | 'expired' | null;
 };
 
 const KEY = 'afrisime-mock-db';
@@ -51,6 +72,10 @@ function emptyDb(): MockDb {
     refreshNonces: {},
     carts: {},
     addresses: { [SEED_USER.id]: [SEED_ADDRESS] },
+    orders: {},
+    payments: {},
+    idempotency: {},
+    orderCounter: 122,
   };
 }
 

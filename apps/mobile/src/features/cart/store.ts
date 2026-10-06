@@ -46,6 +46,8 @@ type CartState = {
   restore: (line: LocalCartLine, index: number) => void;
   /** Aligne le panier local sur la revalidation serveur (« J'ai compris »). */
   applyValidation: (validated: ValidatedCart) => void;
+  /** Ajoute des lignes revalidées par le serveur (« Commander à nouveau »). Retourne le nombre ajouté. */
+  addValidated: (lines: ValidatedCartLine[]) => number;
   /** Remplace tout le panier (fusion avec le panier serveur à la connexion). */
   replaceLines: (lines: LocalCartLine[]) => void;
   clear: () => void;
@@ -130,6 +132,25 @@ export const useCart = create<CartState>()(
           }
           return { lines };
         }),
+
+      addValidated: (validated) => {
+        const usable = validated.filter((v) => v.status !== 'unavailable' && v.quantity > 0);
+        set((s) => {
+          const lines = [...s.lines];
+          for (const v of usable) {
+            const i = lines.findIndex((l) => l.variantId === v.variantId);
+            const snapshot = snapshotFromServer(v);
+            if (i >= 0) {
+              const current = lines[i]!;
+              lines[i] = { ...current, quantity: clampQuantity(current.quantity + v.quantity, v.minQuantity), snapshot };
+            } else {
+              lines.push({ variantId: v.variantId, quantity: clampQuantity(v.quantity, v.minQuantity), addedAt: Date.now(), snapshot });
+            }
+          }
+          return { lines };
+        });
+        return usable.length;
+      },
 
       replaceLines: (lines) => set({ lines }),
 

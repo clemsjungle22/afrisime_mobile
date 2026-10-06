@@ -17,3 +17,8 @@ jest.mock('expo-secure-store', () => {
     __store: store,
   };
 });
+
+// Vrais UUID en test (le mock par défaut renvoie undefined : toutes les clés d'idempotence seraient égales).
+jest.mock('expo-crypto', () => ({
+  randomUUID: () => require('crypto').randomUUID(),
+}));

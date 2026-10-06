@@ -6,5 +6,6 @@ export * from './cart';
 export * from './phone';
 export * from './auth';
 export * from './checkout';
+export * from './orders';
 export * from './pagination';
 export * from './errors';

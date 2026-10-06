@@ -13,6 +13,7 @@ import { requireUser } from './authServer';
 import { buildQuote, deliveryOptions, withZone } from './checkoutEngine';
 import { mockProducts, mockStock } from './data/products';
 import { loadDb, saveDb } from './db';
+import { registerQuote } from './orderServer';
 import { useMockScenarios } from './scenarios';
 import { mockError, simulate } from './simulate';
 
@@ -111,7 +112,7 @@ export const mockCheckoutApi: CheckoutApi = {
         withAuth((token) =>
           simulate(Quote, async () => {
             const user = await requireUser(token);
-            return buildQuote(QuoteRequest.parse(body), {
+            const quote = buildQuote(QuoteRequest.parse(body), {
               products: mockProducts,
               stock: mockStock,
               overrides: useMockScenarios.getState().overrides,
@@ -119,6 +120,9 @@ export const mockCheckoutApi: CheckoutApi = {
               now: new Date(),
               newId: () => newId('qte'),
             });
+            // Le serveur garde le devis signé : seule une commande sur ce devis sera acceptée.
+            registerQuote(user.id, quote);
+            return quote;
           }),
         ),
       signal,

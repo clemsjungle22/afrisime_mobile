@@ -8,8 +8,8 @@ import { BottomSheet, Button, ErrorState, OfflineBanner, RadioGroup, Segmented, 
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { toValidateRequest, useCart } from '@/features/cart/store';
-import { comingSoon } from '@/lib/comingSoon';
 import { formatCountdown } from '@/lib/dates';
+import { usePlaceOrder } from '@/features/orders/hooks';
 import { useIsOffline } from '@/lib/network';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
@@ -38,9 +38,11 @@ function addressLine(a: Address): string {
 
 export function CheckoutScreen() {
   const status = useSession((s) => s.status);
-  const hasLines = useCart((s) => s.lines.length > 0);
+  // Vérifié à l'ouverture seulement : une fois la commande créée, le panier est vidé
+  // pendant qu'on navigue vers le paiement — il ne faut pas rediriger vers le panier.
+  const [hadLines] = useState(() => useCart.getState().lines.length > 0);
   if (status !== 'authenticated') return <Redirect href="/login" />;
-  if (!hasLines) return <Redirect href="/panier" />;
+  if (!hadLines) return <Redirect href="/panier" />;
   return <CheckoutContent />;
 }
 
@@ -54,6 +56,7 @@ function CheckoutContent() {
   const me = useMe();
   const addresses = useAddresses();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const placeOrder = usePlaceOrder();
 
   const addressList = addresses.data ?? [];
   // 1er passage : l'adresse ne dépend pas des options ; elle permet de les charger.
@@ -95,7 +98,36 @@ function CheckoutContent() {
   const methods = methodsFor(options.data, selection.fulfillment);
   const quoteError = quote.error && isApiError(quote.error) && !BACK_TO_CART.has(quote.error.code) ? quote.error : null;
   const expiresIn = currentQuote ? Date.parse(currentQuote.expiresAt) - now : 0;
-  const canConfirm = !!currentQuote && !quote.isFetching && !offline && expiresIn > 0;
+  const canConfirm = !!currentQuote && !quote.isFetching && !offline && expiresIn > 0 && !placeOrder.isPending;
+
+  /** Crée la commande (même Idempotency-Key à chaque tentative pour ce devis), puis paiement ou confirmation. */
+  const confirm = () => {
+    if (!currentQuote) return;
+    const pending = placeOrder.place(currentQuote.quoteId);
+    if (!pending) return; // double tap : la 1re requête est déjà partie
+    pending
+      .then((order) => {
+        const params = { orderId: order.id };
+        if (order.payable) router.replace({ pathname: '/payment/[orderId]', params });
+        else router.replace({ pathname: '/order-confirmation/[orderId]', params });
+      })
+      .catch((e: unknown) => {
+        if (isApiError(e) && (e.code === 'QUOTE_EXPIRED' || e.code === 'SLOT_UNAVAILABLE')) {
+          showSnackbar({ message: e.message });
+          void options.refetch();
+          void quote.refetch();
+        } else if (isApiError(e) && BACK_TO_CART.has(e.code)) {
+          showSnackbar({ message: 'Votre panier a changé : vérifiez-le avant de continuer.' });
+          router.back();
+        } else {
+          showSnackbar({
+            message: isApiError(e) && !e.isNetwork
+              ? e.message
+              : 'Commande non envoyée (connexion instable). Réessayez : elle ne sera pas créée deux fois.',
+          });
+        }
+      });
+  };
 
   if (addresses.isError && !addresses.data) {
     return <ErrorState error={addresses.error} onRetry={() => void addresses.refetch()} />;
@@ -263,8 +295,8 @@ function CheckoutContent() {
           size="lg"
           fullWidth
           disabled={!canConfirm}
-          loading={!!body && !missing && quote.isFetching && !quote.data}
-          onPress={() => comingSoon('La confirmation et le paiement de la commande')}
+          loading={placeOrder.isPending || (!!body && !missing && quote.isFetching && !quote.data)}
+          onPress={confirm}
         />
       </View>
 
