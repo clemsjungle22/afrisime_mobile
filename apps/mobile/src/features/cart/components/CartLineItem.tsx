@@ -49,7 +49,7 @@ export const CartLineItem = memo(function CartLineItem({ line, server, onQuantit
         accessibilityLabel={`Voir ${s.name}`}
         style={[styles.thumb, { borderRadius: theme.radius.md, opacity: unavailable ? 0.5 : 1 }]}
       >
-        <ProductThumb name={s.name} imageUrl={s.imageUrl} color={s.color} packaging={s.variantLabel} scale={0.82} />
+        <ProductThumb name={s.name} imageUrl={s.imageUrl} color={s.color} />
       </Pressable>
 
       <View style={[styles.flex, { gap: 2 }]}>

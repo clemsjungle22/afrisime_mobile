@@ -88,7 +88,7 @@ export const ProductCard = memo(function ProductCard({ product, onPress }: Props
       ]}
     >
       <View style={[styles.thumb, { borderRadius: theme.radius.md, opacity: dimmed ? 0.55 : 1 }]}>
-        <ProductThumb name={product.name} imageUrl={product.imageUrl} color={product.color} packaging={v.packaging} />
+        <ProductThumb name={product.name} imageUrl={product.imageUrl} color={product.color} />
         <View style={[styles.badges, { gap: theme.spacing.xs, padding: theme.spacing.sm }]}>
           {product.discountPercent ? <Badge label={`-${product.discountPercent} %`} tone="accent" /> : null}
           {badge ? <Badge label={badge.label} tone={badge.tone} /> : null}

@@ -178,7 +178,7 @@ function OrderContent({ order }: { order: Order }) {
           .map((l) => (
             <View key={l.variantId} style={{ flexDirection: 'row', gap: theme.spacing.md, alignItems: 'center' }}>
               <View style={{ width: 44, height: 44, borderRadius: theme.radius.sm, overflow: 'hidden' }}>
-                <ProductThumb name={l.productName} imageUrl={l.imageUrl} color={l.color} packaging={l.variantLabel} scale={0.85} />
+                <ProductThumb name={l.productName} imageUrl={l.imageUrl} color={l.color} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text

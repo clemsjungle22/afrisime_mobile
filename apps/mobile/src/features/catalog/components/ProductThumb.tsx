@@ -2,30 +2,36 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { packagingKind, ProductIllustration } from '@/components/illustrations/ProductIllustration';
-import { Pattern } from '@/components/ui';
-import { shade, tint } from '@/theme';
+import { Pattern, Text } from '@/components/ui';
+import { fontFamilies, palette, shade, tint } from '@/theme';
 
 type Props = {
   name: string;
   imageUrl: string | null;
-  /** Couleur du rayon : fond et étiquettes de l'illustration. */
+  /** Couleur du rayon : fond et initiales. */
   color: string;
-  /** Conditionnement ou libellé du format (« Sac 5 kg ») : choisit l'illustration. */
-  packaging?: string;
-  /**
-   * soft : fond pastel (cartes, listes) ; vivid : dégradé du rayon + motif (en-tête de fiche).
-   */
+  /** soft : fond pastel (cartes, listes) ; vivid : dégradé du rayon (en-tête de fiche). */
   variant?: 'soft' | 'vivid';
-  /** Proportion de l'illustration dans le cadre. */
-  scale?: number;
 };
 
+/** Deux initiales significatives : « Riz parfumé long grain » → « RP ». */
+export function productInitials(name: string): string {
+  const words = name
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
+    .filter((w) => w.length > 2);
+  const picked = words.length > 0 ? words : name.split(/\s+/).filter(Boolean);
+  return picked
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('');
+}
+
 /**
- * Visuel produit : photo si disponible (cache disque), sinon illustration vectorielle
- * du conditionnement sur fond aux couleurs du rayon.
+ * Visuel produit : photo si disponible (cache disque), sinon initiales du produit
+ * sur le fond « artisanal » (dégradé du rayon + motif kente/wax).
  */
-export function ProductThumb({ name, imageUrl, color, packaging, variant = 'soft', scale = 0.86 }: Props) {
+export function ProductThumb({ name, imageUrl, color, variant = 'soft' }: Props) {
   const [size, setSize] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -50,28 +56,39 @@ export function ProductThumb({ name, imageUrl, color, packaging, variant = 'soft
   const colors = vivid
     ? ([tint(color, 0.08), shade(color, 0.42)] as const)
     : ([tint(color, 0.9), tint(color, 0.74)] as const);
+  const fontSize = Math.max(14, size * (vivid ? 0.28 : 0.3));
 
   return (
     <View style={styles.fill} onLayout={onLayout} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      {vivid ? <Pattern color="#ffffff" opacity={0.09} size={34} /> : <Pattern color={color} opacity={0.07} size={28} />}
+      {vivid ? <Pattern color="#ffffff" opacity={0.09} size={34} /> : <Pattern color={color} opacity={0.08} size={28} />}
       {size > 0 ? (
         <View style={styles.center}>
           <View
             style={{
               position: 'absolute',
-              width: size * 0.72,
-              height: size * 0.72,
+              width: size * (vivid ? 0.5 : 0.62),
+              height: size * (vivid ? 0.5 : 0.62),
               borderRadius: size,
               backgroundColor: '#ffffff',
-              opacity: vivid ? 0.16 : 0.5,
+              opacity: vivid ? 0.16 : 0.6,
               zIndex: 0,
             }}
           />
-          {/* zIndex explicite : l'illustration toujours AU-DESSUS du halo (web compris). */}
-          <View style={{ zIndex: 1 }}>
-            <ProductIllustration kind={packagingKind(packaging ?? 'sac')} color={color} size={size * scale} />
-          </View>
+          {/* zIndex explicite : les initiales toujours AU-DESSUS du halo (web compris). */}
+          <Text
+            maxFontSizeMultiplier={1}
+            style={{
+              zIndex: 1,
+              fontFamily: fontFamilies.extrabold,
+              fontSize,
+              lineHeight: fontSize * 1.15,
+              letterSpacing: -fontSize * 0.03,
+              color: vivid ? palette.white : shade(color, 0.3),
+            }}
+          >
+            {productInitials(name)}
+          </Text>
         </View>
       ) : null}
     </View>

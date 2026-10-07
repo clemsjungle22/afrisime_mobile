@@ -181,14 +181,7 @@ function ProductContent({ product }: { product: ProductDetail }) {
   return (
     <View style={styles.flex}>
       <Animated.View style={[styles.hero, { height: heroHeight, width }, heroStyle]}>
-        <ProductThumb
-          name={product.name}
-          imageUrl={product.imageUrl}
-          color={product.color}
-          packaging={variant.packaging}
-          variant="vivid"
-          scale={0.66}
-        />
+        <ProductThumb name={product.name} imageUrl={product.imageUrl} color={product.color} variant="vivid" />
       </Animated.View>
 
       <Animated.ScrollView

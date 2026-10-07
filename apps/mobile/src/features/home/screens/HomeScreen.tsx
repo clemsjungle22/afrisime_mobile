@@ -5,8 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { ErrorState, FadeIn, OfflineBanner, Pattern, Skeleton, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
@@ -22,9 +23,14 @@ import { useCheckout } from '@/features/checkout/store';
 import { comingSoon } from '@/lib/comingSoon';
 import { openAppLink, openProduct } from '@/lib/links';
 import { gradients, palette, useTheme } from '@/theme';
-import { TrustStrip } from '../components/TrustStrip';
 
 const logo = require('../../../../assets/brand/logo.webp') as number;
+
+/** Couleur unie des en-têtes : en-tête fixe, salutation et bande de la recherche se raccordent sans couture. */
+const HEADER_COLOR = palette.brand900;
+/** Moitié de la barre de recherche (58 px) qui chevauche le vert. */
+const SEARCH_OVERLAP = 29;
+const CATEGORY_TILE = 116;
 
 const SECTION_OVERLINES: Partial<Record<HomeSection['type'], string>> = {
   best_sellers: 'LES PRÉFÉRÉS DE LOMÉ',
@@ -59,40 +65,65 @@ export function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      {/* En-tête FIXE : logo et notifications restent toujours visibles, rien ne passe dessus. */}
+      <TopBar />
+
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
+        // L'élément 1 (barre de recherche) s'accroche sous l'en-tête : le contenu défile DESSOUS.
+        stickyHeaderIndices={[1]}
+        contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE + theme.spacing.lg }}
         refreshControl={
           <RefreshControl
             refreshing={home.isRefetching}
             onRefresh={() => void home.refetch()}
             colors={[theme.colors.primary]}
-            tintColor={palette.white}
+            tintColor={theme.colors.primary}
           />
         }
       >
-        <Hero />
-        <View style={{ marginTop: -30, paddingHorizontal: theme.spacing.lg, zIndex: 2 }}>
-          <SearchEntry onPress={() => router.push('/search')} elevated />
+        <Greeting />
+        <StickySearch />
+        <View>
+          <OfflineBanner updatedAt={home.dataUpdatedAt} />
+          {home.data ? (
+            <HomeContent home={home.data} onPressProduct={onPressProduct} onPressCategory={onPressCategory} />
+          ) : home.isError ? (
+            <View style={{ minHeight: 360 }}>
+              <ErrorState error={home.error} onRetry={() => void home.refetch()} />
+            </View>
+          ) : (
+            <HomeSkeleton />
+          )}
         </View>
-        <OfflineBanner updatedAt={home.dataUpdatedAt} />
-
-        {home.data ? (
-          <HomeContent home={home.data} onPressProduct={onPressProduct} onPressCategory={onPressCategory} />
-        ) : home.isError ? (
-          <View style={{ minHeight: 360 }}>
-            <ErrorState error={home.error} onRetry={() => void home.refetch()} />
-          </View>
-        ) : (
-          <HomeSkeleton />
-        )}
       </ScrollView>
     </View>
   );
 }
 
-function Hero() {
+function TopBar() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.topBar, { paddingTop: insets.top + theme.spacing.sm, paddingHorizontal: theme.spacing.lg }]}>
+      <Pattern color={palette.white} opacity={0.07} size={40} />
+      <View style={[styles.logoPill, { borderRadius: theme.radius.md }]}>
+        <Image source={logo} style={styles.logo} contentFit="contain" accessibilityLabel="AfriSime" />
+      </View>
+      <Pressable
+        onPress={() => comingSoon('Les notifications')}
+        accessibilityRole="button"
+        accessibilityLabel="Notifications"
+        style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Ionicons name="notifications-outline" size={22} color={palette.white} />
+      </Pressable>
+    </View>
+  );
+}
+
+/** Salutation et adresse : défilent normalement et passent sous l'en-tête fixe. */
+function Greeting() {
+  const theme = useTheme();
   const authenticated = useSession((s) => s.status === 'authenticated');
   const me = useMe();
   const addresses = useAddresses(authenticated);
@@ -101,41 +132,19 @@ function Hero() {
     addresses.data?.find((a) => a.id === selectedId) ?? addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
 
   return (
-    <View style={[styles.hero, { paddingTop: insets.top + theme.spacing.md }]}>
-      <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+    <View style={[styles.greeting, { paddingHorizontal: theme.spacing.lg }]}>
       <Pattern color={palette.white} opacity={0.07} size={40} />
-
-      <View style={[styles.heroTop, { paddingHorizontal: theme.spacing.lg }]}>
-        <View style={[styles.logoPill, { borderRadius: theme.radius.md }]}>
-          <Image source={logo} style={styles.logo} contentFit="contain" accessibilityLabel="AfriSime" />
-        </View>
-        <Pressable
-          onPress={() => comingSoon('Les notifications')}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Ionicons name="notifications-outline" size={22} color={palette.white} />
-        </Pressable>
-      </View>
-
-      <FadeIn style={{ paddingHorizontal: theme.spacing.lg, gap: 6, marginTop: theme.spacing.xl }}>
+      <FadeIn style={{ gap: 6 }}>
         <Text variant="hero" style={{ color: palette.white }} accessibilityRole="header">
           {greeting(authenticated ? me.data?.firstName : null)}
         </Text>
-        <Text variant="body" style={{ color: palette.brand200 }}>
-          Qu’allons-nous vous livrer aujourd’hui ?
-        </Text>
+        <Text style={{ color: palette.brand200 }}>Qu’allons-nous vous livrer aujourd’hui ?</Text>
       </FadeIn>
-
       <Pressable
         onPress={() => (authenticated ? router.push('/checkout/address') : router.push('/login'))}
         accessibilityRole="button"
         accessibilityLabel={address ? `Livraison à ${address.district}` : 'Choisir mon adresse de livraison'}
-        style={({ pressed }) => [
-          styles.location,
-          { marginHorizontal: theme.spacing.lg, borderRadius: theme.radius.pill, opacity: pressed ? 0.8 : 1 },
-        ]}
+        style={({ pressed }) => [styles.location, { borderRadius: theme.radius.pill, opacity: pressed ? 0.8 : 1 }]}
       >
         <Ionicons name="location" size={16} color={palette.accent500} />
         <Text variant="caption" style={{ color: palette.white }} numberOfLines={1}>
@@ -152,6 +161,22 @@ function Hero() {
   );
 }
 
+/**
+ * Barre de recherche accrochée : une bande verte (coins bas arrondis) la relie à l'en-tête.
+ * Une fois accrochée, l'ensemble forme un en-tête dont la recherche déborde ; le contenu défile dessous.
+ */
+function StickySearch() {
+  const theme = useTheme();
+  return (
+    <View style={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.sm }}>
+      <View style={styles.searchBand}>
+        <Pattern color={palette.white} opacity={0.07} size={40} />
+      </View>
+      <SearchEntry onPress={() => router.push('/search')} elevated />
+    </View>
+  );
+}
+
 type ContentProps = {
   home: Home;
   onPressProduct: (p: ProductSummary) => void;
@@ -160,21 +185,19 @@ type ContentProps = {
 
 function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
   const theme = useTheme();
-  const { width } = useWindowDimensions();
-  const tileSize = (width - theme.spacing.lg * 2 - theme.spacing.md * 2) / 3;
   const flash = home.sections.find((s) => s.type === 'flash_sale');
   const others = home.sections.filter((s) => s.type !== 'flash_sale');
   let i = 0;
 
   return (
-    <View style={{ gap: theme.spacing.xxl, paddingTop: theme.spacing.xl }}>
+    <View style={{ gap: theme.spacing.xxl, paddingTop: theme.spacing.lg }}>
       <FadeIn index={i++}>
         <BannerCarousel banners={home.banners} onPressBanner={(b) => openAppLink(b.link)} />
       </FadeIn>
 
       {home.categories.length > 0 ? (
-        <FadeIn index={i++} style={{ paddingHorizontal: theme.spacing.lg, gap: theme.spacing.md }}>
-          <View style={{ gap: 4 }}>
+        <FadeIn index={i++} style={{ gap: theme.spacing.md }}>
+          <View style={{ gap: 4, paddingHorizontal: theme.spacing.lg }}>
             <Text variant="overline" color="accent">
               FAITES LE TOUR
             </Text>
@@ -182,11 +205,17 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
               Nos rayons
             </Text>
           </View>
-          <View style={styles.grid}>
+          {/* Rangée horizontale, comme les sections de produits. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            accessibilityLabel="Rayons"
+            contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingVertical: 6, gap: theme.spacing.md }}
+          >
             {home.categories.map((c) => (
-              <CategoryTile key={c.id} category={c} onPress={onPressCategory} size={tileSize} />
+              <CategoryTile key={c.id} category={c} onPress={onPressCategory} size={CATEGORY_TILE} />
             ))}
-          </View>
+          </ScrollView>
         </FadeIn>
       ) : null}
 
@@ -219,10 +248,6 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
           />
         </FadeIn>
       ))}
-
-      <FadeIn index={i++}>
-        <TrustStrip />
-      </FadeIn>
     </View>
   );
 }
@@ -230,11 +255,11 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
 function HomeSkeleton() {
   const theme = useTheme();
   return (
-    <View style={{ padding: theme.spacing.lg, gap: theme.spacing.xl, paddingTop: theme.spacing.xl }} accessibilityLabel="Chargement">
-      <Skeleton height={196} radius={theme.radius.xl} />
+    <View style={{ padding: theme.spacing.lg, gap: theme.spacing.xl }} accessibilityLabel="Chargement">
+      <Skeleton height={214} radius={theme.radius.xl} />
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
         {[0, 1, 2].map((k) => (
-          <Skeleton key={k} width="31%" height={110} radius={theme.radius.lg} />
+          <Skeleton key={k} width={CATEGORY_TILE} height={CATEGORY_TILE * 1.08} radius={theme.radius.lg} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
@@ -249,16 +274,14 @@ function HomeSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    paddingBottom: 54,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
-  },
-  heroTop: {
+  topBar: {
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingBottom: 10,
+    backgroundColor: HEADER_COLOR,
+    overflow: 'hidden',
   },
   logoPill: {
     backgroundColor: palette.white,
@@ -277,6 +300,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
+  greeting: {
+    paddingTop: 14,
+    paddingBottom: 18,
+    backgroundColor: HEADER_COLOR,
+    overflow: 'hidden',
+  },
   location: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,10 +316,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  searchBand: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: SEARCH_OVERLAP,
+    backgroundColor: HEADER_COLOR,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
   },
   flash: {
     overflow: 'hidden',
