@@ -1,14 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Tabs } from 'expo-router';
-import { useEffect, type ComponentProps } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withSequence,
   withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
@@ -30,6 +32,10 @@ const ICONS: Record<string, [IconName, IconName]> = {
 
 /** Hauteur réservée en bas des écrans d'onglets (barre flottante + marge). */
 export const FLOATING_TAB_BAR_SPACE = 96;
+
+const BAR_PADDING = 6;
+/** Ressort de la pastille : vif, avec un léger dépassement (sensation « organique »). */
+const SLIDE_SPRING = { damping: 17, stiffness: 190, mass: 0.9 } as const;
 
 /** Badge du panier qui « rebondit » à chaque ajout. */
 function CartBadge({ count }: { count: number }) {
@@ -54,30 +60,34 @@ function CartBadge({ count }: { count: number }) {
 function TabItem({
   route,
   label,
-  focused,
+  index,
+  position,
   onPress,
   onLongPress,
   cartCount,
+  focused,
 }: {
   route: string;
   label: string;
-  focused: boolean;
+  index: number;
+  /** Position animée de la pastille (en index d'onglet, fractionnaire pendant le glissement). */
+  position: SharedValue<number>;
   onPress: () => void;
   onLongPress: () => void;
   cartCount: number;
+  focused: boolean;
 }) {
   const theme = useTheme();
-  const progress = useSharedValue(focused ? 1 : 0);
-  useEffect(() => {
-    progress.value = withSpring(focused ? 1 : 0, { damping: 18, stiffness: 220 });
-  }, [focused, progress]);
-
-  const pill = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scaleX: 0.6 + progress.value * 0.4 }],
-  }));
-
   const [active, inactive] = ICONS[route] ?? ['ellipse', 'ellipse-outline'];
+
+  // L'icône grossit et remonte à mesure que la pastille arrive dessus.
+  const iconStyle = useAnimatedStyle(() => {
+    const p = Math.max(0, 1 - Math.abs(position.value - index));
+    return {
+      transform: [{ translateY: interpolate(p, [0, 1], [0, -1.5]) }, { scale: interpolate(p, [0, 1], [1, 1.12]) }],
+    };
+  });
+
   const color = focused ? theme.colors.primary : theme.colors.tabInactive;
 
   return (
@@ -89,11 +99,10 @@ function TabItem({
       onLongPress={onLongPress}
       style={styles.item}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, styles.pill, { backgroundColor: theme.colors.primarySoft }, pill]} />
-      <View>
+      <Animated.View style={iconStyle}>
         <Ionicons name={focused ? active : inactive} size={23} color={color} />
         {route === 'panier' ? <CartBadge count={cartCount} /> : null}
-      </View>
+      </Animated.View>
       <Text variant="micro" style={{ color, fontSize: 11 }} numberOfLines={1} maxFontSizeMultiplier={1.15}>
         {label}
       </Text>
@@ -101,15 +110,33 @@ function TabItem({
   );
 }
 
-/** Barre d'onglets flottante : coins arrondis, ombre douce, pastille animée sous l'onglet actif. */
+/**
+ * Barre d'onglets flottante : une seule pastille GLISSE d'un onglet à l'autre (ressort),
+ * l'icône active grossit à son arrivée. Respecte « Réduire les animations ».
+ */
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const cartCount = useCartCount();
+  const reduceMotion = useReducedMotion();
+  const [barWidth, setBarWidth] = useState(0);
+  const count = state.routes.length;
+  const tabWidth = barWidth > 0 ? (barWidth - BAR_PADDING * 2) / count : 0;
+
+  const position = useSharedValue(state.index);
+  useEffect(() => {
+    position.value = reduceMotion ? state.index : withSpring(state.index, SLIDE_SPRING);
+  }, [state.index, reduceMotion, position]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    width: tabWidth,
+    transform: [{ translateX: position.value * tabWidth }],
+  }));
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View
+        onLayout={(e: LayoutChangeEvent) => setBarWidth(e.nativeEvent.layout.width)}
         style={[
           styles.bar,
           {
@@ -120,6 +147,11 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           },
         ]}
       >
+        {tabWidth > 0 ? (
+          <Animated.View pointerEvents="none" style={[styles.pill, pillStyle]}>
+            <View style={[styles.pillInner, { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.border }]} />
+          </Animated.View>
+        ) : null}
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           const options = descriptors[route.key]?.options;
@@ -129,6 +161,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               key={route.key}
               route={route.name}
               label={label}
+              index={index}
+              position={position}
               focused={focused}
               cartCount={cartCount}
               onPress={() => {
@@ -157,7 +191,19 @@ const styles = StyleSheet.create({
   },
   bar: {
     flexDirection: 'row',
-    padding: 6,
+    padding: BAR_PADDING,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pill: {
+    position: 'absolute',
+    top: BAR_PADDING,
+    bottom: BAR_PADDING,
+    left: BAR_PADDING,
+    paddingHorizontal: 2,
+  },
+  pillInner: {
+    flex: 1,
+    borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
   },
   item: {
@@ -166,9 +212,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
     minHeight: 56,
-  },
-  pill: {
-    borderRadius: 18,
   },
   badge: {
     position: 'absolute',
