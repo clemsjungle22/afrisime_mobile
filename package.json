@@ -6,7 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "mobile": "npm run start -w @afrisime/mobile",
+    "start": "npm run start -w @afrisime/mobile --",
+    "start:tunnel": "npm run start:tunnel -w @afrisime/mobile --",
+    "start:clear": "npm run start:clear -w @afrisime/mobile --",
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/mobile",
     "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile"
   },
