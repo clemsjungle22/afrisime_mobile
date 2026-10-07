@@ -141,7 +141,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           styles.bar,
           {
             backgroundColor: theme.colors.surface,
-            borderRadius: theme.radius.xl,
+            // Gélule : coins entièrement arrondis.
+            borderRadius: theme.radius.pill,
             boxShadow: theme.shadows.lg,
             borderColor: theme.colors.border,
           },
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   },
   pillInner: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
   },
   item: {
