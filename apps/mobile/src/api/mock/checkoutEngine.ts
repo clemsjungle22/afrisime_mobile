@@ -80,7 +80,7 @@ function paymentMethods(address: Address | null): PaymentMethodOption[] {
     },
     {
       id: 'flooz',
-      label: 'Flooz (Moov Africa)',
+      label: 'Moov Money (Flooz)',
       description: 'Confirmez le paiement sur votre téléphone.',
       fulfillments: ['delivery', 'pickup'],
       available: true,

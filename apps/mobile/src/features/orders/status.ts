@@ -16,7 +16,7 @@ export const orderStatusInfo: Record<OrderStatus, { label: string; tone: BadgeTo
 
 export const paymentMethodLabels: Record<PaymentMethodId, string> = {
   mixx: 'Mixx by Yas',
-  flooz: 'Flooz (Moov Africa)',
+  flooz: 'Moov Money (Flooz)',
   card: 'Carte bancaire',
   cash_on_delivery: 'Paiement à la livraison',
   pay_at_agency: 'Paiement en agence',
