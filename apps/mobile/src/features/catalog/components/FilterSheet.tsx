@@ -14,10 +14,10 @@ type Props = {
   onApply: (filters: CatalogFilters) => void;
   onClose: () => void;
   /** Filtres gérés ailleurs : ni affichés, ni effacés par « Effacer ». */
-  hide?: ReadonlyArray<FacetKey>;
+  hide?: readonly FacetKey[];
 };
 
-const sections: ReadonlyArray<{ key: FacetKey; title: string }> = [
+const sections: readonly { key: FacetKey; title: string }[] = [
   { key: 'category', title: 'Rayon' },
   { key: 'offer', title: 'Offres' },
   { key: 'availability', title: 'Disponibilité' },

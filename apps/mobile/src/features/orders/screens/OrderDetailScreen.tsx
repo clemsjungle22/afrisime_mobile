@@ -8,6 +8,7 @@ import { ProductThumb } from '@/features/catalog/components/ProductThumb';
 import { comingSoon } from '@/lib/comingSoon';
 import { formatSlotDay, formatSlotHours } from '@/lib/dates';
 import { openProduct } from '@/lib/links';
+import { useNow } from '@/lib/useNow';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { OrderProgress } from '../components/OrderProgress';
@@ -82,7 +83,9 @@ function OrderContent({ order }: { order: Order }) {
   const cancel = useCancelOrder(order.id);
   const reorder = useReorder(order.id);
   const status = orderStatusInfo[order.status];
-  const deadline = order.paymentDeadline ? Date.parse(order.paymentDeadline) - Date.now() : 0;
+  // Rafraîchi chaque minute : le délai de paiement affiché reste juste sans rendu impur.
+  const now = useNow(60_000, order.paymentDeadline !== null);
+  const deadline = order.paymentDeadline ? Date.parse(order.paymentDeadline) - now : 0;
 
   const confirmCancel = () =>
     Alert.alert(

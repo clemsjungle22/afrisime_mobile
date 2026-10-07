@@ -19,7 +19,7 @@ type Props = {
   onOpenFilters: () => void;
   onOpenSort: () => void;
   /** Filtres gérés ailleurs (ex. rayon dans la Boutique). */
-  ignore?: ReadonlyArray<keyof CatalogFilters>;
+  ignore?: readonly (keyof CatalogFilters)[];
 };
 
 /** Boutons Filtres / Tri, nombre de résultats et puces des filtres actifs. */

@@ -5,7 +5,7 @@ import { Text } from './Text';
 type Option<T extends string> = { value: T; label: string };
 
 type Props<T extends string> = {
-  options: ReadonlyArray<Option<T>>;
+  options: readonly Option<T>[];
   value: T;
   onChange: (value: T) => void;
   accessibilityLabel: string;

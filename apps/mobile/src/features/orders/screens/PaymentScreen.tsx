@@ -17,6 +17,7 @@ import { Button, ErrorState, PaymentLogo, RadioGroup, Skeleton, Text, TextField 
 import { PulseIcon } from '@/components/ui/PulseIcon';
 import { useSession } from '@/features/auth/session';
 import { formatCountdown } from '@/lib/dates';
+import { useNow } from '@/lib/useNow';
 import { useTheme } from '@/theme';
 import { ordersApi } from '../api';
 import { ordersKeys, useOrder } from '../hooks';
@@ -50,15 +51,6 @@ function PaymentLoader({ orderId }: { orderId: string }) {
   );
 }
 
-function useNow(active: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [active]);
-  return now;
-}
 
 /**
  * Paiement Mobile Money : le statut affiché est TOUJOURS celui du serveur (jamais supposé).
@@ -74,7 +66,8 @@ function PaymentFlow({ order }: { order: Order }) {
   const [paymentId, setPaymentId] = useState<string | null>(
     order.payment.status === 'pending' ? order.payment.paymentId : null,
   );
-  const startedAt = useRef(Date.now());
+  // Début du suivi (état, pas ref : il sert au rendu pour savoir quand arrêter d'attendre).
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const attemptKey = useRef<string | null>(null);
 
   const phone = toE164(phoneInput);
@@ -91,7 +84,9 @@ function PaymentFlow({ order }: { order: Order }) {
       return ordersApi.createPayment({ orderId: order.id, method, phone }, attemptKey.current);
     },
     onSuccess: (intent) => {
-      startedAt.current = Date.now();
+      // Faux positif : rappel exécuté après la réponse du serveur, pas pendant le rendu.
+      // eslint-disable-next-line react-hooks/purity
+      setStartedAt(Date.now());
       client.setQueryData(ordersKeys.payment(intent.id), intent);
       setPaymentId(intent.id);
     },
@@ -101,13 +96,13 @@ function PaymentFlow({ order }: { order: Order }) {
     queryKey: ordersKeys.payment(paymentId ?? 'none'),
     queryFn: ({ signal }) => ordersApi.getPayment(paymentId!, signal),
     enabled: paymentId !== null,
-    refetchInterval: (q) => nextPollDelay(q.state.data, startedAt.current, Date.now()),
+    refetchInterval: (q) => nextPollDelay(q.state.data, startedAt, Date.now()),
     retry: 2,
   });
   const intent: PaymentIntent | undefined = paymentId ? status.data : undefined;
   const polling = intent !== undefined && (intent.status === 'pending' || intent.status === 'initiated');
-  const now = useNow(polling);
-  const stoppedWaiting = polling && nextPollDelay(intent, startedAt.current, now) === false;
+  const now = useNow(1000, polling);
+  const stoppedWaiting = polling && nextPollDelay(intent, startedAt, now) === false;
 
   // Succès confirmé PAR LE SERVEUR → écran de confirmation.
   useEffect(() => {

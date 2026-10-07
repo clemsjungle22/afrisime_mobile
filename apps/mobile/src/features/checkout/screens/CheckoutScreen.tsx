@@ -11,6 +11,7 @@ import { toValidateRequest, useCart } from '@/features/cart/store';
 import { formatCountdown } from '@/lib/dates';
 import { usePlaceOrder } from '@/features/orders/hooks';
 import { useIsOffline } from '@/lib/network';
+import { useNow } from '@/lib/useNow';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { CheckoutSection } from '../components/CheckoutSection';
@@ -23,14 +24,6 @@ import { useCheckout } from '../store';
 /** Erreurs du devis qui renvoient au panier (il affichera le détail des changements). */
 const BACK_TO_CART = new Set(['CART_CHANGED', 'OUT_OF_STOCK']);
 
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 function addressLine(a: Address): string {
   return [a.district, a.city].filter(Boolean).join(', ');

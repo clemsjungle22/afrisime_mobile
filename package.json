@@ -10,7 +10,8 @@
     "start:tunnel": "npm run start:tunnel -w @afrisime/mobile --",
     "start:clear": "npm run start:clear -w @afrisime/mobile --",
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p apps/mobile",
-    "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile"
+    "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile",
+    "lint": "npm run lint -w @afrisime/mobile"
   },
   "engines": {
     "node": ">=20"

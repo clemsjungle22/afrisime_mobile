@@ -7,6 +7,7 @@ import { isApiError } from '@/api/errors';
 import { Button, Text } from '@/components/ui';
 import { formatCountdown } from '@/lib/dates';
 import { getDeviceInfo } from '@/lib/device';
+import { useNow } from '@/lib/useNow';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { authApi } from '../api';
@@ -19,14 +20,6 @@ import { signIn } from '../session';
 /** Codes qui imposent de redemander un code (la saisie est bloquée). */
 const LOCKING_CODES = new Set(['OTP_TOO_MANY_ATTEMPTS', 'OTP_EXPIRED']);
 
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 export function OtpScreen() {
   const theme = useTheme();

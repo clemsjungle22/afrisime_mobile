@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -46,24 +46,25 @@ function ConfettiPiece({ piece, height }: { piece: Piece; height: number }) {
   );
 }
 
+function makePieces(width: number): Piece[] {
+  return Array.from({ length: COUNT }, (_, i) => ({
+    x: Math.random() * width,
+    delay: Math.random() * 500,
+    duration: 2200 + Math.random() * 1400,
+    size: 7 + Math.random() * 7,
+    color: COLORS[i % COLORS.length]!,
+    drift: 12 + Math.random() * 28,
+    spin: (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540),
+    round: i % 4 === 0,
+  }));
+}
+
 /** Pluie de confettis aux couleurs AfriSime, jouée une fois (absente si « Réduire les animations »). */
 export function Confetti() {
   const reduceMotion = useReducedMotion();
   const { width, height } = useWindowDimensions();
-  const pieces = useMemo<Piece[]>(
-    () =>
-      Array.from({ length: COUNT }, (_, i) => ({
-        x: Math.random() * width,
-        delay: Math.random() * 500,
-        duration: 2200 + Math.random() * 1400,
-        size: 7 + Math.random() * 7,
-        color: COLORS[i % COLORS.length]!,
-        drift: 12 + Math.random() * 28,
-        spin: (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 540),
-        round: i % 4 === 0,
-      })),
-    [width],
-  );
+  // Tirage aléatoire une seule fois, à l'initialisation de l'état (rendus suivants purs).
+  const [pieces] = useState<Piece[]>(() => makePieces(width));
   if (reduceMotion) return null;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill} importantForAccessibility="no-hide-descendants">

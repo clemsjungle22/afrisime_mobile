@@ -148,7 +148,7 @@ export function materialize(stored: Order, now: number): Order {
 
   if (order.status === 'confirmed') {
     const t0 = Date.parse(last.at);
-    const steps: Array<[number, OrderStatus, string]> = [
+    const steps: [number, OrderStatus, string][] = [
       [STEP_PREPARING_MS, 'preparing', 'Votre commande est en préparation'],
       order.fulfillment === 'delivery'
         ? [STEP_SHIPPING_MS, 'out_for_delivery', 'Le livreur est en route']

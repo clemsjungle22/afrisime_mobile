@@ -13,7 +13,7 @@ type Props = {
   filters: CatalogFilters;
   onChange: (filters: CatalogFilters) => void;
   /** Filtres pilotés par l'écran lui-même (ex. rayon via les onglets de la Boutique). */
-  hide?: ReadonlyArray<FacetKey>;
+  hide?: readonly FacetKey[];
   /** Contenu au-dessus des résultats (correction orthographique, description du rayon…). */
   header?: (products: ReturnType<typeof useProducts>) => ReactElement | null;
   empty: (products: ReturnType<typeof useProducts>) => ReactElement;

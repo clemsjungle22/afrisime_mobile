@@ -23,7 +23,7 @@ export const FILTER_KEYS = [
   'packaging',
   'origin',
   'offer',
-] as const satisfies ReadonlyArray<keyof CatalogFilters>;
+] as const satisfies readonly (keyof CatalogFilters)[];
 
 const slug = z.string().regex(/^[a-z0-9-]+$/);
 const freeText = z.string().trim().min(1).max(100);
@@ -72,7 +72,7 @@ export function toFilterParams(filters: CatalogFilters): Record<string, string |
   );
 }
 
-export function countActiveFilters(filters: CatalogFilters, ignore: ReadonlyArray<keyof CatalogFilters> = []): number {
+export function countActiveFilters(filters: CatalogFilters, ignore: readonly (keyof CatalogFilters)[] = []): number {
   const price = filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0;
   const others = FILTER_KEYS.filter(
     (k) => k !== 'minPrice' && k !== 'maxPrice' && !ignore.includes(k) && filters[k] !== undefined,
@@ -108,7 +108,7 @@ function without<K extends keyof CatalogFilters>(...keys: K[]) {
 export function activeFilters(
   filters: CatalogFilters,
   facets: Facets | undefined,
-  ignore: ReadonlyArray<keyof CatalogFilters> = [],
+  ignore: readonly (keyof CatalogFilters)[] = [],
 ): ActiveFilter[] {
   const chips: ActiveFilter[] = [];
   for (const key of facetKeys) {
@@ -136,7 +136,7 @@ export function defaultSort(filters: CatalogFilters): ProductSort {
 }
 
 /** Tranches de prix rapides (FCFA). Paramétrables plus tard via l'API si besoin. */
-export const PRICE_PRESETS: ReadonlyArray<{ label: string; min?: number; max?: number }> = [
+export const PRICE_PRESETS: readonly { label: string; min?: number; max?: number }[] = [
   { label: 'Moins de 1 000 FCFA', max: 999 },
   { label: '1 000 – 5 000 FCFA', min: 1000, max: 5000 },
   { label: '5 000 – 20 000 FCFA', min: 5000, max: 20000 },

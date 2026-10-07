@@ -3,7 +3,7 @@ import { formatNationalInput, toE164, type GeoPoint } from '@afrisime/shared';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { z } from 'zod';
 import { isApiError } from '@/api/errors';
@@ -40,7 +40,7 @@ export function AddressFormScreen() {
   const [location, setLocation] = useState<LocationState>({ status: 'idle' });
   const isFirst = (addresses.data?.length ?? 0) === 0;
 
-  const { control, handleSubmit, formState, setValue, watch } = useForm<AddressForm>({
+  const { control, handleSubmit, formState, setValue } = useForm<AddressForm>({
     resolver: zodResolver(AddressForm),
     defaultValues: {
       label: 'Maison',
@@ -54,7 +54,8 @@ export function AddressFormScreen() {
     },
   });
   const errors = formState.errors;
-  const label = watch('label');
+  // useWatch (et non watch) : compatible avec le compilateur React.
+  const label = useWatch({ control, name: 'label' });
 
   /** Position facultative : la permission n'est demandée qu'à ce moment, refus sans blocage. */
   const locate = async () => {
