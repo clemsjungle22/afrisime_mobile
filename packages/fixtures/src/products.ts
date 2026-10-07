@@ -1,4 +1,5 @@
 import type { Availability, ProductDetail, ProductSummary, Variant } from '@afrisime/shared';
+import { relatedOf, summarizeVariants, toSummary } from '@afrisime/shared';
 import { findCategory } from './categories';
 
 /**
@@ -297,13 +298,6 @@ function toDetail(seed: ProductSeed, index: number): ProductDetail {
   const category = findCategory(seed.category);
   if (!category) throw new Error(`Rayon mock inconnu : ${seed.category}`);
   const variants = seed.variants.map((v, i) => toVariant(seed.slug, v, i));
-  const [defaultVariant] = variants;
-  if (!defaultVariant) throw new Error(`Produit mock sans variante : ${seed.slug}`);
-  const prices = variants.map((v) => v.price).filter((p): p is number => p !== null);
-  const discount =
-    defaultVariant.compareAtPrice !== null && defaultVariant.price !== null
-      ? Math.round((1 - defaultVariant.price / defaultVariant.compareAtPrice) * 100)
-      : null;
   return {
     id: `prd_${String(index + 1).padStart(4, '0')}`,
     slug: seed.slug,
@@ -312,11 +306,7 @@ function toDetail(seed: ProductSeed, index: number): ProductDetail {
     origin: seed.origin,
     imageUrl: null,
     badges: seed.badges ?? [],
-    priceFrom: prices.length > 0 ? Math.min(...prices) : null,
-    priceTo: prices.length > 0 ? Math.max(...prices) : null,
-    discountPercent: discount,
-    defaultVariant,
-    variantsCount: variants.length,
+    ...summarizeVariants(variants),
     color: category.color,
     description: seed.description,
     categoryId: category.slug,
@@ -343,28 +333,9 @@ export const mockStock: ReadonlyMap<string, number> = new Map(
   ),
 );
 
-export function toSummary(p: ProductDetail): ProductSummary {
-  const {
-    description: _d,
-    categoryId: _c,
-    images: _i,
-    variants: _v,
-    related: _r,
-    ...summary
-  } = p;
-  return summary;
-}
+export { toSummary };
 
-/** Produits associés : d'abord le même rayon, puis des populaires. */
-function relatedOf(p: ProductDetail): ProductSummary[] {
-  const sameCategory = details.filter((o) => o.categoryId === p.categoryId && o.slug !== p.slug);
-  const popular = details.filter(
-    (o) => o.badges.includes('popular') && o.slug !== p.slug && o.categoryId !== p.categoryId,
-  );
-  return [...sameCategory, ...popular].slice(0, 6).map(toSummary);
-}
-
-export const mockProducts: ProductDetail[] = details.map((p) => ({ ...p, related: relatedOf(p) }));
+export const mockProducts: ProductDetail[] = details.map((p) => ({ ...p, related: relatedOf(details, p) }));
 
 /** Rayons avec leur nombre de produits calculé. */
 export function countByCategory(slug: string): number {

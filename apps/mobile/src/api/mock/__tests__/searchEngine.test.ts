@@ -1,5 +1,10 @@
-import { mockProducts } from '@afrisime/fixtures';
-import { editDistance, normalize, searchProducts, suggest } from '../searchEngine';
+import { mockCategories, mockProducts } from '@afrisime/fixtures';
+import type { ProductListQuery } from '@afrisime/shared';
+import { editDistance, normalize, searchProducts as search, suggest as suggestFrom } from '@afrisime/shared';
+
+// Le moteur vit dans @afrisime/shared (partagé avec le serveur) ; testé ici sur les données de démo.
+const searchProducts = (products: typeof mockProducts, q: ProductListQuery) => search(products, q, mockCategories);
+const suggest = (products: typeof mockProducts, q: string) => suggestFrom(products, q, mockCategories);
 
 const names = (r: ReturnType<typeof searchProducts>) => r.items.map((p) => p.slug);
 

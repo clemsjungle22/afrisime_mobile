@@ -12,6 +12,7 @@ const components = {
   ProductSummary: shared.ProductSummary,
   ProductDetail: shared.ProductDetail,
   ProductListResponse: shared.ProductListResponse,
+  SearchSuggestResponse: shared.SearchSuggestResponse,
   Home: shared.Home,
   OnboardingOptions: shared.OnboardingOptions,
   UserProfile: shared.UserProfile,
@@ -37,6 +38,29 @@ const errorResponse = (description: string) => ({
   description,
   content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiErrorBody' } } },
 });
+
+const ref = (name: keyof typeof components) => ({ $ref: `#/components/schemas/${name}` });
+
+/** GET public du catalogue : 200 au format du schéma, 400/404 au format d'erreur commun. */
+function publicGet(summary: string, schema: object, options: { params?: object[]; notFound?: boolean } = {}) {
+  return {
+    get: {
+      summary,
+      ...(options.params ? { parameters: options.params } : {}),
+      responses: {
+        '200': { description: 'OK', content: { 'application/json': { schema } } },
+        '400': errorResponse('Paramètres invalides (VALIDATION_ERROR)'),
+        ...(options.notFound ? { '404': errorResponse('Introuvable (NOT_FOUND)') } : {}),
+      },
+    },
+  };
+}
+
+/** Paramètres d'URL de GET /v1/products, dérivés du schéma partagé. */
+function productListParameters() {
+  const json = toSchema(shared.ProductListQuery) as { properties: Record<string, object> };
+  return Object.entries(json.properties).map(([name, schema]) => ({ name, in: 'query', required: false, schema }));
+}
 
 export function buildOpenApi(serverUrl?: string) {
   return {
@@ -74,6 +98,19 @@ export function buildOpenApi(serverUrl?: string) {
           },
         },
       },
+      '/v1/home': publicGet("Accueil : bannières, rayons et sections", ref('Home')),
+      '/v1/categories': publicGet('Rayons et nombre de produits', { type: 'array', items: ref('Category') }),
+      '/v1/products': publicGet('Recherche, filtres, tris, facettes et pagination', ref('ProductListResponse'), {
+        params: productListParameters(),
+      }),
+      '/v1/products/{slug}': publicGet('Fiche produit', ref('ProductDetail'), {
+        params: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
+        notFound: true,
+      }),
+      '/v1/search/suggest': publicGet('Suggestions de saisie et correction', ref('SearchSuggestResponse'), {
+        params: [{ name: 'q', in: 'query', required: true, schema: { type: 'string', maxLength: 100 } }],
+      }),
+      '/v1/onboarding/options': publicGet("Listes de l'inscription (types de client, agences, CGU)", ref('OnboardingOptions')),
     },
     components: {
       schemas: Object.fromEntries(Object.entries(components).map(([name, schema]) => [name, toSchema(schema)])),

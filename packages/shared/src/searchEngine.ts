@@ -7,13 +7,16 @@ import type {
   ProductListQuery,
   ProductOffer,
   Suggestion,
-} from '@afrisime/shared';
-import { mockCategories } from '@afrisime/fixtures';
+} from './index';
 
 /**
- * Moteur de recherche SIMULÉ : reproduit le comportement attendu du serveur
- * (insensible aux accents, une faute de frappe tolérée par mot, facettes, tris).
+ * Moteur de recherche du catalogue, partagé par le serveur et le mode démo de l'app :
+ * insensible aux accents, une faute de frappe tolérée par mot, facettes, tris.
+ * Fonctions pures : le catalogue (produits + rayons) est passé en paramètre.
  */
+
+/** Rayons connus du moteur : seuls le slug et le nom servent (recherche et libellés de facettes). */
+export type SearchCategory = { slug: string; name: string };
 
 export function normalize(text: string): string {
   return text
@@ -48,11 +51,14 @@ export function editDistance(a: string, b: string, max = 2): number {
   return d[a.length]![b.length]!;
 }
 
-function categoryName(slug: string): string {
-  return mockCategories.find((c) => c.slug === slug)?.name ?? '';
+type NameOf = (slug: string) => string;
+
+function nameLookup(categories: readonly SearchCategory[]): NameOf {
+  const names = new Map(categories.map((c) => [c.slug, c.name]));
+  return (slug) => names.get(slug) ?? '';
 }
 
-function searchableText(p: ProductDetail): string {
+function searchableText(p: ProductDetail, categoryName: NameOf): string {
   return [p.name, p.brand, categoryName(p.categoryId), ...p.variants.map((v) => v.packaging)].join(' ');
 }
 
@@ -73,9 +79,9 @@ function matchToken(queryToken: string, productTokens: string[]): TokenMatch | n
 
 type TextMatch = { score: number; corrections: Map<string, string> };
 
-function matchText(q: string, p: ProductDetail): TextMatch | null {
+function matchText(q: string, p: ProductDetail, categoryName: NameOf): TextMatch | null {
   const qTokens = tokens(q);
-  const pTokens = tokens(searchableText(p));
+  const pTokens = tokens(searchableText(p, categoryName));
   let score = 0;
   const corrections = new Map<string, string>();
   for (const qt of qTokens) {
@@ -151,7 +157,7 @@ function countValues(
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'));
 }
 
-function computeFacets(base: ProductDetail[], q: ProductListQuery): Facets {
+function computeFacets(base: ProductDetail[], q: ProductListQuery, categoryName: NameOf): Facets {
   const scope = (key: FacetKey) => base.filter((p) => matchesFilters(p, q, key));
   return {
     category: countValues(scope('category'), (p) => [p.categoryId], categoryName),
@@ -183,8 +189,16 @@ export type SearchResult = {
   correctedQuery: string | null;
 };
 
-/** Recherche + filtres + tri + facettes sur le catalogue mock. `rank` = ordre de nouveauté. */
-export function searchProducts(all: ProductDetail[], q: ProductListQuery): SearchResult {
+/**
+ * Recherche + filtres + tri + facettes. L'ordre de `all` sert d'ordre éditorial
+ * (tri « populaires » à égalité, « nouveautés »).
+ */
+export function searchProducts(
+  all: ProductDetail[],
+  q: ProductListQuery,
+  categories: readonly SearchCategory[],
+): SearchResult {
+  const categoryName = nameLookup(categories);
   const scores = new Map<string, number>();
   let base = all;
   let correctedQuery: string | null = null;
@@ -192,7 +206,7 @@ export function searchProducts(all: ProductDetail[], q: ProductListQuery): Searc
   if (q.q) {
     const corrections = new Map<string, string>();
     base = all.filter((p) => {
-      const m = matchText(q.q!, p);
+      const m = matchText(q.q!, p, categoryName);
       if (!m) return false;
       scores.set(p.id, m.score);
       m.corrections.forEach((to, from) => corrections.set(from, to));
@@ -227,18 +241,22 @@ export function searchProducts(all: ProductDetail[], q: ProductListQuery): Searc
 
   return {
     items: sorted,
-    facets: computeFacets(base, q),
+    facets: computeFacets(base, q, categoryName),
     priceBounds: priceBoundsOf(base.filter((p) => matchesFilters(p, q, 'price'))),
     correctedQuery,
   };
 }
 
 /** Suggestions de saisie : rayons, marques, produits correspondant à la saisie. */
-export function suggest(all: ProductDetail[], query: string): { suggestions: Suggestion[]; correctedQuery: string | null } {
+export function suggest(
+  all: ProductDetail[],
+  query: string,
+  categories: readonly SearchCategory[],
+): { suggestions: Suggestion[]; correctedQuery: string | null } {
   const nq = normalize(query);
   if (nq.length < 2) return { suggestions: [], correctedQuery: null };
 
-  const categories: Suggestion[] = mockCategories
+  const categoryHits: Suggestion[] = categories
     .filter((c) => normalize(c.name).split(' ').some((w) => w.startsWith(nq)))
     .map((c) => ({ type: 'category', label: c.name, value: c.slug }));
 
@@ -246,13 +264,13 @@ export function suggest(all: ProductDetail[], query: string): { suggestions: Sug
     .filter((b) => normalize(b).includes(nq))
     .map((b) => ({ type: 'brand', label: b, value: b }));
 
-  const result = searchProducts(all, { q: query, sort: 'relevance' });
+  const result = searchProducts(all, { q: query, sort: 'relevance' }, categories);
   const products: Suggestion[] = result.items
     .slice(0, 5)
     .map((p) => ({ type: 'product', label: p.name, value: p.slug }));
 
   return {
-    suggestions: [...categories.slice(0, 2), ...brands.slice(0, 2), ...products].slice(0, 8),
+    suggestions: [...categoryHits.slice(0, 2), ...brands.slice(0, 2), ...products].slice(0, 8),
     correctedQuery: result.correctedQuery,
   };
 }

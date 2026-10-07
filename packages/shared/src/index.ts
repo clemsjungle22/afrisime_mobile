@@ -9,3 +9,5 @@ export * from './checkout';
 export * from './orders';
 export * from './pagination';
 export * from './errors';
+export * from './searchEngine';
+export * from './catalogLogic';

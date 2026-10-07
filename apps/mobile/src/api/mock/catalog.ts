@@ -4,12 +4,13 @@ import {
   ProductDetail,
   ProductListResponse,
   SearchSuggestResponse,
+  searchProducts,
+  suggest,
 } from '@afrisime/shared';
 import { z } from 'zod';
 import type { CatalogApi } from '@/features/catalog/api';
 import { withRetry } from '../client';
 import { buildMockHome, countByCategory, mockCategories, mockProducts, toSummary } from '@afrisime/fixtures';
-import { searchProducts, suggest } from './searchEngine';
 import { mockError, simulate } from './simulate';
 
 const CategoryList = z.array(Category);
@@ -38,7 +39,7 @@ export const mockCatalogApi: CatalogApi = {
     return read(
       () =>
         simulate(ProductListResponse, () => {
-          const result = searchProducts(mockProducts, query);
+          const result = searchProducts(mockProducts, query, mockCategories);
           const limit = query.limit ?? 20;
           const start = query.cursor ? Number(query.cursor) : 0;
           const next = start + limit;
@@ -69,7 +70,7 @@ export const mockCatalogApi: CatalogApi = {
 
   suggest(q, signal) {
     return read(
-      () => simulate(SearchSuggestResponse, () => ({ query: q, ...suggest(mockProducts, q) })),
+      () => simulate(SearchSuggestResponse, () => ({ query: q, ...suggest(mockProducts, q, mockCategories) })),
       signal,
     );
   },

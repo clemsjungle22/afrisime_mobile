@@ -112,7 +112,10 @@ describe('GET /v1/openapi.json', () => {
   it('publie le contrat généré depuis les schémas partagés', async () => {
     const doc = await openapi(req('/v1/openapi.json')).json();
     expect(doc.openapi).toBe('3.1.0');
-    expect(doc.paths['/health']).toBeDefined();
+    expect(Object.keys(doc.paths)).toEqual(
+      expect.arrayContaining(['/health', '/v1/home', '/v1/categories', '/v1/products', '/v1/products/{slug}', '/v1/search/suggest']),
+    );
+    expect(doc.paths['/v1/products'].get.parameters.map((p: { name: string }) => p.name)).toContain('minPrice');
     expect(Object.keys(doc.components.schemas)).toEqual(
       expect.arrayContaining(['ProductDetail', 'Order', 'ApiErrorBody']),
     );
