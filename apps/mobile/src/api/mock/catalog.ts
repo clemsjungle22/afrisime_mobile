@@ -8,9 +8,7 @@ import {
 import { z } from 'zod';
 import type { CatalogApi } from '@/features/catalog/api';
 import { withRetry } from '../client';
-import { mockCategories } from './data/categories';
-import { buildMockHome } from './data/home';
-import { countByCategory, mockProducts, toSummary } from './data/products';
+import { buildMockHome, countByCategory, mockCategories, mockProducts, toSummary } from '@afrisime/fixtures';
 import { searchProducts, suggest } from './searchEngine';
 import { mockError, simulate } from './simulate';
 

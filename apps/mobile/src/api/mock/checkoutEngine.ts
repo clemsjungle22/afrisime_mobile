@@ -11,8 +11,7 @@ import type {
 } from '@afrisime/shared';
 import { formatFCFA } from '@afrisime/shared';
 import { validateCart } from './cartEngine';
-import { mockOnboardingOptions } from './data/onboarding';
-import { DELIVERY_RULES, mockZones, zoneFor } from './data/zones';
+import { DELIVERY_RULES, mockOnboardingOptions, mockZones, zoneFor } from '@afrisime/fixtures';
 import { noOverrides, type CatalogOverrides } from './scenarios';
 import { mockError } from './simulate';
 

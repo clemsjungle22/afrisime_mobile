@@ -2,7 +2,7 @@ import { Order, OrderList, PaymentIntent, ReorderResponse } from '@afrisime/shar
 import type { OrdersApi } from '@/features/orders/api';
 import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
-import { mockProducts, mockStock } from './data/products';
+import { mockProducts, mockStock } from '@afrisime/fixtures';
 import * as server from './orderServer';
 import { simulate } from './simulate';
 

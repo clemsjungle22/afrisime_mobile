@@ -11,7 +11,7 @@ import type { CheckoutApi } from '@/features/checkout/api';
 import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
 import { buildQuote, deliveryOptions, withZone } from './checkoutEngine';
-import { mockProducts, mockStock } from './data/products';
+import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, saveDb } from './db';
 import { registerQuote } from './orderServer';
 import { useMockScenarios } from './scenarios';

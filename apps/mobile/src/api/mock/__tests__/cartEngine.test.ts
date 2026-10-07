@@ -1,7 +1,7 @@
 import type { CartValidateLine, ValidatedCart } from '@afrisime/shared';
 import { ValidatedCart as ValidatedCartSchema } from '@afrisime/shared';
 import { buildCartChangeOverrides, validateCart } from '../cartEngine';
-import { mockProducts, mockStock } from '../data/products';
+import { mockProducts, mockStock } from '@afrisime/fixtures';
 
 const RIZ_5KG = 'var_riz-parfume-savana_0'; // 4 750 FCFA
 const RIZ_50KG = 'var_riz-parfume-savana_2'; // 43 500 FCFA, stock 5

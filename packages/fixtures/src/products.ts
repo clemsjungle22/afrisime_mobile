@@ -6,7 +6,7 @@ import { findCategory } from './categories';
  * Données FICTIVES en attendant le vrai catalogue géré par le back-office.
  */
 
-type SeedVariant = {
+export type SeedVariant = {
   label: string;
   packaging: string;
   price: number | null;
@@ -19,7 +19,7 @@ type SeedVariant = {
   stock?: number;
 };
 
-type Seed = {
+export type ProductSeed = {
   slug: string;
   name: string;
   brand: string;
@@ -30,7 +30,7 @@ type Seed = {
   variants: SeedVariant[];
 };
 
-const seeds: Seed[] = [
+const seeds: ProductSeed[] = [
   // Céréales & farines
   {
     slug: 'riz-parfume-savana',
@@ -293,7 +293,7 @@ function toVariant(slug: string, v: SeedVariant, index: number): Variant {
   };
 }
 
-function toDetail(seed: Seed, index: number): ProductDetail {
+function toDetail(seed: ProductSeed, index: number): ProductDetail {
   const category = findCategory(seed.category);
   if (!category) throw new Error(`Rayon mock inconnu : ${seed.category}`);
   const variants = seed.variants.map((v, i) => toVariant(seed.slug, v, i));
@@ -327,6 +327,14 @@ function toDetail(seed: Seed, index: number): ProductDetail {
 }
 
 const details: ProductDetail[] = seeds.map(toDetail);
+
+/** Graines brutes (prix, formats, stock) pour remplir la base du backend. */
+export const productSeeds: readonly ProductSeed[] = seeds;
+
+/** Identifiant stable d'une variante (partagé par le mock et la base). */
+export function variantId(slug: string, index: number): string {
+  return `var_${slug}_${index}`;
+}
 
 /** Stock limité par variante (simulé). Absent = non limité. */
 export const mockStock: ReadonlyMap<string, number> = new Map(

@@ -8,7 +8,7 @@ import type {
   ProductOffer,
   Suggestion,
 } from '@afrisime/shared';
-import { mockCategories } from './data/categories';
+import { mockCategories } from '@afrisime/fixtures';
 
 /**
  * Moteur de recherche SIMULÉ : reproduit le comportement attendu du serveur

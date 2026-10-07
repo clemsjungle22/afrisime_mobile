@@ -1,4 +1,4 @@
-import { mockProducts } from '../data/products';
+import { mockProducts } from '@afrisime/fixtures';
 import { editDistance, normalize, searchProducts, suggest } from '../searchEngine';
 
 const names = (r: ReturnType<typeof searchProducts>) => r.items.map((p) => p.slug);

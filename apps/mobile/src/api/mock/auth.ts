@@ -9,7 +9,7 @@ import { z } from 'zod';
 import type { AuthApi } from '@/features/auth/api';
 import { withAuth, withRetry } from '../client';
 import * as server from './authServer';
-import { mockOnboardingOptions } from './data/onboarding';
+import { mockOnboardingOptions } from '@afrisime/fixtures';
 import { simulate } from './simulate';
 
 /** Écriture non idempotente : pas de nouvelle tentative automatique (comme en HTTP). */

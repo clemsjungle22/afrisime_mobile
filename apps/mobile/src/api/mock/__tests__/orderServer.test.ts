@@ -1,6 +1,6 @@
 import type { Quote } from '@afrisime/shared';
 import { ApiError } from '@/api/errors';
-import { mockProducts, mockStock } from '../data/products';
+import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, resetMockDb } from '../db';
 import {
   PAYMENT_CONFIRM_MS,

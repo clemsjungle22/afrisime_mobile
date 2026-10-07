@@ -1,8 +1,7 @@
 import { Quote as QuoteSchema, type Address, type CartValidateLine, type QuoteRequest } from '@afrisime/shared';
 import { ApiError } from '@/api/errors';
 import { buildQuote, buildSlots, deliveryOptions, withZone } from '../checkoutEngine';
-import { mockProducts, mockStock } from '../data/products';
-import { DELIVERY_RULES } from '../data/zones';
+import { DELIVERY_RULES, mockProducts, mockStock } from '@afrisime/fixtures';
 import { SEED_ADDRESS } from '../db';
 
 // Mardi 7 octobre 2026, 9h30 à Lomé (UTC+0).

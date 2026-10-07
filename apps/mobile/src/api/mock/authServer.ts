@@ -6,7 +6,7 @@ import type {
   UserProfile,
 } from '@afrisime/shared';
 import { loadDb, saveDb } from './db';
-import { mockOnboardingOptions } from './data/onboarding';
+import { mockOnboardingOptions } from '@afrisime/fixtures';
 import { mockError } from './simulate';
 
 /**
