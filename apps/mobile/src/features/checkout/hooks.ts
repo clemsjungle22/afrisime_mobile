@@ -9,11 +9,12 @@ export const checkoutKeys = {
   quote: (body: QuoteRequest) => ['checkout', 'quote', body] as const,
 };
 
-export function useAddresses() {
+export function useAddresses(enabled = true) {
   return useQuery({
     queryKey: checkoutKeys.addresses(),
     queryFn: ({ signal }) => checkoutApi.listAddresses(signal),
     staleTime: 5 * 60_000,
+    enabled,
   });
 }
 

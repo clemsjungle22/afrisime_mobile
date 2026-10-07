@@ -17,6 +17,10 @@ export const palette = {
   accent500: '#e8a33d',
   accent600: '#c9811a',
   canvas: '#f7f9f8',
+  cream: '#fbf7ef',
+  creamDeep: '#f3ecdd',
+  sand: '#e9e1cf',
+  gold300: '#f6c978',
   ink: '#17221d',
   muted: '#56665f',
   line: '#dbe4df',
@@ -63,13 +67,22 @@ export type ColorTokens = {
   logoBackground: string;
   /** Fin des dégradés de rayon (comme le site). */
   gradientEnd: string;
+  /** En-têtes immersifs (dégradé vert profond → vert nuit). */
+  heroStart: string;
+  heroEnd: string;
+  /** Texte et éléments posés sur les en-têtes. */
+  onHero: string;
+  onHeroMuted: string;
+  /** Ombre portée (couleur). */
+  shadow: string;
 };
 
 export const lightColors: ColorTokens = {
-  background: palette.canvas,
+  // Fond crème chaud : fait ressortir le vert profond et l'or, rendu plus premium que le gris.
+  background: palette.cream,
   surface: palette.white,
-  surfaceAlt: palette.brand50,
-  border: palette.line,
+  surfaceAlt: palette.creamDeep,
+  border: palette.sand,
   text: palette.ink,
   textMuted: palette.muted,
   textInverse: palette.white,
@@ -93,16 +106,21 @@ export const lightColors: ColorTokens = {
   disabled: '#e4eae6',
   onDisabled: '#7d8a83',
   tabInactive: palette.muted,
-  skeleton: '#e6ece8',
+  skeleton: '#efe8da',
   logoBackground: 'transparent',
   gradientEnd: palette.brand950,
+  heroStart: palette.brand800,
+  heroEnd: palette.brand950,
+  onHero: palette.white,
+  onHeroMuted: palette.brand200,
+  shadow: '#0a2a20',
 };
 
 export const darkColors: ColorTokens = {
-  background: '#0b1712',
-  surface: '#12211a',
-  surfaceAlt: '#183026',
-  border: '#27392f',
+  background: '#08130e',
+  surface: '#11201a',
+  surfaceAlt: '#172b22',
+  border: '#243a2f',
   text: '#eef4f0',
   textMuted: '#a5b5ad',
   textInverse: palette.brand950,
@@ -126,9 +144,14 @@ export const darkColors: ColorTokens = {
   disabled: '#22332a',
   onDisabled: '#6f8077',
   tabInactive: '#8fa198',
-  skeleton: '#1e3128',
+  skeleton: '#1b2d24',
   logoBackground: palette.brand50,
   gradientEnd: '#050f0b',
+  heroStart: '#123d2d',
+  heroEnd: '#050f0b',
+  onHero: palette.white,
+  onHeroMuted: palette.brand200,
+  shadow: '#000000',
 };
 
 export const spacing = {
@@ -141,9 +164,10 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
+  sm: 8,
+  md: 14,
+  lg: 20,
+  xl: 28,
   pill: 999,
 } as const;
 
@@ -160,13 +184,16 @@ export const fontFamilies = {
 } as const;
 
 export const typography = {
-  display: { fontFamily: fontFamilies.extrabold, fontSize: 28, lineHeight: 34 },
-  title: { fontFamily: fontFamilies.bold, fontSize: 22, lineHeight: 28 },
+  hero: { fontFamily: fontFamilies.extrabold, fontSize: 34, lineHeight: 40, letterSpacing: -0.8 },
+  display: { fontFamily: fontFamilies.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5 },
+  title: { fontFamily: fontFamilies.extrabold, fontSize: 22, lineHeight: 28, letterSpacing: -0.3 },
   subtitle: { fontFamily: fontFamilies.bold, fontSize: 17, lineHeight: 24 },
   body: { fontFamily: fontFamilies.regular, fontSize: 15, lineHeight: 22 },
   bodyStrong: { fontFamily: fontFamilies.semibold, fontSize: 15, lineHeight: 22 },
   label: { fontFamily: fontFamilies.semibold, fontSize: 15, lineHeight: 20 },
-  price: { fontFamily: fontFamilies.extrabold, fontSize: 16, lineHeight: 22 },
+  price: { fontFamily: fontFamilies.extrabold, fontSize: 17, lineHeight: 22, letterSpacing: -0.2 },
+  priceLg: { fontFamily: fontFamilies.extrabold, fontSize: 26, lineHeight: 32, letterSpacing: -0.5 },
+  overline: { fontFamily: fontFamilies.bold, fontSize: 11, lineHeight: 14, letterSpacing: 1.2 },
   caption: { fontFamily: fontFamilies.medium, fontSize: 13, lineHeight: 18 },
   micro: { fontFamily: fontFamilies.semibold, fontSize: 11, lineHeight: 14 },
 } as const;
@@ -179,4 +206,44 @@ export type Theme = {
   spacing: typeof spacing;
   radius: typeof radius;
   typography: typeof typography;
+  shadows: ReturnType<typeof shadows>;
 };
+
+/**
+ * Ombres douces (propriété `boxShadow`, gérée nativement par React Native en nouvelle architecture).
+ * Teintées de vert nuit plutôt que de noir pur : plus chaudes, plus « premium ».
+ */
+export function shadows(color: string) {
+  return {
+    sm: `0px 2px 8px ${color}14`,
+    md: `0px 8px 24px ${color}1f`,
+    lg: `0px 16px 40px ${color}2e`,
+  } as const;
+}
+
+/** Dégradés de la marque. */
+export const gradients = {
+  brand: [palette.brand800, palette.brand950] as const,
+  gold: ['#f2b955', palette.accent600] as const,
+  night: ['#123d2d', '#050f0b'] as const,
+};
+
+/** Assombrit une couleur #rrggbb (dégradés de rayon, ombres teintées). */
+export function shade(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number) => Math.max(0, Math.min(255, Math.round(v * (1 - amount))));
+  const r = f((n >> 16) & 255);
+  const g = f((n >> 8) & 255);
+  const b = f(n & 255);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
+
+/** Éclaircit une couleur #rrggbb vers le blanc. */
+export function tint(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v: number) => Math.round(v + (255 - v) * amount);
+  const r = f((n >> 16) & 255);
+  const g = f((n >> 8) & 255);
+  const b = f(n & 255);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Button, EmptyState, ErrorState, OfflineBanner, Screen, Segmented, Skeleton, Text } from '@/components/ui';
 import { useSession } from '@/features/auth/session';
+import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { useTheme } from '@/theme';
 import type { OrderFilter } from '../api';
 import { OrderCard } from '../components/OrderCard';
@@ -25,6 +26,7 @@ export function OrdersScreen() {
       ) : (
         <EmptyState
           icon="receipt-outline"
+          art="orders"
           title="Connectez-vous pour voir vos commandes"
           description="Suivez vos livraisons, vos paiements et commandez à nouveau en un geste."
           actionLabel="Se connecter"
@@ -82,7 +84,7 @@ function OrdersList() {
           data={orders.items}
           renderItem={renderItem}
           keyExtractor={(o) => o.id}
-          contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xl }}
+          contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingBottom: FLOATING_TAB_BAR_SPACE }}
           refreshing={orders.isRefetching && !orders.isFetchingNextPage}
           onRefresh={() => void orders.refetch()}
           onEndReached={() => {
@@ -95,6 +97,7 @@ function OrdersList() {
             filter === 'active' ? (
               <EmptyState
                 icon="bag-handle-outline"
+                art="orders"
                 title="Aucune commande en cours"
                 description="Vos commandes apparaîtront ici dès leur validation."
                 actionLabel="Découvrir la boutique"

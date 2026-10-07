@@ -3,7 +3,8 @@ import type { Suggestion } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useRef, useState, type ComponentProps } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { EmptyState, Screen, Text } from '@/components/ui';
+import { SceneIllustration } from '@/components/illustrations/SceneIllustration';
+import { Chip, EmptyState, Screen, Text } from '@/components/ui';
 import { openProduct } from '@/lib/links';
 import { useRecentSearches } from '@/stores/recentSearches';
 import { fontFamilies, minTouchSize, useTheme } from '@/theme';
@@ -13,6 +14,9 @@ import { useSuggestions } from '../hooks';
 import { useFilterParams } from '../useFilterParams';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
+
+/** Recherches fréquentes proposées quand le champ est vide (à alimenter par l'API plus tard). */
+const POPULAR = ['Riz', 'Huile', 'Gari', 'Eau', 'Savon', 'Sucre'];
 
 const suggestionIcons: Record<Suggestion['type'], IconName> = {
   query: 'search',
@@ -196,9 +200,20 @@ function SearchAssist({
           ))}
         </>
       ) : (
-        <Text color="textMuted" align="center" style={{ padding: theme.spacing.xl }}>
-          Cherchez un produit, une marque ou un rayon.
-        </Text>
+        <View style={{ alignItems: 'center', padding: theme.spacing.xl, gap: theme.spacing.md }}>
+          <SceneIllustration kind="search" size={170} />
+          <Text variant="title" align="center">
+            Que cherchez-vous ?
+          </Text>
+          <Text color="textMuted" align="center">
+            Un produit, une marque ou un rayon.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+            {POPULAR.map((q) => (
+              <Chip key={q} role="checkbox" label={q} selected={false} onPress={() => onSubmit(q)} />
+            ))}
+          </View>
+        </View>
       )}
     </ScrollView>
   );
@@ -272,6 +287,7 @@ function NoResults({ filters, onChange }: { filters: CatalogFilters; onChange: (
   ) : (
     <EmptyState
       icon="search-outline"
+      art="search"
       title={`Aucun résultat pour « ${filters.q ?? ''} »`}
       description="Vérifiez l'orthographe ou essayez un mot plus simple (riz, huile, savon…)."
       actionLabel="Parcourir les rayons"

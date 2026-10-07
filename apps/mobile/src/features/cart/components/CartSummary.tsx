@@ -35,59 +35,58 @@ export function CartSummary({
   const showServer = serverTotal !== null;
 
   return (
-    <View
-      style={[
-        styles.bar,
-        {
-          gap: theme.spacing.sm,
-          paddingHorizontal: theme.spacing.lg,
-          paddingTop: theme.spacing.md,
-          paddingBottom: bottomInset ?? Math.max(insets.bottom, theme.spacing.md),
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
-        },
-      ]}
-    >
-      <View style={styles.row}>
-        <Text color="textMuted">
-          Sous-total ({itemCount} article{itemCount > 1 ? 's' : ''})
-        </Text>
-        <View style={[styles.row, { gap: theme.spacing.sm }]}>
-          {calculating ? <ActivityIndicator size="small" color={theme.colors.primary} /> : null}
-          <Text
-            variant="price"
-            color={showServer ? 'text' : 'textMuted'}
-            accessibilityLabel={
-              showServer ? `Sous-total ${formatFCFA(serverTotal)}` : `Estimation ${formatFCFA(estimate)}, à confirmer`
-            }
-          >
-            {showServer ? formatFCFA(serverTotal) : `≈ ${formatFCFA(estimate)}`}
+    <View style={{ paddingHorizontal: theme.spacing.md, paddingBottom: bottomInset ?? Math.max(insets.bottom, theme.spacing.md) }}>
+      <View
+        style={[
+          styles.bar,
+          {
+            gap: theme.spacing.sm,
+            padding: theme.spacing.lg,
+            borderRadius: theme.radius.xl,
+            backgroundColor: theme.colors.surface,
+            boxShadow: theme.shadows.lg,
+          },
+        ]}
+      >
+        <View style={styles.row}>
+          <Text color="textMuted">
+            Sous-total ({itemCount} article{itemCount > 1 ? 's' : ''})
           </Text>
+          <View style={[styles.row, { gap: theme.spacing.sm }]}>
+            {calculating ? <ActivityIndicator size="small" color={theme.colors.primary} /> : null}
+            <Text
+              variant="priceLg"
+              color={showServer ? 'primary' : 'textMuted'}
+              accessibilityLabel={
+                showServer ? `Sous-total ${formatFCFA(serverTotal)}` : `Estimation ${formatFCFA(estimate)}, à confirmer`
+              }
+            >
+              {showServer ? formatFCFA(serverTotal) : `≈ ${formatFCFA(estimate)}`}
+            </Text>
+          </View>
         </View>
+        <Text variant="caption" color="textMuted">
+          {offline
+            ? 'Hors connexion : prix indicatifs, confirmés dès le retour du réseau.'
+            : showServer
+              ? 'Frais de livraison calculés à l’étape suivante.'
+              : 'Vérification des prix et du stock…'}
+        </Text>
+        <Button
+          label={offline ? 'Connexion requise pour commander' : 'Passer la commande'}
+          size="lg"
+          fullWidth
+          disabled={checkoutDisabled}
+          loading={checkoutLoading}
+          onPress={onCheckout}
+        />
       </View>
-      <Text variant="caption" color="textMuted">
-        {offline
-          ? 'Hors connexion : prix indicatifs, confirmés dès le retour du réseau.'
-          : showServer
-            ? 'Frais de livraison calculés à l’étape suivante.'
-            : 'Vérification des prix et du stock…'}
-      </Text>
-      <Button
-        label={offline ? 'Connexion requise pour commander' : 'Passer la commande'}
-        size="lg"
-        fullWidth
-        disabled={checkoutDisabled}
-        loading={checkoutLoading}
-        onPress={onCheckout}
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
+  bar: {},
   row: {
     flexDirection: 'row',
     alignItems: 'center',

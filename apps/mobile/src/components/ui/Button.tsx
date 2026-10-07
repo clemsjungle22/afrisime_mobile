@@ -11,7 +11,7 @@ import {
 import { minTouchSize, useTheme, type ColorTokens } from '@/theme';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger';
 type Size = 'md' | 'lg';
 
 export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
@@ -30,6 +30,7 @@ const variantColors: Record<
   { bg: keyof ColorTokens; bgPressed: keyof ColorTokens; fg: keyof ColorTokens; border?: keyof ColorTokens }
 > = {
   primary: { bg: 'primary', bgPressed: 'primaryPressed', fg: 'onPrimary' },
+  accent: { bg: 'accent', bgPressed: 'accentSoft', fg: 'onAccent' },
   secondary: { bg: 'primarySoft', bgPressed: 'surfaceAlt', fg: 'onPrimarySoft', border: 'border' },
   ghost: { bg: 'background', bgPressed: 'surfaceAlt', fg: 'primary' },
   danger: { bg: 'error', bgPressed: 'error', fg: 'textInverse' },

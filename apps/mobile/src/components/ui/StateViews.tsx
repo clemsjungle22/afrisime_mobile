@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { isApiError } from '@/api/errors';
+import { SceneIllustration, type SceneKind } from '@/components/illustrations/SceneIllustration';
 import { useTheme } from '@/theme';
 import { Button } from './Button';
 import { Text } from './Text';
@@ -14,20 +15,26 @@ type MessageProps = {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** Scène illustrée à la place de l'icône. */
+  art?: SceneKind;
 };
 
-function MessageView({ icon, title, description, actionLabel, onAction }: MessageProps) {
+function MessageView({ icon, title, description, actionLabel, onAction, art }: MessageProps) {
   const theme = useTheme();
   return (
     <View style={[styles.container, { padding: theme.spacing.xl, gap: theme.spacing.md }]}>
-      <View
-        style={[styles.iconCircle, { backgroundColor: theme.colors.primarySoft }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <Ionicons name={icon} size={32} color={theme.colors.onPrimarySoft} />
-      </View>
-      <Text variant="subtitle" align="center" accessibilityRole="header">
+      {art ? (
+        <SceneIllustration kind={art} size={180} />
+      ) : (
+        <View
+          style={[styles.iconCircle, { backgroundColor: theme.colors.primarySoft }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Ionicons name={icon} size={32} color={theme.colors.onPrimarySoft} />
+        </View>
+      )}
+      <Text variant="title" align="center" accessibilityRole="header">
         {title}
       </Text>
       {description ? (
@@ -36,7 +43,7 @@ function MessageView({ icon, title, description, actionLabel, onAction }: Messag
         </Text>
       ) : null}
       {actionLabel && onAction ? (
-        <Button label={actionLabel} variant="secondary" onPress={onAction} style={styles.action} />
+        <Button label={actionLabel} variant="primary" onPress={onAction} style={styles.action} />
       ) : null}
     </View>
   );
@@ -53,6 +60,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => 
   return (
     <MessageView
       icon={network ? 'cloud-offline-outline' : 'alert-circle-outline'}
+      art={network ? 'offline' : undefined}
       title={network ? 'Connexion impossible' : 'Oups, un problème est survenu'}
       description={description}
       actionLabel="Réessayer"

@@ -10,5 +10,8 @@ export { Segmented } from './Segmented';
 export { Skeleton } from './Skeleton';
 export { SnackbarHost } from './SnackbarHost';
 export { EmptyState, ErrorState } from './StateViews';
+export { FadeIn } from './FadeIn';
+export { Pattern } from './Pattern';
+export { PressableScale } from './PressableScale';
 export { Text, type TextProps } from './Text';
 export { TextField } from './TextField';

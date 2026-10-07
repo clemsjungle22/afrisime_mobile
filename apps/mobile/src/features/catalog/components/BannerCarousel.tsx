@@ -1,7 +1,9 @@
 import type { HomeBanner } from '@afrisime/shared';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -9,134 +11,203 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Button, Text } from '@/components/ui';
-import { palette, useTheme, type ColorTokens } from '@/theme';
+import { useReducedMotion } from 'react-native-reanimated';
+import { ProductIllustration, type PackagingKind } from '@/components/illustrations/ProductIllustration';
+import { Pattern, Text } from '@/components/ui';
+import { gradients, palette, useTheme } from '@/theme';
 
 type Props = {
   banners: HomeBanner[];
   onPressBanner: (banner: HomeBanner) => void;
 };
 
-const toneColors: Record<HomeBanner['tone'], { bg: string; fg: string; muted: string }> = {
-  brand: { bg: palette.brand900, fg: palette.white, muted: palette.brand200 },
-  accent: { bg: palette.accent500, fg: palette.brand950, muted: palette.brand900 },
-  neutral: { bg: palette.brand100, fg: palette.brand950, muted: palette.brand700 },
+const TONES: Record<HomeBanner['tone'], { colors: readonly [string, string]; fg: string; muted: string; overline: string; cta: string; ctaText: string; art: PackagingKind; artColor: string }> = {
+  brand: {
+    colors: gradients.brand,
+    fg: palette.white,
+    muted: palette.brand200,
+    overline: palette.accent500,
+    cta: palette.accent500,
+    ctaText: palette.brand950,
+    art: 'sack',
+    artColor: palette.accent600,
+  },
+  accent: {
+    colors: gradients.gold,
+    fg: palette.brand950,
+    muted: '#5b3a06',
+    overline: palette.brand900,
+    cta: palette.brand900,
+    ctaText: palette.white,
+    art: 'jerrycan',
+    artColor: '#c2791b',
+  },
+  neutral: {
+    colors: ['#2f6b2a', '#16391a'],
+    fg: palette.white,
+    muted: '#cfe6c2',
+    overline: '#f6c978',
+    cta: palette.white,
+    ctaText: '#16391a',
+    art: 'jar',
+    artColor: '#4f8a2b',
+  },
 };
 
-const ctaVariant: Record<HomeBanner['tone'], 'secondary' | 'primary'> = {
-  brand: 'secondary',
-  accent: 'primary',
-  neutral: 'primary',
+const OVERLINES: Record<HomeBanner['tone'], string> = {
+  brand: 'AFRISIME · LOMÉ',
+  accent: 'FORMATS PRO',
+  neutral: 'MADE IN TOGO',
 };
 
-/** Bannières défilantes (peu nombreuses : ScrollView paginé suffit). */
+const AUTOPLAY_MS = 5500;
+
+/** Bannières : dégradé, motif, illustration, défilement automatique doux (désactivé si animations réduites). */
 export function BannerCarousel({ banners, onPressBanner }: Props) {
   const theme = useTheme();
+  const reduceMotion = useReducedMotion();
   const { width } = useWindowDimensions();
   const cardWidth = width - theme.spacing.lg * 2;
+  const step = cardWidth + theme.spacing.md;
   const [index, setIndex] = useState(0);
+  const ref = useRef<ScrollView>(null);
+  const touching = useRef(false);
+
+  useEffect(() => {
+    if (reduceMotion || banners.length < 2) return;
+    const id = setInterval(() => {
+      if (touching.current) return;
+      setIndex((i) => {
+        const next = (i + 1) % banners.length;
+        ref.current?.scrollTo({ x: next * step, animated: true });
+        return next;
+      });
+    }, AUTOPLAY_MS);
+    return () => clearInterval(id);
+  }, [reduceMotion, banners.length, step]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.round(e.nativeEvent.contentOffset.x / (cardWidth + theme.spacing.md));
+    const i = Math.round(e.nativeEvent.contentOffset.x / step);
     if (i !== index) setIndex(i);
   };
 
   if (banners.length === 0) return null;
 
   return (
-    <View style={{ gap: theme.spacing.sm }}>
+    <View style={{ gap: theme.spacing.md }}>
       <ScrollView
+        ref={ref}
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
-        snapToInterval={cardWidth + theme.spacing.md}
+        snapToInterval={step}
         snapToAlignment="start"
         contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, gap: theme.spacing.md }}
         onScroll={onScroll}
+        onScrollBeginDrag={() => (touching.current = true)}
+        onScrollEndDrag={() => (touching.current = false)}
         scrollEventThrottle={32}
       >
         {banners.map((b) => {
-          const tone = toneColors[b.tone];
+          const tone = TONES[b.tone];
           return (
-            <View
+            <Pressable
               key={b.id}
-              style={[
-                styles.banner,
-                {
-                  width: cardWidth,
-                  backgroundColor: tone.bg,
-                  borderRadius: theme.radius.lg,
-                  padding: theme.spacing.xl,
-                  gap: theme.spacing.sm,
-                },
-              ]}
+              onPress={() => onPressBanner(b)}
+              accessibilityRole="button"
+              accessibilityLabel={[b.title, b.subtitle, b.ctaLabel].filter(Boolean).join('. ')}
+              style={[styles.banner, { width: cardWidth, borderRadius: theme.radius.xl, boxShadow: theme.shadows.md }]}
             >
+              <LinearGradient colors={tone.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
               {b.imageUrl ? (
-                <Image
-                  source={{ uri: b.imageUrl }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  accessible={false}
-                />
-              ) : null}
-              <Text variant="title" style={{ color: tone.fg }} numberOfLines={2}>
-                {b.title}
-              </Text>
-              {b.subtitle ? (
-                <Text variant="body" style={{ color: tone.muted }} numberOfLines={2}>
-                  {b.subtitle}
+                <Image source={{ uri: b.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+              ) : (
+                <>
+                  <Pattern color={tone.fg} opacity={0.08} size={30} />
+                  <View style={styles.glow} />
+                  <View style={styles.art}>
+                    <ProductIllustration kind={tone.art} color={tone.artColor} size={150} />
+                  </View>
+                </>
+              )}
+              <View style={styles.text}>
+                <Text variant="overline" style={{ color: tone.overline }}>
+                  {OVERLINES[b.tone]}
                 </Text>
-              ) : null}
-              {b.ctaLabel && b.link ? (
-                <Button
-                  label={b.ctaLabel}
-                  variant={ctaVariant[b.tone]}
-                  onPress={() => onPressBanner(b)}
-                  style={styles.cta}
-                />
-              ) : null}
-            </View>
+                <Text variant="title" style={{ color: tone.fg, fontSize: 21, lineHeight: 26 }} numberOfLines={3}>
+                  {b.title}
+                </Text>
+                {b.subtitle ? (
+                  <Text variant="caption" style={{ color: tone.muted }} numberOfLines={2}>
+                    {b.subtitle}
+                  </Text>
+                ) : null}
+                {b.ctaLabel ? (
+                  <View style={[styles.cta, { backgroundColor: tone.cta, borderRadius: theme.radius.pill }]}>
+                    <Text variant="label" style={{ color: tone.ctaText, fontSize: 14 }}>
+                      {b.ctaLabel}  →
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            </Pressable>
           );
         })}
       </ScrollView>
-      {banners.length > 1 ? <Dots count={banners.length} active={index} colors={theme.colors} /> : null}
-    </View>
-  );
-}
-
-function Dots({ count, active, colors }: { count: number; active: number; colors: ColorTokens }) {
-  return (
-    <View
-      style={styles.dots}
-      accessibilityLabel={`Bannière ${active + 1} sur ${count}`}
-      accessibilityRole="text"
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.dot,
-            {
-              width: i === active ? 18 : 6,
-              backgroundColor: i === active ? colors.primary : colors.border,
-            },
-          ]}
-        />
-      ))}
+      {banners.length > 1 ? (
+        <View style={styles.dots} accessibilityLabel={`Bannière ${index + 1} sur ${banners.length}`}>
+          {banners.map((b, i) => (
+            <View
+              key={b.id}
+              style={[
+                styles.dot,
+                { width: i === index ? 22 : 7, backgroundColor: i === index ? theme.colors.primary : theme.colors.border },
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    minHeight: 180,
-    justifyContent: 'flex-end',
+    height: 214,
     overflow: 'hidden',
+  },
+  glow: {
+    zIndex: 0,
+    position: 'absolute',
+    right: -30,
+    top: 10,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: '#ffffff',
+    opacity: 0.12,
+  },
+  art: {
+    zIndex: 1,
+    position: 'absolute',
+    right: -12,
+    bottom: -6,
+    transform: [{ rotate: '-8deg' }],
+  },
+  text: {
+    zIndex: 2,
+    flex: 1,
+    width: '66%',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 5,
+    justifyContent: 'center',
   },
   cta: {
     alignSelf: 'flex-start',
-    marginTop: 4,
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   dots: {
     flexDirection: 'row',
@@ -144,7 +215,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: {
-    height: 6,
-    borderRadius: 3,
+    height: 7,
+    borderRadius: 4,
   },
 });

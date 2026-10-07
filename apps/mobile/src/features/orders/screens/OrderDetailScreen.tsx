@@ -10,6 +10,7 @@ import { formatSlotDay, formatSlotHours } from '@/lib/dates';
 import { openProduct } from '@/lib/links';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
+import { OrderProgress } from '../components/OrderProgress';
 import { StatusTimeline } from '../components/StatusTimeline';
 import { useCancelOrder, useOrder, useReorder } from '../hooks';
 import { orderStatusInfo, paymentMethodLabels } from '../status';
@@ -125,10 +126,12 @@ function OrderContent({ order }: { order: Order }) {
 
   return (
     <ScrollView contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.lg }}>
-      <View style={{ gap: theme.spacing.xs }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Badge label={status.label} tone={status.tone} />
-        <Text variant="price">{formatFCFA(order.total)}</Text>
+        <Text variant="priceLg" color="primary">{formatFCFA(order.total)}</Text>
       </View>
+
+      <OrderProgress status={order.status} fulfillment={order.fulfillment} />
 
       {order.payable ? (
         <View style={{ gap: theme.spacing.sm, padding: theme.spacing.lg, borderRadius: theme.radius.lg, backgroundColor: theme.colors.warningSoft }}>
@@ -175,7 +178,7 @@ function OrderContent({ order }: { order: Order }) {
           .map((l) => (
             <View key={l.variantId} style={{ flexDirection: 'row', gap: theme.spacing.md, alignItems: 'center' }}>
               <View style={{ width: 44, height: 44, borderRadius: theme.radius.sm, overflow: 'hidden' }}>
-                <ProductThumb name={l.productName} imageUrl={l.imageUrl} color={l.color} size="sm" />
+                <ProductThumb name={l.productName} imageUrl={l.imageUrl} color={l.color} packaging={l.variantLabel} scale={0.85} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text

@@ -1,6 +1,9 @@
 import type { Availability, ProductSummary } from '@afrisime/shared';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { useCart } from '@/features/cart/store';
 import { ProductCard } from '../components/ProductCard';
+
+jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
 
 const NBSP = ' ';
 
@@ -74,9 +77,26 @@ describe('ProductCard', () => {
     const onPress = jest.fn();
     const product = makeProduct('available');
     await render(<ProductCard product={product} onPress={onPress} />);
-    const card = screen.getByRole('button');
+    const card = screen.getByRole('button', { name: /^Riz parfumé long grain, Savana/ });
     expect(card.props.accessibilityLabel).toContain('Riz parfumé long grain');
     await fireEvent.press(card);
     expect(onPress).toHaveBeenCalledWith(product);
+  });
+
+  it('ajout express : le format principal part au panier sans ouvrir la fiche', async () => {
+    useCart.getState().clear();
+    const onPress = jest.fn();
+    await render(<ProductCard product={makeProduct('available')} onPress={onPress} />);
+    await fireEvent.press(screen.getByLabelText('Ajouter Riz parfumé long grain, Sac 5 kg, au panier'));
+    expect(onPress).not.toHaveBeenCalled();
+    expect(useCart.getState().lines).toEqual([expect.objectContaining({ variantId: 'var_1', quantity: 1 })]);
+  });
+
+  it('pas d’ajout express pour un produit indisponible ou sur devis', async () => {
+    for (const availability of ['unavailable', 'quote_only'] as const) {
+      const { unmount } = await render(<ProductCard product={makeProduct(availability)} onPress={jest.fn()} />);
+      expect(screen.queryByLabelText(/^Ajouter .* au panier$/)).toBeNull();
+      await unmount();
+    }
   });
 });

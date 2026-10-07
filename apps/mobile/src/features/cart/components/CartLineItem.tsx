@@ -36,8 +36,10 @@ export const CartLineItem = memo(function CartLineItem({ line, server, onQuantit
           gap: theme.spacing.md,
           padding: theme.spacing.md,
           borderRadius: theme.radius.lg,
-          borderColor: unavailable ? theme.colors.error : theme.colors.border,
+          borderWidth: unavailable ? 1.5 : 0,
+          borderColor: unavailable ? theme.colors.error : 'transparent',
           backgroundColor: theme.colors.surface,
+          boxShadow: theme.shadows.sm,
         },
       ]}
     >
@@ -47,7 +49,7 @@ export const CartLineItem = memo(function CartLineItem({ line, server, onQuantit
         accessibilityLabel={`Voir ${s.name}`}
         style={[styles.thumb, { borderRadius: theme.radius.md, opacity: unavailable ? 0.5 : 1 }]}
       >
-        <ProductThumb name={s.name} imageUrl={s.imageUrl} color={s.color} size="sm" />
+        <ProductThumb name={s.name} imageUrl={s.imageUrl} color={s.color} packaging={s.variantLabel} scale={0.82} />
       </Pressable>
 
       <View style={[styles.flex, { gap: 2 }]}>
@@ -107,11 +109,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: {
     flexDirection: 'row',
-    borderWidth: 1,
   },
   thumb: {
-    width: 72,
-    height: 72,
+    width: 84,
+    height: 84,
     overflow: 'hidden',
   },
   titleRow: {

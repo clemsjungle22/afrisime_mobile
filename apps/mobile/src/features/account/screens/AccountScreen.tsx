@@ -1,24 +1,26 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { maskPhone } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Alert, StyleSheet, View } from 'react-native';
 import { apiConfig } from '@/api/config';
 import { MOCK_OTP_CODE, RATE_LIMITED_PHONE } from '@/api/mock/authServer';
 import { SEED_USER } from '@/api/mock/db';
 import { useMockScenarios } from '@/api/mock/scenarios';
-import { Badge, Button, Screen, Skeleton, Text } from '@/components/ui';
+import { SceneIllustration } from '@/components/illustrations/SceneIllustration';
+import { Badge, Button, Pattern, Screen, Skeleton, Text } from '@/components/ui';
 import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
 import { showSnackbar } from '@/stores/snackbar';
-import { useTheme } from '@/theme';
+import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
+import { gradients, palette, useTheme } from '@/theme';
 
 export function AccountScreen() {
   const theme = useTheme();
   const status = useSession((s) => s.status);
   return (
-    <Screen scroll>
+    <Screen scroll contentStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE }}>
       <Text variant="display" accessibilityRole="header">
         Compte
       </Text>
@@ -35,16 +37,23 @@ function Guest() {
       style={{
         gap: theme.spacing.md,
         padding: theme.spacing.xl,
-        borderRadius: theme.radius.lg,
-        backgroundColor: theme.colors.primarySoft,
+        borderRadius: theme.radius.xl,
+        overflow: 'hidden',
+        boxShadow: theme.shadows.md,
       }}
     >
-      <Ionicons name="person-circle-outline" size={48} color={theme.colors.onPrimarySoft} />
-      <Text variant="subtitle">Connectez-vous pour commander</Text>
-      <Text color="textMuted">
+      <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <Pattern color={palette.white} opacity={0.07} size={36} />
+      <View style={{ alignItems: 'center' }}>
+        <SceneIllustration kind="welcome" size={150} />
+      </View>
+      <Text variant="title" style={{ color: palette.white }}>
+        Connectez-vous pour commander
+      </Text>
+      <Text style={{ color: palette.brand200 }}>
         Suivez vos commandes, retrouvez votre panier sur tous vos appareils et accédez aux prix de votre profil.
       </Text>
-      <Button label="Se connecter ou créer un compte" size="lg" fullWidth onPress={() => router.push('/login')} />
+      <Button label="Se connecter ou créer un compte" size="lg" fullWidth variant="accent" onPress={() => router.push('/login')} />
     </View>
   );
 }
@@ -104,18 +113,30 @@ function SignedIn() {
 
   return (
     <View style={{ gap: theme.spacing.lg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+          padding: theme.spacing.lg,
+          borderRadius: theme.radius.xl,
+          overflow: 'hidden',
+          boxShadow: theme.shadows.md,
+        }}
+      >
+        <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <Pattern color={palette.white} opacity={0.07} size={36} />
         <View
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
+            width: 60,
+            height: 60,
+            borderRadius: 30,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: theme.colors.primary,
+            backgroundColor: palette.accent500,
           }}
         >
-          <Text variant="title" color="onPrimary">
+          <Text variant="title" style={{ color: palette.brand950 }}>
             {(user?.firstName?.[0] ?? '?').toUpperCase()}
           </Text>
         </View>
@@ -123,10 +144,10 @@ function SignedIn() {
           {me.isPending ? (
             <Skeleton width="60%" height={20} />
           ) : (
-            <Text variant="subtitle">{name || 'Profil à compléter'}</Text>
+            <Text variant="subtitle" style={{ color: palette.white }}>{name || 'Profil à compléter'}</Text>
           )}
           {phone ? (
-            <Text color="textMuted" accessibilityLabel="Numéro masqué">
+            <Text style={{ color: palette.brand200 }} accessibilityLabel="Numéro masqué">
               {maskPhone(phone)}
             </Text>
           ) : null}

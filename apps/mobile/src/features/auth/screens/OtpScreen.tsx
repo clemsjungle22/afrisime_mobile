@@ -4,13 +4,14 @@ import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { isApiError } from '@/api/errors';
-import { Button, Screen, Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { formatCountdown } from '@/lib/dates';
 import { getDeviceInfo } from '@/lib/device';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { authApi } from '../api';
-import { AuthHeader, closeAuthFlow } from '../components/AuthHeader';
+import { closeAuthFlow } from '../components/AuthHeader';
+import { AuthHero } from '../components/AuthHero';
 import { OTP_LENGTH, OtpInput } from '../components/OtpInput';
 import { otpErrorMessage, useOtpFlow } from '../otpFlow';
 import { signIn } from '../session';
@@ -85,13 +86,21 @@ export function OtpScreen() {
   const resendIn = Math.max(0, resendAt - now);
 
   return (
-    <Screen padded={false}>
-      <AuthHeader />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.xl }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <AuthHero title="Code de vérification" subtitle="Un SMS vient de partir vers votre téléphone." />
+        <View
+          style={{
+            flex: 1,
+            marginTop: -28,
+            borderTopLeftRadius: theme.radius.xl,
+            borderTopRightRadius: theme.radius.xl,
+            backgroundColor: theme.colors.background,
+            padding: theme.spacing.xl,
+            gap: theme.spacing.xl,
+          }}
+        >
         <View style={{ gap: theme.spacing.sm }}>
-          <Text variant="display" accessibilityRole="header">
-            Code de vérification
-          </Text>
           <Text color="textMuted">
             Saisissez le code à 6 chiffres envoyé par SMS au{' '}
             <Text variant="bodyStrong">{formatPhone(phone)}</Text>.
@@ -147,7 +156,8 @@ export function OtpScreen() {
             onPress={() => resend.mutate()}
           />
         )}
+        </View>
       </ScrollView>
-    </Screen>
+    </View>
   );
 }

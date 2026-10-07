@@ -17,10 +17,11 @@ type Props = {
   /** Contenu au-dessus des résultats (correction orthographique, description du rayon…). */
   header?: (products: ReturnType<typeof useProducts>) => ReactElement | null;
   empty: (products: ReturnType<typeof useProducts>) => ReactElement;
+  bottomSpace?: number;
 };
 
 /** Barre filtres/tri + grille de résultats + panneaux, branchés sur les mêmes filtres. */
-export function FilteredProducts({ filters, onChange, hide = [], header, empty }: Props) {
+export function FilteredProducts({ filters, onChange, hide = [], header, empty, bottomSpace }: Props) {
   const products = useProducts(filters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -37,7 +38,7 @@ export function FilteredProducts({ filters, onChange, hide = [], header, empty }
         ignore={hide}
       />
       <OfflineBanner updatedAt={products.dataUpdatedAt} />
-      <ProductGrid products={products} header={header?.(products)} empty={empty(products)} />
+      <ProductGrid products={products} header={header?.(products)} empty={empty(products)} bottomSpace={bottomSpace} />
       <FilterSheet
         visible={filtersOpen}
         filters={filters}

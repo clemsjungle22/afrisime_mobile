@@ -12,10 +12,12 @@ type Props = {
   products: ReturnType<typeof useProducts>;
   header?: ReactElement | null;
   empty: ReactElement;
+  /** Espace libre sous la liste (barre d'onglets flottante). */
+  bottomSpace?: number;
 };
 
 /** Grille 2 colonnes paginée, avec tous les états (chargement, erreur, vide, page suivante). */
-export function ProductGrid({ products, header, empty }: Props) {
+export function ProductGrid({ products, header, empty, bottomSpace }: Props) {
   const theme = useTheme();
   const onPressProduct = useCallback((p: ProductSummary) => openProduct(p.slug), []);
   const gutter = theme.spacing.xs + 2;
@@ -60,7 +62,7 @@ export function ProductGrid({ products, header, empty }: Props) {
       keyExtractor={(p) => p.id}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.xl }}
+      contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: bottomSpace ?? theme.spacing.xl }}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       refreshing={products.isRefetching && !products.isFetchingNextPage}

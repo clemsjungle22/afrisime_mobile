@@ -22,3 +22,7 @@ jest.mock('expo-secure-store', () => {
 jest.mock('expo-crypto', () => ({
   randomUUID: () => require('crypto').randomUUID(),
 }));
+
+// Reanimated 4 : moteur de worklets simulé + utilitaires de test officiels (animations synchrones).
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+require('react-native-reanimated').setUpTests();

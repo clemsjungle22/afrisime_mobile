@@ -4,10 +4,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { isApiError } from '@/api/errors';
-import { Button, Screen, Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { fontFamilies, minTouchSize, useTheme } from '@/theme';
 import { authApi } from '../api';
-import { AuthHeader } from '../components/AuthHeader';
+import { AuthHero } from '../components/AuthHero';
 import { otpErrorMessage, useOtpFlow } from '../otpFlow';
 
 export function PhoneScreen() {
@@ -41,20 +41,29 @@ export function PhoneScreen() {
     : null;
 
   return (
-    <Screen padded={false}>
-      <AuthHeader action="close" />
+    <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: theme.spacing.xl, gap: theme.spacing.lg }}
-        >
-          <View style={{ gap: theme.spacing.sm }}>
-            <Text variant="display" accessibilityRole="header">
-              Votre numéro
-            </Text>
-            <Text color="textMuted">
-              Connexion ou création de compte : nous vous envoyons un code par SMS. Pas de mot de passe à retenir.
-            </Text>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+          <AuthHero
+            action="close"
+            showArt
+            title="Bienvenue chez AfriSime"
+            subtitle="Connectez-vous ou créez votre compte en moins d’une minute."
+          />
+          <View
+            style={{
+              flex: 1,
+              marginTop: -28,
+              borderTopLeftRadius: theme.radius.xl,
+              borderTopRightRadius: theme.radius.xl,
+              backgroundColor: theme.colors.background,
+              padding: theme.spacing.xl,
+              gap: theme.spacing.lg,
+            }}
+          >
+          <View style={{ gap: theme.spacing.xs }}>
+            <Text variant="title">Votre numéro</Text>
+            <Text color="textMuted">Nous vous envoyons un code par SMS. Pas de mot de passe à retenir.</Text>
           </View>
 
           <View style={{ gap: theme.spacing.xs }}>
@@ -109,9 +118,10 @@ export function PhoneScreen() {
           <Text variant="caption" color="textMuted" align="center">
             Un SMS vous sera envoyé. Des frais de votre opérateur peuvent s’appliquer.
           </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 }
 

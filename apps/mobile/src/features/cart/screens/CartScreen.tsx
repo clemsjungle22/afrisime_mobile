@@ -8,6 +8,7 @@ import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { useIsOffline } from '@/lib/network';
 import { showSnackbar } from '@/stores/snackbar';
+import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { useTheme } from '@/theme';
 import { CartChangedNotice } from '../components/CartChangedNotice';
 import { CartLineItem } from '../components/CartLineItem';
@@ -110,6 +111,7 @@ export function CartScreen() {
         </Text>
         <EmptyState
           icon="cart-outline"
+          art="cart"
           title="Votre panier est vide"
           description="Ajoutez des produits depuis la boutique : votre panier est conservé même hors connexion."
           actionLabel="Découvrir la boutique"
@@ -164,7 +166,7 @@ export function CartScreen() {
         checkoutDisabled={offline || purchasableCount === 0}
         checkoutLoading={checkingOut}
         onCheckout={() => void onCheckout()}
-        bottomInset={theme.spacing.md}
+        bottomInset={FLOATING_TAB_BAR_SPACE}
       />
     </Screen>
   );

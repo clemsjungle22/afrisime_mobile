@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   formatFCFA,
   formatNationalInput,
@@ -15,6 +14,7 @@ import { z } from 'zod';
 import { newIdempotencyKey } from '@/api/client';
 import { isApiError } from '@/api/errors';
 import { Button, ErrorState, Segmented, Skeleton, Text, TextField } from '@/components/ui';
+import { PulseIcon } from '@/components/ui/PulseIcon';
 import { useSession } from '@/features/auth/session';
 import { formatCountdown } from '@/lib/dates';
 import { useTheme } from '@/theme';
@@ -145,9 +145,9 @@ function PaymentFlow({ order }: { order: Order }) {
       {intent && polling && !stoppedWaiting ? (
         <View
           accessibilityLiveRegion="polite"
-          style={{ gap: theme.spacing.md, padding: theme.spacing.xl, borderRadius: theme.radius.lg, backgroundColor: theme.colors.primarySoft, alignItems: 'center' }}
+          style={{ gap: theme.spacing.md, padding: theme.spacing.xl, borderRadius: theme.radius.xl, backgroundColor: theme.colors.surface, boxShadow: theme.shadows.md, alignItems: 'center' }}
         >
-          <Ionicons name="phone-portrait-outline" size={44} color={theme.colors.onPrimarySoft} />
+          <PulseIcon icon="phone-portrait" />
           <Text variant="title" align="center">
             Confirmez sur votre téléphone
           </Text>
