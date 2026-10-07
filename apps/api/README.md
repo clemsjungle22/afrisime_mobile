@@ -19,11 +19,11 @@ Unique point d'entrée de l'app mobile et du back-office. L'app ne parle **jamai
 ```bash
 npm run db:migrate   # crée les tables (rejouable)
 npm run db:seed      # charge les données d'exemple (rejouable, sans doublon)
-npm run api          # http://localhost:3000
+npm run api          # http://localhost:4000
 ```
 
-Vérifier : `http://localhost:3000/health` → `{ "status": "ok", "database": "ok" }`.
-Contrat de l'API : `http://localhost:3000/v1/openapi.json`.
+Vérifier : `http://localhost:4000/health` → `{ "status": "ok", "database": "ok" }`.
+Contrat de l'API : `http://localhost:4000/v1/openapi.json`.
 
 ## Commandes
 
