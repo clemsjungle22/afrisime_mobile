@@ -77,7 +77,7 @@ beforeEach(() => {
 
 describe('création de commande', () => {
   it('Mobile Money : en attente de paiement, numéro lisible, délai de paiement', async () => {
-    const q = makeQuote('tmoney');
+    const q = makeQuote('mixx');
     const order = await createOrder(USER, { quoteId: q.quoteId }, 'k1', T0);
     expect(order).toMatchObject({ status: 'pending_payment', payable: true, total: 10000 });
     expect(order.orderNumber).toBe('AFS-2026-000123');
@@ -95,7 +95,7 @@ describe('création de commande', () => {
   });
 
   it('idempotence : même clé = même commande (double tap, reconnexion)', async () => {
-    const q = makeQuote('tmoney');
+    const q = makeQuote('mixx');
     const a = await createOrder(USER, { quoteId: q.quoteId }, 'same-key', T0);
     const b = await createOrder(USER, { quoteId: q.quoteId }, 'same-key', T0 + 1000);
     expect(b.id).toBe(a.id);
@@ -103,25 +103,25 @@ describe('création de commande', () => {
   });
 
   it('même clé, autre contenu → 409', async () => {
-    await createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, 'k', T0);
-    expect(await rejection(createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, 'k', T0))).toMatchObject({
+    await createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0);
+    expect(await rejection(createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0))).toMatchObject({
       code: 'IDEMPOTENCY_CONFLICT',
       status: 409,
     });
   });
 
   it('devis expiré ou déjà utilisé', async () => {
-    const q = makeQuote('tmoney');
+    const q = makeQuote('mixx');
     expect(await rejection(createOrder(USER, { quoteId: q.quoteId }, 'k1', T0 + 16 * 60_000))).toMatchObject({
       code: 'QUOTE_EXPIRED',
     });
-    const q2 = makeQuote('tmoney');
+    const q2 = makeQuote('mixx');
     await createOrder(USER, { quoteId: q2.quoteId }, 'k2', T0);
     expect(await rejection(createOrder(USER, { quoteId: q2.quoteId }, 'k3', T0))).toMatchObject({ code: 'QUOTE_EXPIRED' });
   });
 
   it('clé d’idempotence obligatoire', async () => {
-    expect(await rejection(createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, undefined, T0))).toMatchObject({
+    expect(await rejection(createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, undefined, T0))).toMatchObject({
       status: 400,
     });
   });
@@ -129,12 +129,12 @@ describe('création de commande', () => {
 
 describe('paiement Mobile Money', () => {
   async function pendingOrder() {
-    return createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, `k${quoteSeq}`, T0);
+    return createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, `k${quoteSeq}`, T0);
   }
 
   it('succès : en attente puis confirmé par le « serveur », commande confirmée', async () => {
     const order = await pendingOrder();
-    const intent = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p1', T0);
+    const intent = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p1', T0);
     expect(intent).toMatchObject({ status: 'pending', amount: 10000, action: { type: 'confirm_on_phone' } });
     expect((await getPayment(USER, intent.id, T0 + 1000)).status).toBe('pending');
     expect((await getPayment(USER, intent.id, T0 + PAYMENT_CONFIRM_MS)).status).toBe('succeeded');
@@ -151,21 +151,21 @@ describe('paiement Mobile Money', () => {
 
   it('expiration (…0003)', async () => {
     const order = await pendingOrder();
-    const intent = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890120003' }, 'p1', T0);
+    const intent = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890120003' }, 'p1', T0);
     expect((await getPayment(USER, intent.id, T0 + 30_000)).status).toBe('pending');
     expect((await getPayment(USER, intent.id, T0 + PAYMENT_TTL_MS)).status).toBe('expired');
   });
 
   it('RB-003 : une tentative en cours est renvoyée, jamais deux débits simultanés', async () => {
     const order = await pendingOrder();
-    const a = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p1', T0);
-    const b = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p2', T0 + 1000);
+    const a = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p1', T0);
+    const b = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p2', T0 + 1000);
     expect(b.id).toBe(a.id);
   });
 
   it('issue figée une seule fois (webhook idempotent)', async () => {
     const order = await pendingOrder();
-    const intent = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p1', T0);
+    const intent = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p1', T0);
     await getPayment(USER, intent.id, T0 + PAYMENT_CONFIRM_MS);
     await getPayment(USER, intent.id, T0 + PAYMENT_CONFIRM_MS + 1000);
     const confirmedEvents = (await getOrder(USER, order.id, T0 + PAYMENT_CONFIRM_MS + 2000)).history.filter(
@@ -177,7 +177,7 @@ describe('paiement Mobile Money', () => {
   it('commande non payable (déjà confirmée) → refus', async () => {
     const order = await createOrder(USER, { quoteId: makeQuote('cash_on_delivery').quoteId }, 'k', T0);
     expect(
-      await rejection(createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p', T0)),
+      await rejection(createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p', T0)),
     ).toMatchObject({ code: 'ORDER_NOT_PAYABLE' });
   });
 });
@@ -193,7 +193,7 @@ describe('cycle de vie', () => {
   });
 
   it('non payée à temps → annulée automatiquement', async () => {
-    const order = await createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, 'k', T0);
+    const order = await createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0);
     expect(await getOrder(USER, order.id, T0 + PAYMENT_DEADLINE_MS + 1)).toMatchObject({ status: 'cancelled', payable: false });
   });
 
@@ -206,8 +206,8 @@ describe('cycle de vie', () => {
   });
 
   it('annulation d’une commande payée → remboursement', async () => {
-    const order = await createOrder(USER, { quoteId: makeQuote('tmoney').quoteId }, 'k', T0);
-    const intent = await createPayment(USER, { orderId: order.id, method: 'tmoney', phone: '+22890123456' }, 'p', T0);
+    const order = await createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0);
+    const intent = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p', T0);
     await getPayment(USER, intent.id, T0 + PAYMENT_CONFIRM_MS);
     const cancelled = await cancelOrder(USER, order.id, T0 + PAYMENT_CONFIRM_MS + 1000);
     expect(cancelled).toMatchObject({ status: 'refunded', payment: { status: 'refunded' } });

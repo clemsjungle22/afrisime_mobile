@@ -34,7 +34,7 @@ function quote(partial: Partial<QuoteRequest>) {
     addressId: SEED_ADDRESS.id,
     agencyId: null,
     slotId: firstSlot('delivery').id,
-    paymentMethod: 'tmoney',
+    paymentMethod: 'mixx',
     useCredit: false,
     lines: [line(RIZ_5KG, 2, 4750)],
     ...partial,

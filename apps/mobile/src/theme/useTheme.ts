@@ -1,4 +1,3 @@
-import { useColorScheme } from 'react-native';
 import { darkColors, lightColors, radius, shadows, spacing, typography, type Theme } from './tokens';
 
 const lightTheme: Theme = {
@@ -18,6 +17,14 @@ const darkTheme: Theme = {
   shadows: shadows(darkColors.shadow),
 };
 
+/**
+ * Mode CLAIR uniquement : la charte AfriSime, ce sont les couleurs du logo (vert profond + or
+ * sur fond clair). Le thème sombre reste défini (darkTheme) pour une éventuelle réactivation :
+ * il suffira de revenir à `useColorScheme() === 'dark' ? darkTheme : lightTheme`.
+ */
 export function useTheme(): Theme {
-  return useColorScheme() === 'dark' ? darkTheme : lightTheme;
+  return lightTheme;
 }
+
+/** Thème sombre conservé, non utilisé (voir useTheme). */
+export const unusedDarkTheme = darkTheme;

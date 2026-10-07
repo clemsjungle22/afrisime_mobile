@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isApiError } from '@/api/errors';
-import { BottomSheet, Button, ErrorState, OfflineBanner, RadioGroup, Segmented, Skeleton, Text } from '@/components/ui';
+import { BottomSheet, Button, ErrorState, OfflineBanner, PaymentLogo, RadioGroup, Segmented, Skeleton, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { toValidateRequest, useCart } from '@/features/cart/store';
@@ -243,6 +243,7 @@ function CheckoutContent() {
                 title: m.label,
                 subtitle: m.available ? m.description : m.unavailableReason,
                 disabled: !m.available,
+                leading: <PaymentLogo method={m.id} />,
               }))}
               value={selection.paymentMethod}
               onChange={(id) => prefs.setPaymentMethod(id as typeof methods[number]['id'])}

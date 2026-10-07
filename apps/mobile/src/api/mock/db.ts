@@ -23,7 +23,7 @@ export type MockPayment = {
   id: string;
   orderId: string;
   userId: string;
-  method: 'tmoney' | 'flooz';
+  method: 'mixx' | 'flooz';
   phone: string;
   amount: number;
   createdAt: string;
@@ -85,7 +85,9 @@ export async function loadDb(): Promise<MockDb> {
   if (cache) return cache;
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    cache = raw ? { ...emptyDb(), ...(JSON.parse(raw) as MockDb) } : emptyDb();
+    // Migration : T-Money est devenu Mixx by Yas (identifiant tmoney → mixx).
+    const migrated = raw?.replaceAll('"tmoney"', '"mixx"');
+    cache = migrated ? { ...emptyDb(), ...(JSON.parse(migrated) as MockDb) } : emptyDb();
   } catch {
     cache = emptyDb();
   }

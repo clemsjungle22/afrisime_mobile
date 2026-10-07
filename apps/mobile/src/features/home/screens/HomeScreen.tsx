@@ -220,8 +220,9 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
       ) : null}
 
       {flash ? (
-        <FadeIn index={i++} style={{ paddingHorizontal: theme.spacing.sm }}>
-          <View style={[styles.flash, { borderRadius: theme.radius.xl, boxShadow: theme.shadows.md }]}>
+        <FadeIn index={i++}>
+          {/* Bande pleine largeur : les produits défilent d'un bord à l'autre de l'écran. */}
+          <View style={styles.flash}>
             <LinearGradient colors={gradients.night} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <Pattern color={palette.accent500} opacity={0.07} size={34} />
             <ProductCarousel
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
   },
   flash: {
     overflow: 'hidden',
-    paddingVertical: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
   },
 });

@@ -15,14 +15,14 @@ export const orderStatusInfo: Record<OrderStatus, { label: string; tone: BadgeTo
 };
 
 export const paymentMethodLabels: Record<PaymentMethodId, string> = {
-  tmoney: 'T-Money',
-  flooz: 'Flooz (Moov Money)',
+  mixx: 'Mixx by Yas',
+  flooz: 'Flooz (Moov Africa)',
   card: 'Carte bancaire',
   cash_on_delivery: 'Paiement à la livraison',
   pay_at_agency: 'Paiement en agence',
 };
 
-export const isMobileMoney = (m: PaymentMethodId): m is 'tmoney' | 'flooz' => m === 'tmoney' || m === 'flooz';
+export const isMobileMoney = (m: PaymentMethodId): m is 'mixx' | 'flooz' => m === 'mixx' || m === 'flooz';
 
 /** Vérification serrée au début (le client valide en général en moins d'une minute). */
 export const FAST_POLL_MS = 3_000;

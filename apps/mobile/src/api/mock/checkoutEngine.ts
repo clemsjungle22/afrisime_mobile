@@ -71,8 +71,8 @@ function paymentMethods(address: Address | null): PaymentMethodOption[] {
   const codAllowed = zone?.cashOnDelivery ?? false;
   return [
     {
-      id: 'tmoney',
-      label: 'T-Money',
+      id: 'mixx',
+      label: 'Mixx by Yas',
       description: 'Confirmez le paiement sur votre téléphone.',
       fulfillments: ['delivery', 'pickup'],
       available: true,
@@ -80,7 +80,7 @@ function paymentMethods(address: Address | null): PaymentMethodOption[] {
     },
     {
       id: 'flooz',
-      label: 'Flooz (Moov Money)',
+      label: 'Flooz (Moov Africa)',
       description: 'Confirmez le paiement sur votre téléphone.',
       fulfillments: ['delivery', 'pickup'],
       available: true,

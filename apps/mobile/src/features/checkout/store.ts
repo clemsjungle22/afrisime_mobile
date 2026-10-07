@@ -43,6 +43,13 @@ export const useCheckout = create<CheckoutPrefs>()(
     }),
     {
       name: 'afrisime-checkout',
+      version: 1,
+      // v1 : T-Money est devenu Mixx by Yas (identifiant tmoney → mixx).
+      migrate: (persisted) => {
+        const p = persisted as { paymentMethod?: string | null } | undefined;
+        if (p?.paymentMethod === 'tmoney') p.paymentMethod = 'mixx';
+        return p as never;
+      },
       storage: createJSONStorage(() => AsyncStorage),
       partialize: ({ fulfillment, addressId, agencyId, paymentMethod }) => ({
         fulfillment,

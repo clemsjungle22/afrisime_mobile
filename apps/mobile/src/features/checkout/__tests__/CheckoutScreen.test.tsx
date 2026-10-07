@@ -92,7 +92,7 @@ describe('CheckoutScreen', () => {
       expect.objectContaining({
         fulfillment: 'delivery',
         addressId: SEED_ADDRESS.id,
-        paymentMethod: 'tmoney',
+        paymentMethod: 'mixx',
         lines: [expect.objectContaining({ variantId: 'var_riz-parfume-savana_0', quantity: 2, expectedUnitPrice: 4750 })],
       }),
       expect.anything(),

@@ -13,7 +13,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { z } from 'zod';
 import { newIdempotencyKey } from '@/api/client';
 import { isApiError } from '@/api/errors';
-import { Button, ErrorState, Segmented, Skeleton, Text, TextField } from '@/components/ui';
+import { Button, ErrorState, PaymentLogo, RadioGroup, Skeleton, Text, TextField } from '@/components/ui';
 import { PulseIcon } from '@/components/ui/PulseIcon';
 import { useSession } from '@/features/auth/session';
 import { formatCountdown } from '@/lib/dates';
@@ -68,7 +68,7 @@ function PaymentFlow({ order }: { order: Order }) {
   const theme = useTheme();
   const client = useQueryClient();
   const accountPhone = useSession((s) => s.phone);
-  const [method, setMethod] = useState<'tmoney' | 'flooz'>(isMobileMoney(order.payment.method) ? order.payment.method : 'tmoney');
+  const [method, setMethod] = useState<'mixx' | 'flooz'>(isMobileMoney(order.payment.method) ? order.payment.method : 'mixx');
   const [phoneInput, setPhoneInput] = useState(formatNationalInput(accountPhone ?? ''));
   // Reprise : une tentative déjà en cours pour cette commande est suivie directement.
   const [paymentId, setPaymentId] = useState<string | null>(
@@ -190,14 +190,16 @@ function PaymentFlow({ order }: { order: Order }) {
         </View>
       ) : (
         <View style={{ gap: theme.spacing.lg }}>
-          <Segmented
-            accessibilityLabel="Opérateur Mobile Money"
-            options={[
-              { value: 'tmoney', label: 'T-Money' },
-              { value: 'flooz', label: 'Flooz' },
-            ]}
+          <RadioGroup
+            title="Payer avec"
+            items={(['mixx', 'flooz'] as const).map((id) => ({
+              id,
+              title: paymentMethodLabels[id],
+              subtitle: 'Confirmation sur votre téléphone',
+              leading: <PaymentLogo method={id} />,
+            }))}
             value={method}
-            onChange={setMethod}
+            onChange={(id) => setMethod(id as 'mixx' | 'flooz')}
           />
           <TextField
             label="Numéro Mobile Money (+228)"

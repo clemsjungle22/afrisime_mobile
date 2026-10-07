@@ -32,7 +32,7 @@ export type PaymentStatus = z.infer<typeof PaymentStatus>;
 export const OrderStatusEvent = z.object({
   status: OrderStatus,
   at: z.string().datetime(),
-  /** Précision affichable (« Paiement T-Money reçu », « Annulée à votre demande »). */
+  /** Précision affichable (« Paiement Mixx by Yas reçu », « Annulée à votre demande »). */
   note: z.string().nullable(),
 });
 export type OrderStatusEvent = z.infer<typeof OrderStatusEvent>;

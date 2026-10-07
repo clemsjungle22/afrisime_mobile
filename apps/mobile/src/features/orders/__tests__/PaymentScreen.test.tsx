@@ -39,17 +39,17 @@ const order = {
   payable: true,
   fulfillmentSummary: 'Livraison · Maison — Tokoin',
   paymentDeadline: new Date(Date.now() + 30 * 60_000).toISOString(),
-  payment: { method: 'tmoney', status: 'initiated', paymentId: null, paidAt: null },
+  payment: { method: 'mixx', status: 'initiated', paymentId: null, paidAt: null },
 } as unknown as Order;
 
 function intent(status: PaymentIntent['status'], id = 'pay_1'): PaymentIntent {
   return {
     id,
     orderId: 'ord_1',
-    method: 'tmoney',
+    method: 'mixx',
     status,
     amount: 10000,
-    action: { type: 'confirm_on_phone', url: null, instructions: 'Validez la demande T-Money.' },
+    action: { type: 'confirm_on_phone', url: null, instructions: 'Validez la demande Mixx by Yas.' },
     expiresAt: new Date(Date.now() + 90_000).toISOString(),
     failureReason: status === 'failed' ? 'Solde insuffisant.' : null,
   };
@@ -80,7 +80,7 @@ describe('PaymentScreen', () => {
 
     await fireEvent.press(await screen.findByText(/Payer 10\s000\sFCFA/));
     expect(api.createPayment).toHaveBeenCalledWith(
-      { orderId: 'ord_1', method: 'tmoney', phone: '+22890123456' } satisfies CreatePaymentBody,
+      { orderId: 'ord_1', method: 'mixx', phone: '+22890123456' } satisfies CreatePaymentBody,
       expect.stringMatching(/^[0-9a-f-]{36}$/),
     );
     expect(await screen.findByText('Confirmez sur votre téléphone')).toBeOnTheScreen();

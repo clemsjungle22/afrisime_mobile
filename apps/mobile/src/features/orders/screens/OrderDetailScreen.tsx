@@ -3,7 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Alert, ScrollView, View } from 'react-native';
 import { z } from 'zod';
 import { isApiError } from '@/api/errors';
-import { Badge, Button, ErrorState, OfflineBanner, Skeleton, Text } from '@/components/ui';
+import { Badge, Button, ErrorState, OfflineBanner, PaymentLogo, Skeleton, Text } from '@/components/ui';
 import { ProductThumb } from '@/features/catalog/components/ProductThumb';
 import { comingSoon } from '@/lib/comingSoon';
 import { formatSlotDay, formatSlotHours } from '@/lib/dates';
@@ -206,7 +206,10 @@ function OrderContent({ order }: { order: Order }) {
       </Card>
 
       <Card title="Paiement">
-        <Text>{paymentMethodLabels[order.payment.method]}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+          <PaymentLogo method={order.payment.method} />
+          <Text variant="bodyStrong">{paymentMethodLabels[order.payment.method]}</Text>
+        </View>
         <Text variant="caption" color="textMuted">
           {order.payment.status === 'succeeded'
             ? 'Payé'

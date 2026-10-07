@@ -4,6 +4,7 @@ export { Button, type ButtonProps } from './Button';
 export { Checkbox } from './Checkbox';
 export { Chip } from './Chip';
 export { OfflineBanner } from './OfflineBanner';
+export { PaymentLogo } from './PaymentLogo';
 export { RadioGroup, type RadioItem } from './RadioGroup';
 export { Screen, type ScreenProps } from './Screen';
 export { Segmented } from './Segmented';

@@ -29,7 +29,7 @@ const STEP_PREPARING_MS = 2 * 60_000;
 const STEP_SHIPPING_MS = 5 * 60_000;
 const STEP_DONE_MS = 10 * 60_000;
 
-const MOBILE_MONEY = new Set(['tmoney', 'flooz']);
+const MOBILE_MONEY = new Set(['mixx', 'flooz']);
 const CANCELLABLE: ReadonlySet<OrderStatus> = new Set(['pending_payment', 'payment_failed', 'confirmed']);
 
 /** Devis émis (en mémoire : un devis expire en 15 min, inutile de le persister). */
@@ -251,7 +251,7 @@ function outcomeFor(phone: string): MockPayment['outcome'] {
 }
 
 const OPERATOR_HINT: Record<MockPayment['method'], string> = {
-  tmoney: 'Validez la demande T-Money reçue sur votre téléphone avec votre code secret.',
+  mixx: 'Validez la demande Mixx by Yas reçue sur votre téléphone avec votre code secret.',
   flooz: 'Validez la demande Flooz reçue sur votre téléphone avec votre code secret.',
 };
 
@@ -293,7 +293,7 @@ async function settle(p: MockPayment, intent: PaymentIntent, now: number): Promi
         ...o,
         status: 'confirmed' as const,
         payment: { ...o.payment, status: 'succeeded' as const, paidAt: new Date(now).toISOString() },
-        history: [...o.history, event('confirmed', now, `Paiement ${p.method === 'tmoney' ? 'T-Money' : 'Flooz'} reçu`)],
+        history: [...o.history, event('confirmed', now, `Paiement ${p.method === 'mixx' ? 'Mixx by Yas' : 'Flooz'} reçu`)],
       };
     }
     return {
@@ -319,7 +319,7 @@ export async function createPayment(userId: string, body: CreatePaymentBody, key
   const { order: stored } = await findOrder(userId, body.orderId);
   const order = materialize(stored, now);
   if (!order.payable) throw mockError('ORDER_NOT_PAYABLE', 'Cette commande n’attend pas de paiement.', 409);
-  if (body.method !== 'tmoney' && body.method !== 'flooz') {
+  if (body.method !== 'mixx' && body.method !== 'flooz') {
     throw mockError('PAYMENT_METHOD_UNAVAILABLE', 'Ce moyen de paiement ne se règle pas en ligne.', 422);
   }
   if (!body.phone) throw mockError('VALIDATION_ERROR', 'Numéro Mobile Money requis.', 422);

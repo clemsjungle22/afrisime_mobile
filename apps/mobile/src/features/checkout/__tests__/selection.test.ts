@@ -43,7 +43,7 @@ const options: DeliveryOptions = {
     ],
   },
   paymentMethods: [
-    { id: 'tmoney', label: 'T-Money', description: null, fulfillments: ['delivery', 'pickup'], available: true, unavailableReason: null },
+    { id: 'mixx', label: 'Mixx by Yas', description: null, fulfillments: ['delivery', 'pickup'], available: true, unavailableReason: null },
     { id: 'cash_on_delivery', label: 'COD', description: null, fulfillments: ['delivery'], available: false, unavailableReason: 'Zone' },
     { id: 'pay_at_agency', label: 'Agence', description: null, fulfillments: ['pickup'], available: true, unavailableReason: null },
   ],
@@ -66,7 +66,7 @@ describe('resolveSelection', () => {
       options,
       profileAgencyId: null,
     });
-    expect(r.selection).toMatchObject({ addressId: 'a2', slotId: 'd_ok', paymentMethod: 'tmoney' });
+    expect(r.selection).toMatchObject({ addressId: 'a2', slotId: 'd_ok', paymentMethod: 'mixx' });
     expect(r.missing).toBeNull();
   });
 
@@ -77,7 +77,7 @@ describe('resolveSelection', () => {
       options,
       profileAgencyId: null,
     });
-    expect(r.selection).toMatchObject({ addressId: 'a1', slotId: 'd_ok', paymentMethod: 'tmoney' });
+    expect(r.selection).toMatchObject({ addressId: 'a1', slotId: 'd_ok', paymentMethod: 'mixx' });
   });
 
   it('retrait : agence du profil par défaut, paiement compatible', () => {
@@ -103,13 +103,13 @@ describe('toQuoteRequest', () => {
   const lines = [{ variantId: 'v', quantity: 1, expectedUnitPrice: 100, expectedAvailability: 'available' as const }];
 
   it('null tant que la sélection est incomplète', () => {
-    expect(toQuoteRequest(prefs({ addressId: 'a', slotId: null, paymentMethod: 'tmoney' }), lines)).toBeNull();
-    expect(toQuoteRequest(prefs({ addressId: 'a', slotId: 's', paymentMethod: 'tmoney' }), [])).toBeNull();
+    expect(toQuoteRequest(prefs({ addressId: 'a', slotId: null, paymentMethod: 'mixx' }), lines)).toBeNull();
+    expect(toQuoteRequest(prefs({ addressId: 'a', slotId: 's', paymentMethod: 'mixx' }), [])).toBeNull();
   });
 
   it('n’envoie que le lieu du mode choisi', () => {
     expect(
-      toQuoteRequest(prefs({ fulfillment: 'pickup', addressId: 'a', agencyId: 'g', slotId: 's', paymentMethod: 'tmoney' }), lines),
+      toQuoteRequest(prefs({ fulfillment: 'pickup', addressId: 'a', agencyId: 'g', slotId: 's', paymentMethod: 'mixx' }), lines),
     ).toMatchObject({ fulfillment: 'pickup', addressId: null, agencyId: 'g', useCredit: false });
   });
 });

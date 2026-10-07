@@ -12,6 +12,8 @@ export type RadioItem = {
   disabled?: boolean;
   /** Contenu aligné à droite (prix, frais…). */
   trailing?: ReactNode;
+  /** Visuel avant le texte (logo de moyen de paiement…). */
+  leading?: ReactNode;
 };
 
 type Props = {
@@ -55,6 +57,7 @@ export function RadioGroup({ title, items, value, onChange, error }: Props) {
             <View style={[styles.dot, { borderColor: selected ? theme.colors.primary : theme.colors.border }]}>
               {selected ? <View style={[styles.dotInner, { backgroundColor: theme.colors.primary }]} /> : null}
             </View>
+            {item.leading}
             <View style={{ flex: 1, gap: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: theme.spacing.sm }}>
                 <Text variant="bodyStrong">{item.title}</Text>
