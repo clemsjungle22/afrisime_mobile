@@ -1,7 +1,7 @@
 import { ApiErrorBody } from '@afrisime/shared';
 import { randomUUID } from 'expo-crypto';
 import type { z } from 'zod';
-import { apiConfig } from './config';
+import { apiConfig, missingServerReason } from './config';
 import { ApiError, networkErrorMessage } from './errors';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -82,6 +82,8 @@ export function newIdempotencyKey(): string {
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
+  const missing = missingServerReason();
+  if (missing) throw new ApiError({ code: 'CONFIG_ERROR', message: missing });
   const url = `${apiConfig.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
   if (!query) return url;
   const params = Object.entries(query)

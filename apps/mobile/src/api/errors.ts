@@ -1,7 +1,7 @@
 import type { ApiErrorCode } from '@afrisime/shared';
 
 /** Codes produits côté client (jamais renvoyés par le serveur). */
-export type ClientErrorCode = 'NETWORK_ERROR' | 'TIMEOUT' | 'INVALID_RESPONSE' | 'UNKNOWN';
+export type ClientErrorCode = 'NETWORK_ERROR' | 'TIMEOUT' | 'INVALID_RESPONSE' | 'CONFIG_ERROR' | 'UNKNOWN';
 
 export type ErrorCode = ApiErrorCode | ClientErrorCode | (string & {});
 

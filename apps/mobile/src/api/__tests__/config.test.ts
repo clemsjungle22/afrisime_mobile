@@ -26,6 +26,17 @@ describe('adresse du serveur', () => {
     expect(loadConfig({ url: 'https://api.afrisime.tg/' }, '10.0.0.2:8081').apiConfig.baseUrl).toBe('https://api.afrisime.tg');
   });
 
+  it("mode tunnel (…exp.direct) : aucune adresse inventée, explication affichable", () => {
+    const config = loadConfig({}, 'yx0x3mw-cayigah-8081.exp.direct');
+    expect(config.apiConfig.baseUrl).toBe('');
+    expect(config.missingServerReason()).toMatch(/mode tunnel/);
+  });
+
+  it('adresse trouvée ou mode démo : rien à signaler', () => {
+    expect(loadConfig({}, '192.168.1.69:8081').missingServerReason()).toBeNull();
+    expect(loadConfig({ mock: 'true' }, 'x.exp.direct').missingServerReason()).toBeNull();
+  });
+
   it('sans adresse Metro ni variable : vide', () => {
     expect(loadConfig({}, undefined).apiConfig.baseUrl).toBe('');
   });
