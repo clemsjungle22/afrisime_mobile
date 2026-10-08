@@ -335,6 +335,11 @@ export const orders = pgTable(
     fulfillmentSummary: text().notNull(),
     slot: jsonb().notNull(),
     paymentMethod: paymentMethod().notNull(),
+    /** État du paiement vu par le client (dernière tentative pour le Mobile Money). */
+    paymentStatus: paymentStatus().notNull(),
+    currentPaymentId: text(),
+    paidAt: timestamp({ withTimezone: true }),
+    itemCount: integer().notNull(),
     subtotal: integer().notNull(),
     deliveryFee: integer().notNull(),
     discountTotal: integer().notNull().default(0),
@@ -348,7 +353,11 @@ export const orders = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('orders_customer_idx').on(t.customerId, t.createdAt), uniqueIndex('orders_quote_uidx').on(t.quoteId)],
+  (t) => [
+    index('orders_customer_idx').on(t.customerId, t.createdAt),
+    index('orders_status_idx').on(t.status),
+    uniqueIndex('orders_quote_uidx').on(t.quoteId),
+  ],
 );
 
 /** Lignes figées au moment de la commande (prix et libellés ne bougent plus). */
@@ -370,6 +379,9 @@ export const orderLines = pgTable(
     unitPrice: integer().notNull(),
     quantity: integer().notNull(),
     lineTotal: integer().notNull(),
+    /** Ligne exactement telle qu'affichée au client au moment de la commande. */
+    snapshot: jsonb().notNull(),
+    sortOrder: integer().notNull().default(0),
   },
   (t) => [index('order_lines_order_idx').on(t.orderId)],
 );
@@ -427,6 +439,8 @@ export const payments = pgTable(
     amount: integer().notNull(),
     status: paymentStatus().notNull(),
     failureReason: text(),
+    /** Données propres au prestataire (jamais exposées au client). */
+    providerData: jsonb(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     settledAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -434,6 +448,7 @@ export const payments = pgTable(
   },
   (t) => [
     index('payments_order_idx').on(t.orderId),
+    index('payments_status_idx').on(t.status),
     uniqueIndex('payments_provider_ref_uidx').on(t.provider, t.providerReference),
   ],
 );

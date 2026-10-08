@@ -20,6 +20,17 @@ const Env = z.object({
     .regex(/^\d{6}$/, 'OTP_DEV_CODE doit faire 6 chiffres')
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  /** Prestataire de paiement. « simulated » : paiements simulés (développement uniquement). */
+  PAYMENT_PROVIDER: z.enum(['simulated']).default('simulated'),
+  /** Secret de signature des webhooks de paiement. Par défaut, dérivé d'AUTH_SECRET (développement). */
+  PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
+  /** Développement : les commandes avancent seules (préparation, livraison…). Interdit en production. */
+  ORDER_SIMULATION: z
+    .enum(['true', 'false', ''])
+    .default('false')
+    .transform((v) => v === 'true'),
+  /** Secret attendu par la route des tâches planifiées (absente = route désactivée). */
+  CRON_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
 });
 export type Env = z.infer<typeof Env>;
 
@@ -37,8 +48,14 @@ export function env(): Env {
     const lines = parsed.error.issues.map((i) => `- ${i.path.join('.')}: ${i.message}`);
     throw new Error(`Configuration invalide :\n${lines.join('\n')}`);
   }
-  if (parsed.data.NODE_ENV === 'production' && (parsed.data.OTP_DEV_CODE || parsed.data.SMS_PROVIDER === 'console')) {
-    throw new Error('Configuration invalide : OTP_DEV_CODE et SMS_PROVIDER=console sont interdits en production.');
+  const d = parsed.data;
+  if (
+    d.NODE_ENV === 'production' &&
+    (d.OTP_DEV_CODE || d.SMS_PROVIDER === 'console' || d.PAYMENT_PROVIDER === 'simulated' || d.ORDER_SIMULATION)
+  ) {
+    throw new Error(
+      'Configuration invalide : OTP_DEV_CODE, SMS_PROVIDER=console, PAYMENT_PROVIDER=simulated et ORDER_SIMULATION sont interdits en production.',
+    );
   }
   cached = parsed.data;
   return cached;

@@ -27,6 +27,11 @@ const components = {
   ServerCart: shared.ServerCart,
   ServerCartPut: shared.ServerCartPut,
   CartValidateRequest: shared.CartValidateRequest,
+  QuoteRequest: shared.QuoteRequest,
+  CreateOrderBody: shared.CreateOrderBody,
+  CancelOrderBody: shared.CancelOrderBody,
+  CreatePaymentBody: shared.CreatePaymentBody,
+  ReorderResponse: shared.ReorderResponse,
   ValidatedCart: shared.ValidatedCart,
   Address: shared.Address,
   DeliveryOptions: shared.DeliveryOptions,
@@ -68,6 +73,8 @@ function publicGet(summary: string, schema: object, options: { params?: object[]
 
 type Op = {
   summary: string;
+  /** Écriture protégée contre les doublons : en-tête Idempotency-Key obligatoire. */
+  idempotent?: boolean;
   body?: keyof typeof components;
   response?: object;
   status?: '200' | '201' | '204';
@@ -77,11 +84,15 @@ type Op = {
 };
 
 /** Opération générique : corps JSON, réponse, erreurs au format commun, jeton si `auth`. */
-function op({ summary, body, response, status = '200', auth = true, errors = {}, params }: Op) {
+function op({ summary, body, response, status = '200', auth = true, errors = {}, params, idempotent }: Op) {
+  const parameters = [
+    ...(params ?? []),
+    ...(idempotent ? [{ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 8 } }] : []),
+  ];
   return {
     summary,
     ...(auth ? { security: [{ bearer: [] }] } : {}),
-    ...(params ? { parameters: params } : {}),
+    ...(parameters.length ? { parameters } : {}),
     ...(body ? { requestBody: { required: true, content: { 'application/json': { schema: ref(body) } } } } : {}),
     responses: {
       [status]: response
@@ -199,6 +210,77 @@ export function buildOpenApi(serverUrl?: string) {
           ...op({ summary: 'Revérifier le panier (prix, stock) et lister les changements', body: 'CartValidateRequest', response: ref('ValidatedCart') }),
           security: [{}, { bearer: [] }],
         },
+      },
+      '/v1/delivery/options': {
+        get: op({
+          summary: 'Livraison, retrait en agence et moyens de paiement',
+          params: [{ name: 'addressId', in: 'query', required: false, schema: { type: 'string' } }],
+          response: ref('DeliveryOptions'),
+        }),
+      },
+      '/v1/checkout/quote': {
+        post: op({
+          summary: 'Devis final (total garanti pendant sa validité)',
+          body: 'QuoteRequest',
+          response: ref('Quote'),
+          errors: {
+            '409': 'Panier modifié (CART_CHANGED, détail des écarts), rupture ou créneau indisponible',
+            '422': 'Zone non desservie, minimum non atteint, moyen de paiement indisponible',
+          },
+        }),
+      },
+      '/v1/orders': {
+        get: op({
+          summary: 'Commandes en cours ou historique',
+          params: [
+            { name: 'status', in: 'query', required: false, schema: { enum: ['active', 'history'] } },
+            { name: 'cursor', in: 'query', required: false, schema: { type: 'string' } },
+          ],
+          response: ref('OrderList'),
+        }),
+        post: op({
+          summary: 'Commander sur un devis',
+          idempotent: true,
+          body: 'CreateOrderBody',
+          response: ref('Order'),
+          status: '201',
+          errors: {
+            '409': 'Devis expiré ou déjà utilisé (QUOTE_EXPIRED), rupture (OUT_OF_STOCK), clé réutilisée (IDEMPOTENCY_CONFLICT)',
+          },
+        }),
+      },
+      '/v1/orders/{id}': {
+        get: op({
+          summary: "Détail et suivi d'une commande",
+          params: idParam,
+          response: ref('Order'),
+          errors: { '404': 'Introuvable (NOT_FOUND)' },
+        }),
+      },
+      '/v1/orders/{id}/cancel': {
+        post: op({
+          summary: 'Annuler (remboursement si déjà payée)',
+          params: idParam,
+          body: 'CancelOrderBody',
+          response: ref('Order'),
+          errors: { '409': 'Déjà en préparation (ORDER_NOT_CANCELLABLE)' },
+        }),
+      },
+      '/v1/orders/{id}/reorder': {
+        post: op({ summary: 'Recommander (articles aux prix du jour)', params: idParam, response: ref('ReorderResponse') }),
+      },
+      '/v1/payments': {
+        post: op({
+          summary: 'Payer en Mobile Money (Mixx by Yas, Moov Money)',
+          idempotent: true,
+          body: 'CreatePaymentBody',
+          response: ref('PaymentIntent'),
+          status: '201',
+          errors: { '409': "La commande n'attend pas de paiement (ORDER_NOT_PAYABLE)" },
+        }),
+      },
+      '/v1/payments/{id}': {
+        get: op({ summary: 'Suivi du paiement', params: idParam, response: ref('PaymentIntent') }),
       },
     },
     components: {

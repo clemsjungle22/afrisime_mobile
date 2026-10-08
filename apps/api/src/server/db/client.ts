@@ -1,6 +1,6 @@
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import { env } from '../env';
 import * as schema from './schema';
 
@@ -12,13 +12,20 @@ type Holder = { db: Db | null; close: (() => Promise<void>) | null };
 const holder: Holder = ((globalThis as { __afrisimeDb?: Holder }).__afrisimeDb ??= { db: null, close: null });
 
 /**
- * Connexion via le « Transaction pooler » de Supabase (port 6543) : `prepare: false` est obligatoire,
- * le pooler ne conserve pas les requêtes préparées d'une transaction à l'autre.
+ * Connexion via le « Transaction pooler » de Supabase (port 6543), avec le pilote `pg` :
+ * une seule requête à la fois par connexion, et pas de requêtes préparées nommées.
+ * (Le pilote `postgres` enchaîne plusieurs requêtes sur une connexion sans attendre les réponses,
+ * ce que le pooler en mode transaction ne supporte pas : requêtes bloquées puis « statement timeout ».)
  */
 export function createPostgresDb(url: string, options: { max?: number } = {}) {
-  const sql = postgres(url, { prepare: false, max: options.max ?? 5, idle_timeout: 20, connect_timeout: 10 });
-  const db = drizzle(sql, { schema, casing: 'snake_case' });
-  return { db: db as unknown as Db, close: () => sql.end({ timeout: 5 }) };
+  const pool = new Pool({
+    connectionString: url,
+    max: options.max ?? 10,
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 10_000,
+  });
+  const db = drizzle(pool, { schema, casing: 'snake_case' });
+  return { db: db as unknown as Db, close: () => pool.end() };
 }
 
 export function getDb(): Db {

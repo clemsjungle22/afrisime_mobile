@@ -5,7 +5,7 @@ Unique point d'entrée de l'app mobile et du back-office. L'app ne parle **jamai
 ## Stack
 
 - **Next.js 16** (routes API uniquement, pas de pages) + TypeScript strict
-- **PostgreSQL** hébergé chez **Supabase**, via **Drizzle ORM** et le pilote `postgres`
+- **PostgreSQL** hébergé chez **Supabase**, via **Drizzle ORM** et le pilote `pg` (node-postgres)
 - **PGlite** (PostgreSQL en mémoire) pour les tests : mêmes migrations, aucune base à installer
 - Contrat : schémas zod de `@afrisime/shared` ; données d'exemple : `@afrisime/fixtures`
 

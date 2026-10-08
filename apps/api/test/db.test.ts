@@ -106,6 +106,8 @@ describe('seed', () => {
       fulfillmentSummary: 'Retrait',
       slot: {},
       paymentMethod: 'mixx',
+      paymentStatus: 'initiated',
+      itemCount: 1,
       subtotal: 1300,
       deliveryFee: 0,
       total: 1300,

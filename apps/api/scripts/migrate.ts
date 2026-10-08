@@ -1,5 +1,5 @@
 import './load-env';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { createPostgresDb } from '../src/server/db/client';
 import { env } from '../src/server/env';
 
