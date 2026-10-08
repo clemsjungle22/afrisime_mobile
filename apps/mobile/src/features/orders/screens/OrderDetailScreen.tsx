@@ -15,6 +15,7 @@ import { OrderProgress } from '../components/OrderProgress';
 import { StatusTimeline } from '../components/StatusTimeline';
 import { useCancelOrder, useOrder, useReorder } from '../hooks';
 import { orderStatusInfo, paymentMethodLabels } from '../status';
+import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 
 const Params = z.object({ orderId: z.string().min(1) });
 
@@ -27,6 +28,7 @@ export function OrderDetailScreen() {
 function OrderLoader({ orderId }: { orderId: string }) {
   const theme = useTheme();
   const order = useOrder(orderId);
+  useRefetchOnFocus(order.refetch);
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Stack.Screen options={{ title: order.data?.orderNumber ?? 'Commande' }} />

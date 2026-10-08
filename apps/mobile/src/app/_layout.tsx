@@ -16,13 +16,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, SnackbarHost, Text } from '@/components/ui';
 import { bootstrapSession } from '@/features/auth/session';
 import { useCartSync } from '@/features/cart/sync';
-import { wireOnlineManager } from '@/lib/network';
+import { wireFocusManager, wireOnlineManager } from '@/lib/network';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/theme';
 
 // Splash maintenu jusqu'au chargement des polices (évite un saut de typographie).
 void SplashScreen.preventAutoHideAsync();
 wireOnlineManager();
+wireFocusManager();
 
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const theme = useTheme();

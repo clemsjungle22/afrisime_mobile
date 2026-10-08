@@ -10,6 +10,7 @@ import { useTheme } from '@/theme';
 import type { OrderFilter } from '../api';
 import { OrderCard } from '../components/OrderCard';
 import { useOrders } from '../hooks';
+import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 
 export function OrdersScreen() {
   const theme = useTheme();
@@ -41,6 +42,7 @@ function OrdersList() {
   const theme = useTheme();
   const [filter, setFilter] = useState<OrderFilter>('active');
   const orders = useOrders(filter);
+  useRefetchOnFocus(orders.refetch);
 
   // Rafraîchit en revenant sur l'onglet (statuts qui évoluent), sauf au 1er affichage.
   const focused = useRef(false);
