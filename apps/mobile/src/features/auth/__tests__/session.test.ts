@@ -6,6 +6,9 @@ import { useCart } from '@/features/cart/store';
 import { queryClient } from '@/lib/queryClient';
 import { authApi } from '../api';
 import { bootstrapSession, refreshAccessToken, signIn, signOut, useSession } from '../session';
+import { storageKey } from '@/api/config';
+
+const SESSION_KEY = storageKey('afrisime.session');
 
 jest.mock('../api', () => ({
   authApi: { refresh: jest.fn(), logout: jest.fn(async () => undefined) },
@@ -39,7 +42,7 @@ afterAll(() => queryClient.clear());
 
 beforeEach(async () => {
   refreshMock.mockReset();
-  await SecureStore.deleteItemAsync('afrisime.session');
+  await SecureStore.deleteItemAsync(SESSION_KEY);
   await bootstrapSession();
 });
 
@@ -51,7 +54,7 @@ describe('session', () => {
   it('connexion puis redémarrage : session restaurée depuis le stockage chiffré', async () => {
     await signIn(verifyResult('access-1'));
     expect(useSession.getState()).toMatchObject({ status: 'authenticated', userId: 'usr_1' });
-    expect(JSON.parse((await SecureStore.getItemAsync('afrisime.session'))!)).toMatchObject({
+    expect(JSON.parse((await SecureStore.getItemAsync(SESSION_KEY))!)).toMatchObject({
       refreshToken: 'refresh-1',
       userId: 'usr_1',
     });
@@ -80,7 +83,7 @@ describe('session', () => {
     await expect(pending).resolves.toEqual(['access-new', 'access-new', 'access-new']);
     expect(refreshMock).toHaveBeenCalledTimes(1);
     // Rotation : le nouveau refresh token est enregistré.
-    expect(JSON.parse((await SecureStore.getItemAsync('afrisime.session'))!).refreshToken).toBe('refresh-2');
+    expect(JSON.parse((await SecureStore.getItemAsync(SESSION_KEY))!).refreshToken).toBe('refresh-2');
   });
 
   it('renouvellement refusé : session expirée, retour en visiteur', async () => {
@@ -92,7 +95,7 @@ describe('session', () => {
       }),
     ).rejects.toMatchObject({ status: 401 });
     expect(useSession.getState().status).toBe('guest');
-    expect(await SecureStore.getItemAsync('afrisime.session')).toBeNull();
+    expect(await SecureStore.getItemAsync(SESSION_KEY)).toBeNull();
   });
 
   it('réseau coupé pendant le renouvellement : la session est conservée', async () => {
@@ -118,6 +121,6 @@ describe('session', () => {
     await signOut();
     expect(useSession.getState().status).toBe('guest');
     expect(useCart.getState().lines).toHaveLength(0);
-    expect(await SecureStore.getItemAsync('afrisime.session')).toBeNull();
+    expect(await SecureStore.getItemAsync(SESSION_KEY)).toBeNull();
   });
 });

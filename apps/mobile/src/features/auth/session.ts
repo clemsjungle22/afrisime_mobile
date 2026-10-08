@@ -8,6 +8,7 @@ import { useCart } from '@/features/cart/store';
 import { queryClient } from '@/lib/queryClient';
 import { showSnackbar } from '@/stores/snackbar';
 import { authApi } from './api';
+import { storageKey } from '@/api/config';
 
 /**
  * Session utilisateur.
@@ -27,7 +28,7 @@ type SessionState = {
 
 export const useSession = create<SessionState>()(() => ({ status: 'loading', userId: null, phone: null }));
 
-const STORE_KEY = 'afrisime.session';
+const STORE_KEY = storageKey('afrisime.session');
 const Stored = z.object({ refreshToken: z.string().min(1), userId: z.string(), phone: z.string() });
 type Stored = z.infer<typeof Stored>;
 

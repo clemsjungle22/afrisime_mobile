@@ -12,6 +12,7 @@
     "api": "npm run dev -w @afrisime/api",
     "db:migrate": "npm run db:migrate -w @afrisime/api",
     "db:seed": "npm run db:seed -w @afrisime/api",
+    "e2e": "npm run e2e -w @afrisime/api",
     "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p packages/fixtures && tsc --noEmit -p apps/mobile && tsc --noEmit -p apps/api",
     "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile && npm test -w @afrisime/api",
     "lint": "npm run lint -w @afrisime/mobile && npm run lint -w @afrisime/api"

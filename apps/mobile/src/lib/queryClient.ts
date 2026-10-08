@@ -3,6 +3,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { QueryClient, type Query } from '@tanstack/react-query';
 import type { PersistQueryClientOptions } from '@tanstack/react-query-persist-client';
 import Constants from 'expo-constants';
+import { storageKey } from '@/api/config';
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -37,7 +38,7 @@ function shouldPersist(query: Query): boolean {
 export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   persister: createAsyncStoragePersister({
     storage: AsyncStorage,
-    key: 'afrisime-query-cache',
+    key: storageKey('afrisime-query-cache'),
     throttleTime: 2000,
   }),
   maxAge: DAY_MS,

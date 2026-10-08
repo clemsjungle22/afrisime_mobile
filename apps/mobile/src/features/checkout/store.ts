@@ -2,6 +2,7 @@ import type { Fulfillment, PaymentMethodId } from '@afrisime/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { storageKey } from '@/api/config';
 
 /**
  * Choix du checkout. Mode, adresse, agence et moyen de paiement sont mémorisés pour la
@@ -42,7 +43,7 @@ export const useCheckout = create<CheckoutPrefs>()(
       reset: () => set(initial),
     }),
     {
-      name: 'afrisime-checkout',
+      name: storageKey('afrisime-checkout'),
       version: 1,
       // v1 : T-Money est devenu Mixx by Yas (identifiant tmoney → mixx).
       migrate: (persisted) => {

@@ -15,4 +15,9 @@ export default defineConfig([
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  {
+    // Scripts en ligne de commande (migrations, seed, e2e) : la sortie console est leur résultat.
+    files: ['scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
 ]);

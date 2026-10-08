@@ -26,7 +26,18 @@ export function AccountScreen() {
       </Text>
       <View style={{ marginTop: theme.spacing.lg }}>{status === 'authenticated' ? <SignedIn /> : <Guest />}</View>
       {apiConfig.mock ? <DemoTools /> : null}
+      {__DEV__ ? <DevServerInfo /> : null}
     </Screen>
+  );
+}
+
+/** Développement : à quoi l'app est branchée (utile quand le PC change de réseau). */
+function DevServerInfo() {
+  const theme = useTheme();
+  return (
+    <Text variant="caption" color="textMuted" style={{ marginTop: theme.spacing.lg, textAlign: 'center' }} selectable>
+      {apiConfig.mock ? 'Mode démo (aucun serveur)' : `Serveur : ${apiConfig.baseUrl || 'non configuré'}`}
+    </Text>
   );
 }
 

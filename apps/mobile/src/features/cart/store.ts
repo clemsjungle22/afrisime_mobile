@@ -10,6 +10,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { storageKey } from '@/api/config';
 
 /**
  * Copie des infos produit au moment de l'ajout : permet d'afficher le panier hors ligne.
@@ -157,7 +158,7 @@ export const useCart = create<CartState>()(
       clear: () => set({ lines: [] }),
     }),
     {
-      name: 'afrisime-cart',
+      name: storageKey('afrisime-cart'),
       version: 1,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({ lines: s.lines }),
