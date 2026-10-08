@@ -31,6 +31,8 @@ const Env = z.object({
     .transform((v) => v === 'true'),
   /** Secret attendu par la route des tâches planifiées (absente = route désactivée). */
   CRON_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
+  /** Clé de chiffrement des secrets 2FA de l'équipe (≥ 32 caractères). Obligatoire en production. */
+  ADMIN_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
 });
 export type Env = z.infer<typeof Env>;
 
@@ -49,6 +51,9 @@ export function env(): Env {
     throw new Error(`Configuration invalide :\n${lines.join('\n')}`);
   }
   const d = parsed.data;
+  if (d.NODE_ENV === 'production' && !d.ADMIN_ENCRYPTION_KEY) {
+    throw new Error('Configuration invalide : ADMIN_ENCRYPTION_KEY est obligatoire en production.');
+  }
   if (
     d.NODE_ENV === 'production' &&
     (d.OTP_DEV_CODE || d.SMS_PROVIDER === 'console' || d.PAYMENT_PROVIDER === 'simulated' || d.ORDER_SIMULATION)

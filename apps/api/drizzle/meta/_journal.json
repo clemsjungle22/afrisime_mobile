@@ -15,6 +15,13 @@
       "when": 1791419771057,
       "tag": "0001_orders_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791449279337,
+      "tag": "0002_admin_accounts",
+      "breakpoints": true
     }
   ]
 }

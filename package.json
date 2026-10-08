@@ -10,12 +10,14 @@
     "start:tunnel": "npm run start:tunnel -w @afrisime/mobile --",
     "start:clear": "npm run start:clear -w @afrisime/mobile --",
     "api": "npm run dev -w @afrisime/api",
+    "backoffice": "npm run dev -w @afrisime/backoffice",
     "db:migrate": "npm run db:migrate -w @afrisime/api",
     "db:seed": "npm run db:seed -w @afrisime/api",
+    "admin:create": "npm run admin:create -w @afrisime/api --",
     "e2e": "npm run e2e -w @afrisime/api",
-    "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p packages/fixtures && tsc --noEmit -p apps/mobile && tsc --noEmit -p apps/api",
+    "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p packages/fixtures && tsc --noEmit -p apps/mobile && tsc --noEmit -p apps/api && tsc --noEmit -p apps/backoffice",
     "test": "npm test -w @afrisime/shared && npm test -w @afrisime/mobile && npm test -w @afrisime/api",
-    "lint": "npm run lint -w @afrisime/mobile && npm run lint -w @afrisime/api"
+    "lint": "npm run lint -w @afrisime/mobile && npm run lint -w @afrisime/api && npm run lint -w @afrisime/backoffice"
   },
   "engines": {
     "node": ">=20"

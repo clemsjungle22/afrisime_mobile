@@ -32,6 +32,16 @@ const components = {
   CancelOrderBody: shared.CancelOrderBody,
   CreatePaymentBody: shared.CreatePaymentBody,
   ReorderResponse: shared.ReorderResponse,
+  AdminProfile: shared.AdminProfile,
+  AdminLoginBody: shared.AdminLoginBody,
+  AdminLoginResponse: shared.AdminLoginResponse,
+  AdminSession: shared.AdminSession,
+  AdminTotpBody: shared.AdminTotpBody,
+  AdminTotpSetupBody: shared.AdminTotpSetupBody,
+  AdminTotpSetupResponse: shared.AdminTotpSetupResponse,
+  AdminTotpConfirmBody: shared.AdminTotpConfirmBody,
+  AdminChangePasswordBody: shared.AdminChangePasswordBody,
+  AdminDashboard: shared.AdminDashboard,
   ValidatedCart: shared.ValidatedCart,
   Address: shared.Address,
   DeliveryOptions: shared.DeliveryOptions,
@@ -281,6 +291,37 @@ export function buildOpenApi(serverUrl?: string) {
       },
       '/v1/payments/{id}': {
         get: op({ summary: 'Suivi du paiement', params: idParam, response: ref('PaymentIntent') }),
+      },
+      // ─── Back-office (session de l'équipe, rôles) ───
+      '/v1/admin/auth/login': {
+        post: op({
+          summary: "Back-office : connexion de l'équipe",
+          auth: false,
+          body: 'AdminLoginBody',
+          response: ref('AdminLoginResponse'),
+          errors: { '401': 'Identifiants incorrects', '429': 'Compte ou appareil bloqué 15 min' },
+        }),
+      },
+      '/v1/admin/auth/totp': {
+        post: op({ summary: 'Back-office : code 2FA', auth: false, body: 'AdminTotpBody', response: ref('AdminSession') }),
+      },
+      '/v1/admin/auth/totp/setup': {
+        post: op({ summary: 'Back-office : activer le 2FA (QR code)', auth: false, body: 'AdminTotpSetupBody', response: ref('AdminTotpSetupResponse') }),
+      },
+      '/v1/admin/auth/totp/confirm': {
+        post: op({ summary: 'Back-office : confirmer le 2FA', auth: false, body: 'AdminTotpConfirmBody', response: ref('AdminSession') }),
+      },
+      '/v1/admin/auth/logout': { post: op({ summary: 'Back-office : déconnexion', status: '204' }) },
+      '/v1/admin/me': { get: op({ summary: "Back-office : profil du membre de l'équipe", response: ref('AdminProfile') }) },
+      '/v1/admin/me/password': {
+        post: op({ summary: 'Back-office : changer de mot de passe', body: 'AdminChangePasswordBody', response: ref('AdminProfile') }),
+      },
+      '/v1/admin/dashboard': {
+        get: op({
+          summary: 'Back-office : tableau de bord',
+          response: ref('AdminDashboard'),
+          errors: { '403': 'Rôle insuffisant ou mot de passe provisoire à changer' },
+        }),
       },
     },
     components: {

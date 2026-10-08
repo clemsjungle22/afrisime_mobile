@@ -521,3 +521,62 @@ export const outbox = pgTable(
   },
   (t) => [index('outbox_pending_idx').on(t.processedAt, t.createdAt)],
 );
+
+// ─── Back-office : comptes de l'équipe ───────────────────────────────────────
+
+export const adminRole = pgEnum('admin_role', ['admin', 'catalog', 'orders', 'support', 'readonly']);
+
+/** Comptes de l'équipe AfriSime : séparés des clients, mot de passe haché, 2FA chiffré. */
+export const adminUsers = pgTable('admin_users', {
+  id: text().primaryKey(),
+  email: text().notNull().unique(),
+  name: text().notNull(),
+  role: adminRole().notNull(),
+  passwordHash: text().notNull(),
+  mustChangePassword: boolean().notNull().default(true),
+  /** Secret 2FA chiffré (AES-256-GCM), null tant que le 2FA n'est pas activé. */
+  totpSecret: text(),
+  /** Dernier pas de temps 2FA accepté : un même code ne sert qu'une fois. */
+  totpLastStep: integer(),
+  failedAttempts: integer().notNull().default(0),
+  lockedUntil: timestamp({ withTimezone: true }),
+  status: text().notNull().default('active'),
+  lastLoginAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** Sessions de l'équipe : jeton opaque haché, expiration sur inactivité et durée maximale. */
+export const adminSessions = pgTable(
+  'admin_sessions',
+  {
+    id: text().primaryKey(),
+    adminId: text()
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: 'cascade' }),
+    tokenHash: text().notNull(),
+    ip: text(),
+    userAgent: text(),
+    createdAt: createdAt(),
+    lastUsedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    revokedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index('admin_sessions_admin_idx').on(t.adminId)],
+);
+
+/** Étape de connexion en cours (code 2FA à saisir ou 2FA à activer), valable quelques minutes. */
+export const adminChallenges = pgTable('admin_challenges', {
+  id: text().primaryKey(),
+  adminId: text()
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: 'cascade' }),
+  kind: text().notNull(),
+  /** Secret 2FA proposé pendant l'activation (chiffré), avant confirmation. */
+  pendingSecret: text(),
+  attempts: integer().notNull().default(0),
+  ip: text(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  consumedAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+});

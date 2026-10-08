@@ -1,0 +1,41 @@
+@import 'tailwindcss';
+
+/* Couleurs du site AfriSime (mêmes valeurs que l'app mobile, src/theme/tokens.ts). */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #f2f8f4;
+  --color-brand-100: #e3efe8;
+  --color-brand-200: #c6e0d2;
+  --color-brand-600: #2e7d5b;
+  --color-brand-700: #1b6247;
+  --color-brand-800: #14503b;
+  --color-brand-900: #0f3d2e;
+  --color-brand-950: #0a2a20;
+  --color-accent-100: #fbeed6;
+  --color-accent-500: #e8a33d;
+  --color-accent-600: #c9811a;
+  --color-canvas: #f7f9f8;
+  --color-cream: #fbf7ef;
+  --color-ink: #17221d;
+  --color-muted: #56665f;
+  --color-line: #dbe4df;
+  --color-danger: #b42318;
+  --color-danger-50: #fdecea;
+  --color-warning: #9a6200;
+  --color-warning-50: #fff4dc;
+  --color-info: #1f5f8b;
+  --color-info-50: #e7f1f8;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}
