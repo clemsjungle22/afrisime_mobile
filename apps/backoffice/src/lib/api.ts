@@ -61,7 +61,8 @@ export async function api<S extends z.ZodType>(path: string, options: Options<S>
       headers: h,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       cache: 'no-store',
-      signal: AbortSignal.timeout(20_000),
+      // Un peu plus que le délai de connexion de l'API à la base (30 s) : on reçoit sa réponse plutôt qu'une coupure.
+      signal: AbortSignal.timeout(40_000),
     });
   } catch {
     throw new ApiError('NETWORK_ERROR', 'Le serveur AfriSime ne répond pas. Vérifiez qu’il est lancé (npm run api).', 0);

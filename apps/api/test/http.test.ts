@@ -95,6 +95,11 @@ describe('route()', () => {
 });
 
 describe('journaux', () => {
+  it('gardent la cause d’une erreur (souvent l’information utile)', () => {
+    const error = new Error('Failed query', { cause: new Error('timeout exceeded when trying to connect') });
+    expect(redact({ error })).toMatchObject({ error: { message: 'Failed query', cause: { message: 'timeout exceeded when trying to connect' } } });
+  });
+
   it('masquent secrets, codes et téléphones', () => {
     expect(maskPhone('+22890123456')).toBe('+228•••••456');
     expect(

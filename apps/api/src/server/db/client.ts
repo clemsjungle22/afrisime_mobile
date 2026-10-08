@@ -2,6 +2,7 @@ import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { env } from '../env';
+import { log } from '../log';
 import * as schema from './schema';
 
 /** Base commune à PostgreSQL (Supabase, ou tout autre hébergeur) et à PGlite (tests). */
@@ -21,9 +22,15 @@ export function createPostgresDb(url: string, options: { max?: number } = {}) {
   const pool = new Pool({
     connectionString: url,
     max: options.max ?? 10,
-    idleTimeoutMillis: 20_000,
-    connectionTimeoutMillis: 10_000,
+    // Ouvrir une connexion vers Supabase peut prendre plusieurs secondes sur un réseau lent :
+    // les connexions sont gardées ouvertes (5 min) et maintenues actives plutôt que rouvertes à chaque pause.
+    idleTimeoutMillis: 5 * 60_000,
+    keepAlive: true,
+    connectionTimeoutMillis: 30_000,
   });
+  // Une connexion inactive coupée par le pooler ne doit jamais faire tomber le serveur :
+  // elle est retirée du pool et la suivante sera rouverte.
+  pool.on('error', (error) => log.warn('connexion à la base fermée par le serveur', { error }));
   const db = drizzle(pool, { schema, casing: 'snake_case' });
   return { db: db as unknown as Db, close: () => pool.end() };
 }

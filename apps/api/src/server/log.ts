@@ -18,7 +18,11 @@ export function maskPhone(value: string): string {
 export function redact(value: unknown, depth = 0): unknown {
   if (depth > 6) return '[…]';
   if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1));
-  if (value instanceof Error) return { name: value.name, message: value.message, stack: value.stack };
+  if (value instanceof Error) {
+    // La cause (ex. « timeout exceeded when trying to connect ») est souvent l'information utile.
+    const cause = value.cause === undefined ? undefined : redact(value.cause, depth + 1);
+    return { name: value.name, message: value.message, ...(cause ? { cause } : {}), stack: value.stack };
+  }
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
