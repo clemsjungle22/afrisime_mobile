@@ -7,7 +7,7 @@ import {
 } from '@afrisime/shared';
 import { BadgeCheck, Ban, LockOpen, Tags, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, type ReactNode, useState, useTransition } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
@@ -19,11 +19,13 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
   const can = (a: AdminCustomerDetail['allowedActions'][number]) => c.allowedActions.includes(a);
   if (c.allowedActions.length === 0) return null;
   const typeLabel = c.customerType?.label ?? 'pro';
+  const version = versionOf(c);
   return (
     <div className="flex flex-wrap gap-2">
       {can('review_pro') ? (
         <>
           <ConfirmDialog
+            version={version}
             title={`Valider le profil « ${typeLabel} » ?`}
             description="Le client passe au tarif pro tout de suite : il verra les prix pros dans l’app."
             trigger={
@@ -35,6 +37,7 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
             onSubmit={() => reviewProAction(c.id, { decision: 'approve' })}
           />
           <ConfirmDialog
+            version={version}
             title="Refuser le profil pro ?"
             description="Le client repasse au profil particulier, avec le tarif normal. Il pourra refaire une demande depuis l’app."
             variant="secondary"
@@ -53,6 +56,7 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
       {can('change_pricing') ? <PricingDialog customer={c} /> : null}
       {can('block') ? (
         <ConfirmDialog
+          version={version}
           title="Bloquer ce compte ?"
           description="Le client est déconnecté tout de suite sur tous ses téléphones et ne peut plus se reconnecter. Ses commandes en cours ne sont pas annulées : traitez-les au cas par cas."
           variant="danger-ghost"
@@ -69,6 +73,7 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
       ) : null}
       {can('unblock') ? (
         <ConfirmDialog
+          version={version}
           title="Débloquer ce compte ?"
           description="Le client pourra de nouveau se connecter à l’app avec son numéro."
           trigger={
@@ -85,19 +90,33 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
   );
 }
 
-function useSubmit(close: () => void) {
+/**
+ * Envoi d'une action de la fiche. La fenêtre reste ouverte, bouton « en cours », jusqu'à ce que la
+ * fiche affiche le nouvel état (repéré par `version`) : jamais de fenêtre fermée sur une page périmée.
+ */
+function useSubmit(close: () => void, version: string) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [sentFrom, setSentFrom] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (sentFrom !== null && version !== sentFrom) close();
+  }, [version, sentFrom, close]);
+
   const submit = (call: () => Promise<Result>) =>
     start(async () => {
+      setError(null);
       const res = await call();
       if (!res.ok) return setError(res.error);
+      setSentFrom(version);
       router.refresh();
-      close();
     });
-  return { pending, error, submit };
+  return { pending: pending || sentFrom !== null, error, submit };
 }
+
+/** Change à chaque intervention enregistrée sur le compte. */
+const versionOf = (c: AdminCustomerDetail) => `${c.history.length}:${c.history[0]?.at ?? ''}`;
 
 const TRIGGER_VARIANTS = {
   primary: 'primary',
@@ -115,7 +134,9 @@ function ConfirmDialog({
   submitVariant = 'primary',
   reasonLabel,
   reasonHint,
+  version,
 }: {
+  version: string;
   title: string;
   description: string;
   trigger: ReactNode;
@@ -151,6 +172,7 @@ function ConfirmDialog({
           reasonLabel={reasonLabel}
           reasonHint={reasonHint}
           onSubmit={onSubmit}
+          version={version}
         />
       )}
     </Dialog>
@@ -164,7 +186,9 @@ function ConfirmForm({
   reasonLabel,
   reasonHint,
   onSubmit,
+  version,
 }: {
+  version: string;
   close: () => void;
   submitLabel: string;
   submitVariant: 'primary' | 'danger';
@@ -172,7 +196,7 @@ function ConfirmForm({
   reasonHint?: string;
   onSubmit: (reason: string) => Promise<Result>;
 }) {
-  const { pending, error, submit } = useSubmit(close);
+  const { pending, error, submit } = useSubmit(close, version);
   const send = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const reason = String(new FormData(e.currentTarget).get('reason') ?? '').trim();
@@ -220,7 +244,7 @@ function PricingDialog({ customer: c }: { customer: AdminCustomerDetail }) {
 }
 
 function PricingForm({ customer: c, close }: { customer: AdminCustomerDetail; close: () => void }) {
-  const { pending, error, submit } = useSubmit(close);
+  const { pending, error, submit } = useSubmit(close, versionOf(c));
   const [typeId, setTypeId] = useState(c.customerType?.id ?? c.customerTypes[0]?.id ?? '');
   const [segment, setSegment] = useState<PriceSegment>(c.segment);
   const send = (e: FormEvent<HTMLFormElement>) => {
