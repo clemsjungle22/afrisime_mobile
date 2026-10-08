@@ -231,6 +231,8 @@ export const customerTypes = pgTable('customer_types', {
   /** Segment tarifaire appliqué une fois le type validé. */
   segment: text().notNull().default('retail'),
   sortOrder: integer().notNull().default(0),
+  /** Désactivé : plus proposé à l'inscription ; les clients qui l'ont le gardent. */
+  isActive: boolean().notNull().default(true),
 });
 
 // ─── Clients et sessions ──────────────────────────────────────────────────────

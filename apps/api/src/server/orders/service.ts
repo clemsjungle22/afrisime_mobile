@@ -12,6 +12,7 @@ import {
 import { randomInt } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { validate } from '../cart/service';
+import { loadRules, slotOccupancy } from '../checkout/rules';
 import { decodeCursor, encodeCursor } from '../catalog/service';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
@@ -164,6 +165,24 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
       if (!quoteRow) throw quoteExpired();
       if (quoteRow.expiresAt <= now) throw quoteExpired('Les prix garantis ont expiré. Vérifiez votre commande.');
       const q = quoteRow.payload as Quote;
+
+      // Capacité du créneau revérifiée au moment de commander (un devis ne réserve pas de place).
+      // Verrou par créneau : deux commandes simultanées ne peuvent pas prendre la dernière place.
+      const rules = await loadRules(tx);
+      const capacity = rules.slots?.capacity;
+      if (capacity && (capacity.delivery !== null || capacity.pickup !== null)) {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${q.slot.id}))`);
+        const isFull = await slotOccupancy(tx, rules, now);
+        const kind = q.fulfillment === 'delivery' ? 'd_' : 'p_';
+        if (isFull({ id: q.slot.id, kind, dayIndex: 0, fromHour: 0 })) {
+          throw new ApiError(
+            'SLOT_UNAVAILABLE',
+            'Ce créneau vient d’être complet. Choisissez-en un autre.',
+            undefined,
+            409,
+          );
+        }
+      }
 
       const lines = q.lines.filter((l) => l.quantity > 0);
       const modes = await tx

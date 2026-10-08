@@ -10,6 +10,7 @@ import type {
   Slot,
 } from './checkout';
 import { formatFCFA } from './money';
+import { DEFAULT_SLOT_CONFIG, type SlotConfig } from './slotConfig';
 
 /**
  * Règles du checkout (créneaux, options de livraison, devis), partagées par le serveur et le mode démo.
@@ -28,26 +29,24 @@ export type CheckoutRules = {
   leadTimeMs: number;
   /** Validité d'un devis. */
   quoteTtlMs: number;
+  /** Plages horaires, jours fermés, capacité (défaut : DEFAULT_SLOT_CONFIG). */
+  slots?: SlotConfig;
 };
 
 export type CheckoutZone = { id: string; name: string; fee: number; cashOnDelivery: boolean };
 export type CheckoutAgency = { id: string; name: string; address: string; openingHours: string | null };
 
 /** Créneau complet (capacité atteinte) : décidé par l'appelant. */
-export type IsSlotFull = (slot: { kind: string; dayIndex: number; fromHour: number }) => boolean;
+export type IsSlotFull = (slot: {
+  id: string;
+  kind: string;
+  dayIndex: number;
+  fromHour: number;
+}) => boolean;
 
 type Window = { from: number; to: number };
-export const DELIVERY_WINDOWS: readonly Window[] = [
-  { from: 8, to: 12 },
-  { from: 12, to: 16 },
-  { from: 16, to: 20 },
-];
-export const PICKUP_WINDOWS: readonly Window[] = [
-  { from: 8, to: 12 },
-  { from: 12, to: 16 },
-  { from: 16, to: 19 },
-];
-const DAYS_AHEAD = 3;
+export const DELIVERY_WINDOWS: readonly Window[] = DEFAULT_SLOT_CONFIG.delivery;
+export const PICKUP_WINDOWS: readonly Window[] = DEFAULT_SLOT_CONFIG.pickup;
 
 /** Erreur de règle métier (code du contrat, statut HTTP) : chaque côté la traduit dans son type d'erreur. */
 export class CheckoutRuleError extends Error {
@@ -64,27 +63,30 @@ export class CheckoutRuleError extends Error {
 
 const dayKey = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
-/** Créneaux des prochains jours ouvrés (fermé le dimanche), sans ceux qui commencent trop tôt. */
+/** Créneaux des prochains jours ouverts, sans ceux qui commencent trop tôt. */
 export function buildSlots(
   kind: string,
   windows: readonly Window[],
   now: Date,
   leadTimeMs: number,
   isFull: IsSlotFull = () => false,
+  calendar: Pick<SlotConfig, 'closedDays' | 'daysAhead'> = DEFAULT_SLOT_CONFIG,
 ): Slot[] {
   const slots: Slot[] = [];
+  const closed = new Set(calendar.closedDays);
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  for (let day = 0, found = 0; found < DAYS_AHEAD && day < DAYS_AHEAD + 2; day++) {
+  for (let day = 0, found = 0; found < calendar.daysAhead && day < calendar.daysAhead + 7; day++) {
     const date = new Date(start.getTime() + day * 86_400_000);
-    if (date.getUTCDay() === 0) continue;
+    if (closed.has(date.getUTCDay())) continue;
     found++;
     for (const w of windows) {
       const from = new Date(date.getTime() + w.from * 3_600_000);
       const to = new Date(date.getTime() + w.to * 3_600_000);
       if (from.getTime() < now.getTime() + leadTimeMs) continue;
-      const full = isFull({ kind, dayIndex: day, fromHour: w.from });
+      const id = `slot_${kind}_${dayKey(date)}_${w.from}`;
+      const full = isFull({ id, kind, dayIndex: day, fromHour: w.from });
       slots.push({
-        id: `slot_${kind}_${dayKey(date)}_${w.from}`,
+        id,
         start: from.toISOString(),
         end: to.toISOString(),
         available: !full,
@@ -95,10 +97,14 @@ export function buildSlots(
   return slots;
 }
 
-export const deliverySlots = (zoneId: string, now: Date, rules: CheckoutRules, isFull?: IsSlotFull) =>
-  buildSlots(`d_${zoneId}`, DELIVERY_WINDOWS, now, rules.leadTimeMs, isFull);
-export const pickupSlots = (agencyId: string, now: Date, rules: CheckoutRules, isFull?: IsSlotFull) =>
-  buildSlots(`p_${agencyId}`, PICKUP_WINDOWS, now, rules.leadTimeMs, isFull);
+export const deliverySlots = (zoneId: string, now: Date, rules: CheckoutRules, isFull?: IsSlotFull) => {
+  const config = rules.slots ?? DEFAULT_SLOT_CONFIG;
+  return buildSlots(`d_${zoneId}`, config.delivery, now, rules.leadTimeMs, isFull, config);
+};
+export const pickupSlots = (agencyId: string, now: Date, rules: CheckoutRules, isFull?: IsSlotFull) => {
+  const config = rules.slots ?? DEFAULT_SLOT_CONFIG;
+  return buildSlots(`p_${agencyId}`, config.pickup, now, rules.leadTimeMs, isFull, config);
+};
 
 export const PAYMENT_LABELS: Record<PaymentMethodId, string> = {
   mixx: 'Mixx by Yas',

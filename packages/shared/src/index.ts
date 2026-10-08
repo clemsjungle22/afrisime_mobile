@@ -18,3 +18,5 @@ export * from './adminOrders';
 export * from './adminCatalog';
 export * from './adminHome';
 export * from './adminCustomers';
+export * from './slotConfig';
+export * from './adminSettings';

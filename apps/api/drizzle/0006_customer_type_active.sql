@@ -1,0 +1,1 @@
+ALTER TABLE "customer_types" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;

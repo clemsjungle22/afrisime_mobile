@@ -360,7 +360,8 @@ export async function reviewPro(
     );
   }
   // Refus : profil sans validation (particulier), tarif normal. Le client pourra refaire une demande.
-  const fallback = types.find((t) => !t.requiresReview);
+  const fallback =
+    types.find((t) => !t.requiresReview && t.isActive) ?? types.find((t) => !t.requiresReview);
   return apply(
     db,
     ctx,

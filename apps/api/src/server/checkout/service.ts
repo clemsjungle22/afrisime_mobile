@@ -14,7 +14,7 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
-import { loadAgencies, loadRules, loadZone } from './rules';
+import { loadAgencies, loadRules, loadZone, slotOccupancy } from './rules';
 
 type Customer = { id: string; segment: string };
 
@@ -40,7 +40,8 @@ export async function getDeliveryOptions(
   const address = await findAddress(db, customer.id, addressId);
   if (addressId && !address) throw new ApiError('NOT_FOUND', 'Adresse introuvable.');
   const [rules, agencies, zone] = await Promise.all([loadRules(db), loadAgencies(db), loadZone(db, address?.zoneId ?? null)]);
-  return buildDeliveryOptions({ address, zone, agencies, rules, now });
+  const isFull = await slotOccupancy(db, rules, now);
+  return buildDeliveryOptions({ address, zone, agencies, rules, now, isFull });
 }
 
 /**
@@ -55,7 +56,10 @@ export async function createQuote(db: Db, customer: Customer, request: QuoteRequ
     loadAgencies(db),
     findAddress(db, customer.id, request.addressId),
   ]);
-  const zone = await loadZone(db, address?.zoneId ?? null);
+  const [zone, isFull] = await Promise.all([
+    loadZone(db, address?.zoneId ?? null),
+    slotOccupancy(db, rules, now),
+  ]);
 
   let quote: Quote;
   try {
@@ -67,6 +71,7 @@ export async function createQuote(db: Db, customer: Customer, request: QuoteRequ
       rules,
       now,
       quoteId: newId('qte'),
+      isFull,
     });
   } catch (error) {
     asApiError(error);

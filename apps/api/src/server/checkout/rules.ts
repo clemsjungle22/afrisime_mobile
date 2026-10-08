@@ -1,5 +1,12 @@
-import type { CheckoutAgency, CheckoutRules, CheckoutZone } from '@afrisime/shared';
-import { asc, eq, inArray } from 'drizzle-orm';
+import {
+  type CheckoutAgency,
+  type CheckoutRules,
+  type CheckoutZone,
+  DEFAULT_SLOT_CONFIG,
+  type IsSlotFull,
+  SlotConfig,
+} from '@afrisime/shared';
+import { and, asc, count, eq, gte, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 
@@ -12,12 +19,15 @@ const DEFAULTS = {
   'checkout.quote_ttl_min': 15,
 } as const;
 
+/** Plages horaires, jours fermés et capacité des créneaux (app_settings). */
+export const SLOTS_KEY = 'checkout.slots';
+
 /** Règles commerciales du checkout, lues dans app_settings (modifiables sans redéploiement, RB-010). */
 export async function loadRules(db: Db): Promise<CheckoutRules> {
   const rows = await db
     .select()
     .from(s.appSettings)
-    .where(inArray(s.appSettings.key, Object.keys(DEFAULTS)));
+    .where(inArray(s.appSettings.key, [...Object.keys(DEFAULTS), SLOTS_KEY]));
   const value = (key: keyof typeof DEFAULTS) => {
     const v = rows.find((r) => r.key === key)?.value;
     return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : DEFAULTS[key];
@@ -28,6 +38,42 @@ export async function loadRules(db: Db): Promise<CheckoutRules> {
     cashOnDeliveryMax: value('payment.cod_max'),
     leadTimeMs: value('checkout.lead_time_min') * 60_000,
     quoteTtlMs: value('checkout.quote_ttl_min') * 60_000,
+    slots: slotConfigOf(rows.find((r) => r.key === SLOTS_KEY)?.value),
+  };
+}
+
+/** Réglage illisible ou absent : créneaux par défaut (le checkout ne doit jamais casser). */
+export function slotConfigOf(value: unknown): SlotConfig {
+  const parsed = SlotConfig.safeParse(value);
+  return parsed.success ? parsed.data : DEFAULT_SLOT_CONFIG;
+}
+
+/** Commandes qui n'occupent plus de place dans un créneau. */
+const RELEASED = ['cancelled', 'refunded'] as const;
+
+/**
+ * Créneau complet : nombre de commandes déjà prises sur ce créneau ≥ capacité réglée.
+ * Sans capacité réglée, aucun comptage.
+ */
+export async function slotOccupancy(db: Db, rules: CheckoutRules, now: Date): Promise<IsSlotFull> {
+  const capacity = (rules.slots ?? DEFAULT_SLOT_CONFIG).capacity;
+  if (capacity.delivery === null && capacity.pickup === null) return () => false;
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const slotId = sql<string>`${s.orders.slot}->>'id'`;
+  const rows = await db
+    .select({ id: slotId, n: count() })
+    .from(s.orders)
+    .where(
+      and(
+        notInArray(s.orders.status, [...RELEASED]),
+        gte(sql`(${s.orders.slot}->>'start')::timestamptz`, since),
+      ),
+    )
+    .groupBy(slotId);
+  const taken = new Map(rows.map((r) => [r.id, Number(r.n)]));
+  return ({ id, kind }) => {
+    const max = kind.startsWith('d_') ? capacity.delivery : capacity.pickup;
+    return max !== null && (taken.get(id) ?? 0) >= max;
   };
 }
 

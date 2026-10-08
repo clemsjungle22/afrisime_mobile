@@ -63,6 +63,19 @@ const components = {
   AdminThresholdBody: shared.AdminThresholdBody,
   AdminStockMovement: shared.AdminStockMovement,
   AdminHome: shared.AdminHome,
+  AdminDeliverySettings: shared.AdminDeliverySettings,
+  AdminZoneInput: shared.AdminZoneInput,
+  AdminCheckoutRules: shared.AdminCheckoutRules,
+  AdminSlotSettings: shared.AdminSlotSettings,
+  AdminAgency: shared.AdminAgency,
+  AdminAgencyInput: shared.AdminAgencyInput,
+  AdminCustomerType: shared.AdminCustomerType,
+  AdminCustomerTypeInput: shared.AdminCustomerTypeInput,
+  AdminMoveBody: shared.AdminMoveBody,
+  AdminTeamMember: shared.AdminTeamMember,
+  AdminTeamCreate: shared.AdminTeamCreate,
+  AdminTeamUpdate: shared.AdminTeamUpdate,
+  AdminTeamCredentials: shared.AdminTeamCredentials,
   AdminCustomerList: shared.AdminCustomerList,
   AdminCustomerDetail: shared.AdminCustomerDetail,
   AdminReviewProBody: shared.AdminReviewProBody,
@@ -816,6 +829,158 @@ export function buildOpenApi(serverUrl?: string) {
           params: idParam,
           body: 'AdminBlockBody',
           response: ref('AdminCustomerDetail'),
+        }),
+      },
+      '/v1/admin/settings/delivery': {
+        get: op({
+          summary: "Paramètres : zones de livraison et règles du checkout",
+          response: ref('AdminDeliverySettings'),
+        }),
+      },
+      '/v1/admin/settings/delivery/rules': {
+        put: op({
+          summary: "Paramètres : livraison offerte, minimum, plafond paiement à la livraison, délai",
+          body: 'AdminCheckoutRules',
+          response: ref('AdminDeliverySettings'),
+        }),
+      },
+      '/v1/admin/settings/zones': {
+        post: op({
+          summary: "Paramètres : nouvelle zone de livraison",
+          body: 'AdminZoneInput',
+          response: ref('AdminDeliverySettings'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/settings/zones/{id}': {
+        patch: op({
+          summary: "Paramètres : modifier une zone",
+          params: idParam,
+          body: 'AdminZoneInput',
+          response: ref('AdminDeliverySettings'),
+        }),
+      },
+      '/v1/admin/settings/zones/{id}/move': {
+        post: op({
+          summary: "Paramètres : ordre des zones",
+          params: idParam,
+          body: 'AdminMoveBody',
+          response: ref('AdminDeliverySettings'),
+        }),
+      },
+      '/v1/admin/settings/slots': {
+        get: op({
+          summary: "Paramètres : créneaux (plages, jours fermés, capacité)",
+          response: ref('AdminSlotSettings'),
+        }),
+        put: op({
+          summary: "Paramètres : enregistrer les créneaux",
+          body: 'AdminSlotSettings',
+          response: ref('AdminSlotSettings'),
+        }),
+      },
+      '/v1/admin/settings/agencies': {
+        get: op({
+          summary: "Paramètres : agences",
+          response: { type: 'array', items: ref('AdminAgency') },
+        }),
+        post: op({
+          summary: "Paramètres : nouvelle agence",
+          body: 'AdminAgencyInput',
+          response: { type: 'array', items: ref('AdminAgency') },
+          status: '201',
+        }),
+      },
+      '/v1/admin/settings/agencies/{id}': {
+        patch: op({
+          summary: "Paramètres : modifier une agence",
+          params: idParam,
+          body: 'AdminAgencyInput',
+          response: { type: 'array', items: ref('AdminAgency') },
+        }),
+      },
+      '/v1/admin/settings/agencies/{id}/default': {
+        post: op({
+          summary: "Paramètres : agence par défaut",
+          params: idParam,
+          response: { type: 'array', items: ref('AdminAgency') },
+        }),
+      },
+      '/v1/admin/settings/agencies/{id}/move': {
+        post: op({
+          summary: "Paramètres : ordre des agences",
+          params: idParam,
+          body: 'AdminMoveBody',
+          response: { type: 'array', items: ref('AdminAgency') },
+        }),
+      },
+      '/v1/admin/settings/customer-types': {
+        get: op({
+          summary: "Paramètres : profils clients",
+          response: { type: 'array', items: ref('AdminCustomerType') },
+        }),
+        post: op({
+          summary: "Paramètres : nouveau profil client",
+          body: 'AdminCustomerTypeInput',
+          response: { type: 'array', items: ref('AdminCustomerType') },
+          status: '201',
+        }),
+      },
+      '/v1/admin/settings/customer-types/{id}': {
+        patch: op({
+          summary: "Paramètres : modifier un profil client",
+          params: idParam,
+          body: 'AdminCustomerTypeInput',
+          response: { type: 'array', items: ref('AdminCustomerType') },
+        }),
+      },
+      '/v1/admin/settings/customer-types/{id}/move': {
+        post: op({
+          summary: "Paramètres : ordre des profils",
+          params: idParam,
+          body: 'AdminMoveBody',
+          response: { type: 'array', items: ref('AdminCustomerType') },
+        }),
+      },
+      '/v1/admin/team': {
+        get: op({
+          summary: "Équipe : comptes",
+          response: { type: 'array', items: ref('AdminTeamMember') },
+        }),
+        post: op({
+          summary: "Équipe : nouveau compte (mot de passe provisoire renvoyé une fois)",
+          body: 'AdminTeamCreate',
+          response: ref('AdminTeamCredentials'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/team/{id}': {
+        patch: op({
+          summary: "Équipe : rôle, désactivation (sessions fermées)",
+          params: idParam,
+          body: 'AdminTeamUpdate',
+          response: { type: 'array', items: ref('AdminTeamMember') },
+        }),
+      },
+      '/v1/admin/team/{id}/reset-password': {
+        post: op({
+          summary: "Équipe : nouveau mot de passe provisoire",
+          params: idParam,
+          response: ref('AdminTeamCredentials'),
+        }),
+      },
+      '/v1/admin/team/{id}/reset-totp': {
+        post: op({
+          summary: "Équipe : réinitialiser la double authentification",
+          params: idParam,
+          response: { type: 'array', items: ref('AdminTeamMember') },
+        }),
+      },
+      '/v1/admin/team/{id}/unlock': {
+        post: op({
+          summary: "Équipe : débloquer après trop d’essais",
+          params: idParam,
+          response: { type: 'array', items: ref('AdminTeamMember') },
         }),
       },
       '/v1/admin/dashboard': {

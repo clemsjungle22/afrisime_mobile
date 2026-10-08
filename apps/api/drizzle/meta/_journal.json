@@ -43,6 +43,13 @@
       "when": 1791468235737,
       "tag": "0005_banner_eyebrow",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791490229426,
+      "tag": "0006_customer_type_active",
+      "breakpoints": true
     }
   ]
 }

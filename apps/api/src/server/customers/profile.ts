@@ -61,7 +61,7 @@ export async function updateProfile(db: Db, customer: CustomerRow, body: Profile
   let typeChanged = false;
   if (body.customerTypeId !== undefined && body.customerTypeId !== customer.customerTypeId) {
     const [type] = await db.select().from(s.customerTypes).where(eq(s.customerTypes.id, body.customerTypeId));
-    if (!type) throw invalid('Type de client inconnu.');
+    if (!type || !type.isActive) throw invalid('Type de client inconnu.');
     typeChanged = true;
     changes.customerTypeId = type.id;
     changes.customerTypePending = type.requiresReview;

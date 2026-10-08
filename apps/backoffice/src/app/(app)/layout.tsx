@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="lg:flex">
-      <Sidebar />
+      <Sidebar role={admin.role} />
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-10 flex items-center justify-end gap-3 border-b border-line bg-white/90 px-5 py-3 backdrop-blur lg:px-8">
           <div className="flex items-center gap-3">

@@ -138,7 +138,11 @@ export async function getHome(segment = 'retail'): Promise<Home> {
 export async function getOnboardingOptions(): Promise<OnboardingOptions> {
   const db = getDb();
   const [types, agencies, terms] = await Promise.all([
-    db.select().from(s.customerTypes).orderBy(asc(s.customerTypes.sortOrder)),
+    db
+      .select()
+      .from(s.customerTypes)
+      .where(eq(s.customerTypes.isActive, true))
+      .orderBy(asc(s.customerTypes.sortOrder)),
     db
       .select()
       .from(s.agencies)
