@@ -1,3 +1,4 @@
+import { validateCart , formatFCFA } from '@afrisime/shared';
 import type {
   Address,
   DeliveryOptions,
@@ -9,8 +10,7 @@ import type {
   QuoteRequest,
   Slot,
 } from '@afrisime/shared';
-import { formatFCFA } from '@afrisime/shared';
-import { validateCart } from './cartEngine';
+
 import { DELIVERY_RULES, mockOnboardingOptions, mockZones, zoneFor } from '@afrisime/fixtures';
 import { noOverrides, type CatalogOverrides } from './scenarios';
 import { mockError } from './simulate';

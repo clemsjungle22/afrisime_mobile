@@ -11,3 +11,4 @@ export * from './pagination';
 export * from './errors';
 export * from './searchEngine';
 export * from './catalogLogic';
+export * from './cartEngine';

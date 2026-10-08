@@ -41,6 +41,9 @@ export function getCatalog(segment = 'retail'): Promise<CatalogSnapshot> {
   return value;
 }
 
+/** Segment tarifaire du client connecté (prix publics pour un visiteur). */
+export const segmentOf = (auth: { customer: { segment: string } } | null) => auth?.customer.segment ?? 'retail';
+
 /** Curseur opaque : l'app le renvoie tel quel, sans l'interpréter. */
 export const encodeCursor = (offset: number) => Buffer.from(`o:${offset}`).toString('base64url');
 
@@ -51,8 +54,8 @@ export function decodeCursor(cursor: string | undefined): number {
   return Number(match[1]);
 }
 
-export async function listProducts(query: ProductListQuery): Promise<ProductListResponse> {
-  const catalog = await getCatalog();
+export async function listProducts(query: ProductListQuery, segment = 'retail'): Promise<ProductListResponse> {
+  const catalog = await getCatalog(segment);
   const result = searchProducts(catalog.products, query, catalog.categories);
   const limit = query.limit ?? DEFAULT_LIMIT;
   const start = decodeCursor(query.cursor);
@@ -67,23 +70,23 @@ export async function listProducts(query: ProductListQuery): Promise<ProductList
   };
 }
 
-export async function getProduct(slug: string): Promise<ProductDetail> {
-  const product = (await getCatalog()).bySlug.get(slug);
+export async function getProduct(slug: string, segment = 'retail'): Promise<ProductDetail> {
+  const product = (await getCatalog(segment)).bySlug.get(slug);
   if (!product) throw new ApiError('NOT_FOUND', 'Ce produit est introuvable.');
   return product;
 }
 
-export async function listCategories(): Promise<Category[]> {
-  return (await getCatalog()).categories;
+export async function listCategories(segment = 'retail'): Promise<Category[]> {
+  return (await getCatalog(segment)).categories;
 }
 
-export async function suggestProducts(q: string): Promise<SearchSuggestResponse> {
-  const catalog = await getCatalog();
+export async function suggestProducts(q: string, segment = 'retail'): Promise<SearchSuggestResponse> {
+  const catalog = await getCatalog(segment);
   return { query: q, ...suggest(catalog.products, q, catalog.categories) };
 }
 
-export async function getHome(): Promise<Home> {
-  const catalog = await getCatalog();
+export async function getHome(segment = 'retail'): Promise<Home> {
+  const catalog = await getCatalog(segment);
   return {
     banners: catalog.banners,
     categories: catalog.categories.map(({ id, slug, name, imageUrl, color }) => ({ id, slug, name, imageUrl, color })),

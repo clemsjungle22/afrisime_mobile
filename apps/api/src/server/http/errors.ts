@@ -2,6 +2,9 @@ import type { ApiErrorBody, ApiErrorCode } from '@afrisime/shared';
 
 const STATUS: Partial<Record<ApiErrorCode, number>> = {
   VALIDATION_ERROR: 400,
+  OTP_INVALID: 400,
+  OTP_EXPIRED: 400,
+  OTP_TOO_MANY_ATTEMPTS: 429,
   UNAUTHENTICATED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,

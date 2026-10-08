@@ -1,4 +1,5 @@
 import {
+  MAX_LINE_QUANTITY,
   type Category,
   type HomeBanner,
   type ProductDetail,
@@ -19,6 +20,11 @@ export type CatalogSnapshot = {
   segment: string;
   products: ProductDetail[];
   bySlug: Map<string, ProductDetail>;
+  /**
+   * Quantité commandable des formats dont le stock limite la commande (sous MAX_LINE_QUANTITY).
+   * Usage interne (revalidation du panier) : la quantité n'est révélée qu'au moment où elle plafonne une ligne.
+   */
+  stockLimits: Map<string, number>;
   categories: Category[];
   banners: HomeBanner[];
   /** Fin des ventes flash : fin du prix promo le plus proche, sinon fin de journée (Lomé = UTC). */
@@ -111,6 +117,7 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
   const categoryById = new Map(categoryRows.map((c) => [c.id, c]));
 
   const variantsByProduct = new Map<string, Variant[]>();
+  const stockLimits = new Map<string, number>();
   for (const v of variantRows) {
     const price = prices.get(v.id);
     // Un format vendu au prix catalogue sans prix en vigueur ne peut pas être vendu : il est masqué.
@@ -127,6 +134,8 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
       minQuantity: v.minQuantity,
       isPro: v.isPro,
     };
+    const stock = sellable.get(v.id) ?? 0;
+    if (v.saleMode === 'standard' && stock > 0 && stock < MAX_LINE_QUANTITY) stockLimits.set(v.id, stock);
     const list = variantsByProduct.get(v.productId) ?? [];
     list.push(variant);
     variantsByProduct.set(v.productId, list);
@@ -179,6 +188,7 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
     segment,
     products,
     bySlug: new Map(products.map((p) => [p.slug, p])),
+    stockLimits,
     categories,
     banners: bannerRows.map((b) => ({
       id: b.id,

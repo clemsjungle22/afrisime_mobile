@@ -5,28 +5,36 @@ import type {
   ValidatedCart,
   ValidatedCartLine,
   Variant,
-} from '@afrisime/shared';
-import { noOverrides, type CatalogOverrides } from './scenarios';
+} from './index';
 
 /**
- * Revalidation SIMULÉE du panier (POST /v1/cart/validate), comme le ferait le serveur :
+ * Revalidation du panier (POST /v1/cart/validate), partagée par le serveur et le mode démo :
  * prix et stock courants, quantités accordées, totaux entiers, liste des changements.
  */
 
+/** Modifications appliquées par-dessus le catalogue (scénarios de test du mode démo). */
+export type CatalogOverrides = {
+  prices: ReadonlyMap<string, number>;
+  stock: ReadonlyMap<string, number>;
+  unavailable: ReadonlySet<string>;
+};
+
+export const noOverrides: CatalogOverrides = {
+  prices: new Map(),
+  stock: new Map(),
+  unavailable: new Set(),
+};
+
 type Options = {
   products: ProductDetail[];
+  /** Quantité commandable par format, seulement quand elle limite la commande (absent = non limité). */
   stock: ReadonlyMap<string, number>;
   /** Modifications simulées (scénario de test) appliquées par-dessus le catalogue. */
   overrides?: CatalogOverrides;
   now?: Date;
 };
 
-/** Arrondi commercial aux 25 FCFA (montants entiers). */
-function roundPrice(n: number): number {
-  return Math.round(n / 25) * 25;
-}
-
-function findVariant(products: ProductDetail[], variantId: string) {
+export function findVariant(products: ProductDetail[], variantId: string) {
   for (const product of products) {
     const variant = product.variants.find((v) => v.id === variantId);
     if (variant) return { product, variant };
@@ -36,24 +44,6 @@ function findVariant(products: ProductDetail[], variantId: string) {
 
 function isSellable(v: Variant): boolean {
   return (v.availability === 'available' || v.availability === 'on_order') && v.price !== null;
-}
-
-/**
- * Scénario « panier modifié » : à partir du panier courant, +10 % sur la 1re ligne,
- * stock réduit d'une unité sur la 2e, rupture sur la 3e.
- */
-export function buildCartChangeOverrides(request: CartValidateRequest, products: ProductDetail[]): CatalogOverrides {
-  const prices = new Map<string, number>();
-  const stock = new Map<string, number>();
-  const unavailable = new Set<string>();
-  request.lines.forEach((line, index) => {
-    const variant = findVariant(products, line.variantId)?.variant;
-    if (!variant) return;
-    if (index === 0 && variant.price !== null) prices.set(variant.id, roundPrice(variant.price * 1.1));
-    if (index === 1) stock.set(variant.id, Math.max(1, line.quantity - 1));
-    if (index === 2) unavailable.add(variant.id);
-  });
-  return { prices, stock, unavailable };
 }
 
 export function validateCart(request: CartValidateRequest, options: Options): ValidatedCart {

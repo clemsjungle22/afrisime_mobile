@@ -1,3 +1,4 @@
+import { validateCart } from '@afrisime/shared';
 import {
   FINAL_ORDER_STATUSES,
   type CreateOrderBody,
@@ -10,7 +11,6 @@ import {
   type Quote,
   type ReorderResponse,
 } from '@afrisime/shared';
-import { validateCart } from './cartEngine';
 import { loadDb, saveDb, type MockDb, type MockPayment } from './db';
 import { mockError } from './simulate';
 

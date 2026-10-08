@@ -17,6 +17,16 @@ const components = {
   OnboardingOptions: shared.OnboardingOptions,
   UserProfile: shared.UserProfile,
   AuthTokens: shared.AuthTokens,
+  OtpRequestBody: shared.OtpRequestBody,
+  OtpRequestResponse: shared.OtpRequestResponse,
+  OtpVerifyBody: shared.OtpVerifyBody,
+  OtpVerifyResponse: shared.OtpVerifyResponse,
+  RefreshBody: shared.RefreshBody,
+  ProfileUpdateBody: shared.ProfileUpdateBody,
+  AddressInput: shared.AddressInput,
+  ServerCart: shared.ServerCart,
+  ServerCartPut: shared.ServerCartPut,
+  CartValidateRequest: shared.CartValidateRequest,
   ValidatedCart: shared.ValidatedCart,
   Address: shared.Address,
   DeliveryOptions: shared.DeliveryOptions,
@@ -55,6 +65,36 @@ function publicGet(summary: string, schema: object, options: { params?: object[]
     },
   };
 }
+
+type Op = {
+  summary: string;
+  body?: keyof typeof components;
+  response?: object;
+  status?: '200' | '201' | '204';
+  auth?: boolean;
+  errors?: Record<string, string>;
+  params?: object[];
+};
+
+/** Opération générique : corps JSON, réponse, erreurs au format commun, jeton si `auth`. */
+function op({ summary, body, response, status = '200', auth = true, errors = {}, params }: Op) {
+  return {
+    summary,
+    ...(auth ? { security: [{ bearer: [] }] } : {}),
+    ...(params ? { parameters: params } : {}),
+    ...(body ? { requestBody: { required: true, content: { 'application/json': { schema: ref(body) } } } } : {}),
+    responses: {
+      [status]: response
+        ? { description: 'OK', content: { 'application/json': { schema: response } } }
+        : { description: 'Sans contenu' },
+      ...(body ? { '400': errorResponse('Corps invalide (VALIDATION_ERROR)') } : {}),
+      ...(auth ? { '401': errorResponse('Non connecté ou session expirée (UNAUTHENTICATED)') } : {}),
+      ...Object.fromEntries(Object.entries(errors).map(([code, d]) => [code, errorResponse(d)])),
+    },
+  };
+}
+
+const idParam = [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }];
 
 /** Paramètres d'URL de GET /v1/products, dérivés du schéma partagé. */
 function productListParameters() {
@@ -111,8 +151,58 @@ export function buildOpenApi(serverUrl?: string) {
         params: [{ name: 'q', in: 'query', required: true, schema: { type: 'string', maxLength: 100 } }],
       }),
       '/v1/onboarding/options': publicGet("Listes de l'inscription (types de client, agences, CGU)", ref('OnboardingOptions')),
+      '/v1/auth/otp/request': {
+        post: op({
+          summary: 'Envoyer un code de connexion par SMS',
+          auth: false,
+          body: 'OtpRequestBody',
+          response: ref('OtpRequestResponse'),
+          errors: { '429': 'Trop de demandes (RATE_LIMITED, en-tête Retry-After)' },
+        }),
+      },
+      '/v1/auth/otp/verify': {
+        post: op({
+          summary: 'Vérifier le code et ouvrir une session',
+          auth: false,
+          body: 'OtpVerifyBody',
+          response: ref('OtpVerifyResponse'),
+          errors: { '429': "Trop d'essais (OTP_TOO_MANY_ATTEMPTS)" },
+        }),
+      },
+      '/v1/auth/refresh': {
+        post: op({ summary: 'Renouveler la session (rotation)', auth: false, body: 'RefreshBody', response: ref('AuthTokens') }),
+      },
+      '/v1/auth/logout': { post: op({ summary: 'Fermer la session de cet appareil', status: '204' }) },
+      '/v1/me': {
+        get: op({ summary: 'Profil du client connecté', response: ref('UserProfile') }),
+        patch: op({
+          summary: 'Compléter ou modifier le profil',
+          body: 'ProfileUpdateBody',
+          response: ref('UserProfile'),
+          errors: { '422': 'Type, agence ou CGU inconnus (VALIDATION_ERROR)' },
+        }),
+      },
+      '/v1/me/addresses': {
+        get: op({ summary: 'Adresses du client', response: { type: 'array', items: ref('Address') } }),
+        post: op({ summary: 'Ajouter une adresse (zone attribuée par le serveur)', body: 'AddressInput', response: ref('Address'), status: '201' }),
+      },
+      '/v1/me/addresses/{id}': {
+        patch: op({ summary: 'Modifier une adresse', params: idParam, body: 'AddressInput', response: ref('Address'), errors: { '404': 'Introuvable (NOT_FOUND)' } }),
+        delete: op({ summary: 'Supprimer une adresse', params: idParam, status: '204' }),
+      },
+      '/v1/cart': {
+        get: op({ summary: 'Panier enregistré', response: ref('ServerCart') }),
+        put: op({ summary: 'Remplacer le panier enregistré (idempotent)', body: 'ServerCartPut', response: ref('ServerCart') }),
+      },
+      '/v1/cart/validate': {
+        post: {
+          ...op({ summary: 'Revérifier le panier (prix, stock) et lister les changements', body: 'CartValidateRequest', response: ref('ValidatedCart') }),
+          security: [{}, { bearer: [] }],
+        },
+      },
     },
     components: {
+      securitySchemes: { bearer: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
       schemas: Object.fromEntries(Object.entries(components).map(([name, schema]) => [name, toSchema(schema)])),
     },
   };

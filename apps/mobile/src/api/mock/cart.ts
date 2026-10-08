@@ -1,11 +1,10 @@
-import { CartValidateRequest, ServerCart, ServerCartPut, ValidatedCart } from '@afrisime/shared';
+import { CartValidateRequest, ServerCart, ServerCartPut, ValidatedCart, validateCart } from '@afrisime/shared';
 import type { CartApi } from '@/features/cart/api';
 import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
-import { buildCartChangeOverrides, validateCart } from './cartEngine';
 import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, saveDb } from './db';
-import { useMockScenarios } from './scenarios';
+import { buildCartChangeOverrides, useMockScenarios } from './scenarios';
 import { simulate } from './simulate';
 
 const read = <T>(run: () => Promise<T>, signal?: AbortSignal) => withRetry(run, { canRetry: true, signal });
