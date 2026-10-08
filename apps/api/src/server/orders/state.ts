@@ -106,14 +106,27 @@ export async function closeReservations(tx: Db, orderId: string, mode: 'release'
     .where(and(eq(s.stockReservations.orderId, orderId), isNull(s.stockReservations.releasedAt)))
     .returning();
   for (const r of active) {
-    await tx
+    const [level] = await tx
       .update(s.stockLevels)
       .set({
         reserved: sql`greatest(${s.stockLevels.reserved} - ${r.quantity}, 0)`,
         ...(mode === 'consume' ? { onHand: sql`greatest(${s.stockLevels.onHand} - ${r.quantity}, 0)` } : {}),
         updatedAt: at,
       })
-      .where(and(eq(s.stockLevels.variantId, r.variantId), eq(s.stockLevels.agencyId, r.agencyId)));
+      .where(and(eq(s.stockLevels.variantId, r.variantId), eq(s.stockLevels.agencyId, r.agencyId)))
+      .returning({ onHand: s.stockLevels.onHand });
+    // Une vente apparaît dans l'historique des mouvements du format.
+    if (mode === 'consume' && level) {
+      await tx.insert(s.stockMovements).values({
+        variantId: r.variantId,
+        agencyId: r.agencyId,
+        delta: -r.quantity,
+        onHandAfter: level.onHand,
+        reason: 'sale',
+        orderId,
+        createdAt: at,
+      });
+    }
   }
 }
 

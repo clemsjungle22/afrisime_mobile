@@ -80,6 +80,12 @@ async function tokenFor(role: AdminRole = 'orders', mustChange = false) {
 
 const SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
 
+/**
+ * Début du pas de 30 s en cours : les étapes 2FA sont datées de maintenant, car certaines routes
+ * appelées dans les tests utilisent l'heure réelle (une date fixe finirait par « expirer »).
+ */
+const currentStepStart = () => new Date(Math.floor(Date.now() / 30_000) * 30_000);
+
 describe('briques de sécurité', () => {
   it('mot de passe : empreinte salée, vérification', async () => {
     const a = await hashPassword(PASSWORD);
@@ -163,7 +169,7 @@ describe('connexion', () => {
 
   it('administrateur sans 2FA : activation imposée (QR code), puis session', async () => {
     const { id, email } = await newAdmin('admin');
-    const now = new Date('2026-10-08T10:00:00Z');
+    const now = currentStepStart();
     const res = await login(t.db, { email, password: PASSWORD }, client, now);
     expect(res.status).toBe('totp_setup_required');
     const challengeId = (res as { challengeId: string }).challengeId;
@@ -192,7 +198,7 @@ describe('connexion', () => {
 
   it('2FA activé : code demandé ; faux code compté ; un code ne sert qu’une fois', async () => {
     const { email } = await newAdmin('admin', { totp: SECRET });
-    const now = new Date('2026-10-08T11:00:00Z');
+    const now = currentStepStart();
     const first = await login(t.db, { email, password: PASSWORD }, client, now);
     expect(first.status).toBe('totp_required');
     const challengeId = (first as { challengeId: string }).challengeId;
@@ -224,7 +230,7 @@ describe('connexion', () => {
 
   it('étape 2FA expirée après 5 minutes', async () => {
     const { email } = await newAdmin('admin', { totp: SECRET });
-    const now = new Date('2026-10-08T12:00:00Z');
+    const now = currentStepStart();
     const res = (await login(t.db, { email, password: PASSWORD }, client, now)) as {
       challengeId: string;
     };

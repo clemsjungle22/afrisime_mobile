@@ -26,8 +26,12 @@ import { createTestDb } from './pglite';
 let t: Awaited<ReturnType<typeof createTestDb>>;
 let seq = 0;
 
-/** Mardi 13 octobre 2026, 07:00 à Lomé : les créneaux du jour commencent à 08:00. */
-const NOW = new Date('2026-10-13T07:00:00.000Z');
+/**
+ * Mardi 13 octobre 2037, 07:00 à Lomé : les créneaux du jour commencent à 08:00.
+ * Date future volontaire : certaines routes testées utilisent l'heure réelle, qui doit rester
+ * antérieure aux échéances (devis, délai de paiement) calculées à partir de NOW.
+ */
+const NOW = new Date('2037-10-13T07:00:00.000Z');
 const at = (ms: number) => new Date(NOW.getTime() + ms);
 const RIZ_5KG = 'var_riz-parfume-savana_0'; // 4 750 F, stock non limité
 const RIZ_50KG = 'var_riz-parfume-savana_2'; // 43 500 F, stock 5
@@ -159,7 +163,7 @@ describe('commande', () => {
       history: [{ status: 'pending_payment', note: 'En attente du paiement' }],
       paymentDeadline: at(PAYMENT_DEADLINE_MS).toISOString(),
     });
-    expect(order.orderNumber).toMatch(/^AFS-2026-\d{6}$/);
+    expect(order.orderNumber).toMatch(/^AFS-\d{4}-\d{6}$/);
     expect(order.lines).toEqual(q.lines);
     expect(await sellable(RIZ_50KG)).toBe(before - 2);
   });

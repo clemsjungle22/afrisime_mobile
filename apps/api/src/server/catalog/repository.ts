@@ -31,7 +31,7 @@ export type CatalogSnapshot = {
   flashEndsAt: string;
 };
 
-type PriceRow = { variantId: string; segment: string; amount: number; compareAtAmount: number | null; validFrom: Date; validTo: Date | null };
+export type PriceRow = { variantId: string; segment: string; amount: number; compareAtAmount: number | null; validFrom: Date; validTo: Date | null };
 
 /**
  * Prix applicable parmi les prix en vigueur, dans cet ordre :
@@ -39,7 +39,7 @@ type PriceRow = { variantId: string; segment: string; amount: number; compareAtA
  * 2. un prix temporaire (promo, avec date de fin) avant le prix permanent ;
  * 3. le plus récent.
  */
-function pickPrices(rows: PriceRow[], segment: string): Map<string, PriceRow> {
+export function pickPrices(rows: PriceRow[], segment: string): Map<string, PriceRow> {
   const best = new Map<string, PriceRow>();
   const score = (r: PriceRow) => [r.segment === segment ? 1 : 0, r.validTo ? 1 : 0, r.validFrom.getTime()];
   const better = (a: PriceRow, b: PriceRow) => {
@@ -52,6 +52,20 @@ function pickPrices(rows: PriceRow[], segment: string): Map<string, PriceRow> {
     if (!current || better(r, current)) best.set(r.variantId, r);
   }
   return best;
+}
+
+const COMPUTED_BADGES = new Set(['promotion', 'out_of_stock', 'on_order']);
+
+/**
+ * Badges affichés : ceux choisis par l'équipe (populaire, nouveau, pro) + ceux calculés ici
+ * à partir des prix et du stock (promo en cours, rupture, sur commande) — jamais en décalage.
+ */
+function badgesOf(editorial: string[], variants: Variant[]): ProductDetail['badges'] {
+  const badges = editorial.filter((b) => !COMPUTED_BADGES.has(b)) as ProductDetail['badges'];
+  if (variants.some((v) => v.compareAtPrice !== null)) badges.push('promotion');
+  if (variants.every((v) => v.availability === 'unavailable')) badges.push('out_of_stock');
+  else if (variants.some((v) => v.availability === 'on_order')) badges.push('on_order');
+  return badges;
 }
 
 function endOfDayUtc(now: Date): Date {
@@ -153,7 +167,7 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
       brand: p.brand,
       origin: p.origin,
       imageUrl: p.imageUrl,
-      badges: p.badges as ProductDetail['badges'],
+      badges: badgesOf(p.badges, variants),
       ...summarizeVariants(variants),
       color: category.color,
       description: p.description,

@@ -15,3 +15,4 @@ export * from './cartEngine';
 export * from './checkoutLogic';
 export * from './admin';
 export * from './adminOrders';
+export * from './adminCatalog';

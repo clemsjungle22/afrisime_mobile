@@ -597,3 +597,25 @@ export const orderNotes = pgTable(
   },
   (t) => [index('order_notes_order_idx').on(t.orderId, t.createdAt)],
 );
+
+/** Historique des mouvements de stock (réception, inventaire, casse, vente…), en ajout seul. */
+export const stockMovements = pgTable(
+  'stock_movements',
+  {
+    id: bigserial({ mode: 'number' }).primaryKey(),
+    variantId: text()
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    agencyId: text()
+      .notNull()
+      .references(() => agencies.id),
+    delta: integer().notNull(),
+    onHandAfter: integer().notNull(),
+    reason: text().notNull(),
+    note: text(),
+    orderId: text(),
+    adminId: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('stock_movements_variant_idx').on(t.variantId, t.createdAt)],
+);

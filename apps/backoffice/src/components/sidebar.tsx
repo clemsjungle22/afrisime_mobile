@@ -18,7 +18,7 @@ type Item = { href: string; label: string; icon: LucideIcon; soon?: boolean };
 const ITEMS: Item[] = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/commandes', label: 'Commandes', icon: ShoppingBag },
-  { href: '/catalogue', label: 'Catalogue', icon: Package, soon: true },
+  { href: '/catalogue', label: 'Catalogue', icon: Package },
   { href: '/clients', label: 'Clients', icon: Users, soon: true },
   { href: '/parametres', label: 'Paramètres', icon: Settings, soon: true },
 ];
