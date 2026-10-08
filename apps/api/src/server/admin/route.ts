@@ -24,20 +24,34 @@ const ALL_ROLES: readonly AdminRole[] = ['admin', 'catalog', 'orders', 'support'
  * Adresse du back-office : session de l'équipe obligatoire, rôle vérifié, jamais mise en cache.
  * Les sessions clientes n'y donnent jamais accès (jetons et tables distincts).
  */
-export function adminRoute<Q extends Schema | undefined = undefined, B extends Schema | undefined = undefined, R extends Schema = Schema>(
+export function adminRoute<
+  Q extends Schema | undefined = undefined,
+  B extends Schema | undefined = undefined,
+  R extends Schema = Schema,
+>(
   spec: AdminSpec<Q, B, R>,
   handler: (ctx: RouteContext<Q, B> & AdminContext) => Promise<z.input<R>> | z.input<R>,
 ) {
   const roles = spec.roles ?? ALL_ROLES;
   return route(
-    { query: spec.query, body: spec.body, response: spec.response, status: spec.status, headers: { 'cache-control': 'private, no-store' } },
+    {
+      query: spec.query,
+      body: spec.body,
+      response: spec.response,
+      status: spec.status,
+      headers: { 'cache-control': 'private, no-store' },
+    },
     async (ctx) => {
       const auth = await authenticateAdmin(getDb(), ctx.req);
       if (auth.admin.mustChangePassword && !spec.allowPendingPassword) {
-        throw new ApiError('FORBIDDEN', 'Changez votre mot de passe provisoire pour continuer.', { reason: 'password_change_required' });
+        throw new ApiError('FORBIDDEN', 'Changez votre mot de passe provisoire pour continuer.', {
+          reason: 'password_change_required',
+        });
       }
       if (!roles.includes(auth.admin.role)) {
-        throw new ApiError('FORBIDDEN', "Votre rôle ne donne pas accès à cette action.", { reason: 'role' });
+        throw new ApiError('FORBIDDEN', 'Votre rôle ne donne pas accès à cette action.', {
+          reason: 'role',
+        });
       }
       return handler({ ...ctx, ...auth });
     },

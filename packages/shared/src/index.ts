@@ -14,3 +14,4 @@ export * from './catalogLogic';
 export * from './cartEngine';
 export * from './checkoutLogic';
 export * from './admin';
+export * from './adminOrders';

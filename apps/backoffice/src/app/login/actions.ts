@@ -30,7 +30,9 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
 function messageOf(error: unknown): string {
   if (error instanceof ApiError) {
     const left = (error.details as { attemptsLeft?: number } | undefined)?.attemptsLeft;
-    return left !== undefined ? `${error.message} Encore ${left} essai${left > 1 ? 's' : ''}.` : error.message;
+    return left !== undefined
+      ? `${error.message} Encore ${left} essai${left > 1 ? 's' : ''}.`
+      : error.message;
   }
   return 'Une erreur est survenue. Réessayez.';
 }
@@ -48,12 +50,20 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
 
   let res: AdminLoginResponse;
   try {
-    res = await api('/v1/admin/auth/login', { method: 'POST', body: parsed.data, schema: AdminLoginResponse, auth: false });
+    res = await api('/v1/admin/auth/login', {
+      method: 'POST',
+      body: parsed.data,
+      schema: AdminLoginResponse,
+      auth: false,
+    });
   } catch (error) {
     return { error: messageOf(error), values };
   }
   if (res.status === 'authenticated') return enter(res);
-  await setChallenge({ id: res.challengeId, kind: res.status === 'totp_required' ? 'totp' : 'totp_setup' });
+  await setChallenge({
+    id: res.challengeId,
+    kind: res.status === 'totp_required' ? 'totp' : 'totp_setup',
+  });
   redirect(res.status === 'totp_required' ? '/login/code' : '/login/activer-2fa');
 }
 
@@ -66,14 +76,20 @@ export async function totpAction(_prev: FormState, fd: FormData): Promise<FormSt
 
   let session: AdminSession;
   try {
-    session = await api(challenge.kind === 'totp' ? '/v1/admin/auth/totp' : '/v1/admin/auth/totp/confirm', {
-      method: 'POST',
-      body: { challengeId: challenge.id, code: code.data },
-      schema: AdminSession,
-      auth: false,
-    });
+    session = await api(
+      challenge.kind === 'totp' ? '/v1/admin/auth/totp' : '/v1/admin/auth/totp/confirm',
+      {
+        method: 'POST',
+        body: { challengeId: challenge.id, code: code.data },
+        schema: AdminSession,
+        auth: false,
+      },
+    );
   } catch (error) {
-    if (error instanceof ApiError && (error.code === 'OTP_EXPIRED' || error.code === 'OTP_TOO_MANY_ATTEMPTS')) {
+    if (
+      error instanceof ApiError &&
+      (error.code === 'OTP_EXPIRED' || error.code === 'OTP_TOO_MANY_ATTEMPTS')
+    ) {
       redirect(`/login?etape=${error.code === 'OTP_EXPIRED' ? 'expiree' : 'bloquee'}`);
     }
     return { error: messageOf(error) };
@@ -88,13 +104,17 @@ export async function changePasswordAction(_prev: FormState, fd: FormData): Prom
     newPassword: text(fd, 'newPassword'),
   });
   if (!parsed.success) return { fields: fieldErrors(parsed.error) };
-  if (confirm !== parsed.data.newPassword) return { fields: { confirm: 'Les deux mots de passe ne correspondent pas' } };
+  if (confirm !== parsed.data.newPassword)
+    return { fields: { confirm: 'Les deux mots de passe ne correspondent pas' } };
 
   try {
     await api('/v1/admin/me/password', { method: 'POST', body: parsed.data, schema: AdminProfile });
   } catch (error) {
     if (error instanceof ApiError && error.isUnauthenticated) redirect('/login?etape=expiree');
-    if (error instanceof ApiError && (error.details as { field?: string } | undefined)?.field === 'currentPassword') {
+    if (
+      error instanceof ApiError &&
+      (error.details as { field?: string } | undefined)?.field === 'currentPassword'
+    ) {
       return { fields: { currentPassword: error.message } };
     }
     return { error: messageOf(error) };

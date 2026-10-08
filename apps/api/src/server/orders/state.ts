@@ -31,6 +31,8 @@ export async function transition(
   note: string | null,
   at: Date,
   extra: Partial<typeof s.orders.$inferInsert> = {},
+  /** Auteur : « system », « customer » ou « admin:<id> » (affiché dans le suivi du back-office). */
+  actor = 'system',
 ): Promise<boolean> {
   const updated = await tx
     .update(s.orders)
@@ -38,8 +40,8 @@ export async function transition(
     .where(and(eq(s.orders.id, orderId), inArray(s.orders.status, [...from])))
     .returning({ id: s.orders.id });
   if (updated.length === 0) return false;
-  await tx.insert(s.orderStatusEvents).values({ orderId, status: to, note, at });
-  await emit(tx, 'order.status_changed', orderId, { status: to, at: at.toISOString() });
+  await tx.insert(s.orderStatusEvents).values({ orderId, status: to, note, at, actor });
+  await emit(tx, 'order.status_changed', orderId, { status: to, at: at.toISOString(), actor });
   return true;
 }
 

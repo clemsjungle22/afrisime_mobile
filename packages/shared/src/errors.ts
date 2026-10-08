@@ -22,6 +22,8 @@ export const ApiErrorCode = z.enum([
   'ORDER_NOT_PAYABLE',
   'QUOTE_EXPIRED',
   'IDEMPOTENCY_CONFLICT',
+  // Le back-office : la commande a été modifiée entre-temps par quelqu'un d'autre.
+  'ORDER_CHANGED',
   'UNAUTHENTICATED',
   'FORBIDDEN',
   'NOT_FOUND',

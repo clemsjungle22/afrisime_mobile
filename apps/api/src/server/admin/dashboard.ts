@@ -34,7 +34,13 @@ export async function getDashboard(db: Db, now = new Date()): Promise<AdminDashb
       .from(s.stockLevels)
       .innerJoin(s.productVariants, eq(s.productVariants.id, s.stockLevels.variantId))
       .innerJoin(s.products, eq(s.products.id, s.productVariants.productId))
-      .where(and(eq(s.productVariants.isActive, true), eq(s.products.isActive, true), eq(s.productVariants.saleMode, 'standard')))
+      .where(
+        and(
+          eq(s.productVariants.isActive, true),
+          eq(s.products.isActive, true),
+          eq(s.productVariants.saleMode, 'standard'),
+        ),
+      )
       .groupBy(s.productVariants.id, s.products.name, s.productVariants.label)
       .having(sql`${sellable} <= ${threshold}`)
       .orderBy(asc(sellable))
@@ -48,7 +54,11 @@ export async function getDashboard(db: Db, now = new Date()): Promise<AdminDashb
     revenueToday: Number(paid?.total ?? 0),
     paidOrdersToday: paid?.n ?? 0,
     openByStatus: open.map((o) => ({ status: o.status, count: o.n })),
-    lowStock: low.map((l) => ({ ...l, sellable: Number(l.sellable), threshold: Number(l.threshold) })),
+    lowStock: low.map((l) => ({
+      ...l,
+      sellable: Number(l.sellable),
+      threshold: Number(l.threshold),
+    })),
     pendingProAccounts: pending?.n ?? 0,
   };
 }

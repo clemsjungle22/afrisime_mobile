@@ -580,3 +580,20 @@ export const adminChallenges = pgTable('admin_challenges', {
   consumedAt: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
 });
+
+/** Notes internes de l'équipe sur une commande (jamais visibles par le client). */
+export const orderNotes = pgTable(
+  'order_notes',
+  {
+    id: bigserial({ mode: 'number' }).primaryKey(),
+    orderId: text()
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    adminId: text()
+      .notNull()
+      .references(() => adminUsers.id),
+    text: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('order_notes_order_idx').on(t.orderId, t.createdAt)],
+);

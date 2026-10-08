@@ -11,7 +11,9 @@ const loadMe = cache(() => api('/v1/admin/me', { schema: AdminProfile }));
  * Exige une session valide : sinon retour à la connexion. Un mot de passe provisoire
  * renvoie vers son changement ; un rôle non autorisé vers le tableau de bord.
  */
-export async function requireAdmin(options: { roles?: readonly AdminRole[]; allowPendingPassword?: boolean } = {}) {
+export async function requireAdmin(
+  options: { roles?: readonly AdminRole[]; allowPendingPassword?: boolean } = {},
+) {
   let me: AdminProfile;
   try {
     me = await loadMe();

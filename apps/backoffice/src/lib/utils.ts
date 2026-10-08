@@ -13,10 +13,19 @@ export const formatFCFA = (amount: number) => `${fcfa.format(amount)} F`;
 
 /** Date et heure de Lomé (UTC+0). */
 export const formatDateTime = (iso: string) =>
-  new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lome' }).format(new Date(iso));
+  new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Lome',
+  }).format(new Date(iso));
 
 export const formatDay = (iso: string) =>
-  new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Lome' }).format(new Date(iso));
+  new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Africa/Lome',
+  }).format(new Date(iso));
 
 /** Libellés des statuts de commande (back-office). */
 export const ORDER_STATUS_LABELS: Record<string, string> = {

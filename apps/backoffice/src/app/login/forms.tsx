@@ -24,7 +24,14 @@ export function LoginForm() {
         defaultValue={state.values?.email}
         error={state.fields?.email}
       />
-      <Field label="Mot de passe" name="password" type="password" autoComplete="current-password" required error={state.fields?.password} />
+      <Field
+        label="Mot de passe"
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        required
+        error={state.fields?.password}
+      />
       <Button type="submit" size="lg" loading={pending}>
         Se connecter
       </Button>
@@ -81,7 +88,14 @@ export function PasswordForm({ minLength }: { minLength: number }) {
         hint={`Au moins ${minLength} caractères. Une phrase facile à retenir fonctionne très bien.`}
         error={state.fields?.newPassword}
       />
-      <Field label="Confirmer le nouveau mot de passe" name="confirm" type="password" autoComplete="new-password" required error={state.fields?.confirm} />
+      <Field
+        label="Confirmer le nouveau mot de passe"
+        name="confirm"
+        type="password"
+        autoComplete="new-password"
+        required
+        error={state.fields?.confirm}
+      />
       <Button type="submit" size="lg" loading={pending}>
         Enregistrer le mot de passe
       </Button>

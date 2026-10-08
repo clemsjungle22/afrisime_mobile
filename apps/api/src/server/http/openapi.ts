@@ -42,6 +42,12 @@ const components = {
   AdminTotpConfirmBody: shared.AdminTotpConfirmBody,
   AdminChangePasswordBody: shared.AdminChangePasswordBody,
   AdminDashboard: shared.AdminDashboard,
+  AdminOrderList: shared.AdminOrderList,
+  AdminOrderDetail: shared.AdminOrderDetail,
+  AdminTransitionBody: shared.AdminTransitionBody,
+  AdminCollectBody: shared.AdminCollectBody,
+  AdminCancelBody: shared.AdminCancelBody,
+  AdminNoteBody: shared.AdminNoteBody,
   ValidatedCart: shared.ValidatedCart,
   Address: shared.Address,
   DeliveryOptions: shared.DeliveryOptions,
@@ -117,11 +123,13 @@ function op({ summary, body, response, status = '200', auth = true, errors = {},
 
 const idParam = [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }];
 
-/** Paramètres d'URL de GET /v1/products, dérivés du schéma partagé. */
-function productListParameters() {
-  const json = toSchema(shared.ProductListQuery) as { properties: Record<string, object> };
-  return Object.entries(json.properties).map(([name, schema]) => ({ name, in: 'query', required: false, schema }));
+/** Paramètres d'URL d'une liste, dérivés du schéma partagé. */
+function productListLikeParams(schema: z.ZodType) {
+  const json = toSchema(schema) as { properties: Record<string, object> };
+  return Object.entries(json.properties).map(([name, prop]) => ({ name, in: 'query', required: false, schema: prop }));
 }
+
+const productListParameters = () => productListLikeParams(shared.ProductListQuery);
 
 export function buildOpenApi(serverUrl?: string) {
   return {
@@ -315,6 +323,34 @@ export function buildOpenApi(serverUrl?: string) {
       '/v1/admin/me': { get: op({ summary: "Back-office : profil du membre de l'équipe", response: ref('AdminProfile') }) },
       '/v1/admin/me/password': {
         post: op({ summary: 'Back-office : changer de mot de passe', body: 'AdminChangePasswordBody', response: ref('AdminProfile') }),
+      },
+      '/v1/admin/orders': {
+        get: op({
+          summary: 'Back-office : commandes par étape (recherche, filtres, compteurs)',
+          params: productListLikeParams(shared.AdminOrderListQuery),
+          response: ref('AdminOrderList'),
+        }),
+      },
+      '/v1/admin/orders/{id}': {
+        get: op({ summary: 'Back-office : fiche commande', params: idParam, response: ref('AdminOrderDetail') }),
+      },
+      '/v1/admin/orders/{id}/transition': {
+        post: op({
+          summary: 'Back-office : faire franchir une étape',
+          params: idParam,
+          body: 'AdminTransitionBody',
+          response: ref('AdminOrderDetail'),
+          errors: { '409': 'Commande modifiée entre-temps (ORDER_CHANGED)', '422': 'Étape impossible, paiement à encaisser, code de retrait incorrect' },
+        }),
+      },
+      '/v1/admin/orders/{id}/collect': {
+        post: op({ summary: 'Back-office : encaisser un paiement à la livraison ou en agence', params: idParam, body: 'AdminCollectBody', response: ref('AdminOrderDetail') }),
+      },
+      '/v1/admin/orders/{id}/cancel': {
+        post: op({ summary: "Back-office : annuler (motif obligatoire, remboursement si payée)", params: idParam, body: 'AdminCancelBody', response: ref('AdminOrderDetail') }),
+      },
+      '/v1/admin/orders/{id}/notes': {
+        post: op({ summary: 'Back-office : note interne', params: idParam, body: 'AdminNoteBody', response: ref('AdminOrderDetail'), status: '201' }),
       },
       '/v1/admin/dashboard': {
         get: op({

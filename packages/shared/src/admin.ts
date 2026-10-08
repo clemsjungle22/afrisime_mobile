@@ -61,7 +61,10 @@ export const AdminLoginResponse = z.discriminatedUnion('status', [
 ]);
 export type AdminLoginResponse = z.infer<typeof AdminLoginResponse>;
 
-export const TotpCode = z.string().trim().regex(/^\d{6}$/, 'Le code compte 6 chiffres');
+export const TotpCode = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'Le code compte 6 chiffres');
 
 /** POST /v1/admin/auth/totp : code de l'application d'authentification. */
 export const AdminTotpBody = z.object({ challengeId: z.string(), code: TotpCode });

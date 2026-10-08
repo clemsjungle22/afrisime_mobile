@@ -219,7 +219,7 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
         : q.paymentMethod === 'cash_on_delivery'
           ? 'Paiement à la livraison'
           : 'Paiement au retrait en agence';
-      await tx.insert(s.orderStatusEvents).values({ orderId: id, status, note, at: now });
+      await tx.insert(s.orderStatusEvents).values({ orderId: id, status, note, at: now, actor: 'customer' });
       // Les formats « sur commande » ne puisent pas dans le stock.
       await reserveStock(
         tx,
@@ -247,7 +247,7 @@ export async function cancelOrder(db: Db, customerId: string, orderId: string, r
   await db.transaction(async (txn) => {
     const tx = txn as unknown as Db;
     const note = reason ? `Annulée à votre demande : ${reason}` : 'Annulée à votre demande';
-    const done = await transition(tx, orderId, [...CANCELLABLE], 'cancelled', note, now);
+    const done = await transition(tx, orderId, [...CANCELLABLE], 'cancelled', note, now, {}, 'customer');
     if (!done) throw new ApiError('ORDER_NOT_CANCELLABLE', 'Cette commande ne peut plus être annulée.');
     await closeReservations(tx, orderId, 'release', now);
     await emit(tx, 'order.cancelled', orderId, { reason: 'customer' });

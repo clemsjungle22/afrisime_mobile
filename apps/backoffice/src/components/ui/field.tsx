@@ -11,7 +11,10 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
 /** Champ de formulaire accessible : libellé, aide et erreur reliés au champ. */
 export function Field({ label, name, error, hint, className, id, ...props }: Props) {
   const inputId = id ?? name;
-  const describedBy = [hint ? `${inputId}-hint` : null, error ? `${inputId}-error` : null].filter(Boolean).join(' ') || undefined;
+  const describedBy =
+    [hint ? `${inputId}-hint` : null, error ? `${inputId}-error` : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={inputId} className="text-sm font-semibold text-ink">

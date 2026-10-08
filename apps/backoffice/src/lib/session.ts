@@ -32,7 +32,10 @@ export async function clearSession() {
 export type Challenge = { id: string; kind: 'totp' | 'totp_setup' };
 
 export async function setChallenge(challenge: Challenge) {
-  (await cookies()).set(CHALLENGE_COOKIE, `${challenge.kind}:${challenge.id}`, { ...base, maxAge: 5 * 60 });
+  (await cookies()).set(CHALLENGE_COOKIE, `${challenge.kind}:${challenge.id}`, {
+    ...base,
+    maxAge: 5 * 60,
+  });
 }
 
 export async function getChallenge(): Promise<Challenge | null> {

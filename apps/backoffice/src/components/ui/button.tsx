@@ -24,11 +24,16 @@ const buttonVariants = cva(
   },
 );
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { loading?: boolean };
+type Props = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & { loading?: boolean };
 
 export function Button({ className, variant, size, loading, disabled, children, ...props }: Props) {
   return (
-    <button className={cn(buttonVariants({ variant, size }), className)} disabled={disabled || loading} {...props}>
+    <button
+      className={cn(buttonVariants({ variant, size }), className)}
+      disabled={disabled || loading}
+      {...props}
+    >
       {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
       {children}
     </button>

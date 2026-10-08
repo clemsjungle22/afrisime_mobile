@@ -39,7 +39,10 @@ type Options<S extends z.ZodType> = {
   auth?: boolean;
 };
 
-export async function api<S extends z.ZodType>(path: string, options: Options<S>): Promise<z.infer<S>> {
+export async function api<S extends z.ZodType>(
+  path: string,
+  options: Options<S>,
+): Promise<z.infer<S>> {
   const incoming = await headers();
   const h: Record<string, string> = { accept: 'application/json' };
   // L'adresse IP et l'appareil de la personne servent aux limites anti-abus et au journal d'audit.
@@ -65,17 +68,28 @@ export async function api<S extends z.ZodType>(path: string, options: Options<S>
       signal: AbortSignal.timeout(40_000),
     });
   } catch {
-    throw new ApiError('NETWORK_ERROR', 'Le serveur AfriSime ne répond pas. Vérifiez qu’il est lancé (npm run api).', 0);
+    throw new ApiError(
+      'NETWORK_ERROR',
+      'Le serveur AfriSime ne répond pas. Vérifiez qu’il est lancé (npm run api).',
+      0,
+    );
   }
 
   const text = await res.text();
   const json: unknown = text ? JSON.parse(text) : null;
   if (!res.ok) {
     const err = ApiErrorBody.safeParse(json);
-    if (err.success) throw new ApiError(err.data.error.code, err.data.error.message, res.status, err.data.error.details);
+    if (err.success)
+      throw new ApiError(
+        err.data.error.code,
+        err.data.error.message,
+        res.status,
+        err.data.error.details,
+      );
     throw new ApiError('INTERNAL_ERROR', 'Une erreur est survenue. Réessayez.', res.status);
   }
   const parsed = options.schema.safeParse(json);
-  if (!parsed.success) throw new ApiError('INVALID_RESPONSE', 'Réponse inattendue du serveur.', res.status);
+  if (!parsed.success)
+    throw new ApiError('INVALID_RESPONSE', 'Réponse inattendue du serveur.', res.status);
   return parsed.data;
 }

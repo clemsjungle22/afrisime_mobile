@@ -21,14 +21,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-10 flex items-center justify-end gap-3 border-b border-line bg-white/90 px-5 py-3 backdrop-blur lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-800" aria-hidden>
+            <span
+              className="grid size-9 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-800"
+              aria-hidden
+            >
               {initials}
             </span>
             <div className="hidden leading-tight sm:block">
               <p className="text-sm font-semibold text-ink">{admin.name}</p>
               <p className="text-xs text-muted">{admin.email}</p>
             </div>
-            <Badge tone={admin.role === 'admin' ? 'accent' : 'neutral'}>{ADMIN_ROLE_LABELS[admin.role]}</Badge>
+            <Badge tone={admin.role === 'admin' ? 'accent' : 'neutral'}>
+              {ADMIN_ROLE_LABELS[admin.role]}
+            </Badge>
           </div>
           <span className="h-6 w-px bg-line" aria-hidden />
           <Link
