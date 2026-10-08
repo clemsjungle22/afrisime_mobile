@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, SnackbarHost, Text } from '@/components/ui';
+import { useTariffChangeRefresh } from '@/features/auth/hooks';
 import { bootstrapSession } from '@/features/auth/session';
 import { useCartSync } from '@/features/cart/sync';
 import { wireFocusManager, wireOnlineManager } from '@/lib/network';
@@ -83,10 +84,17 @@ export default function RootLayout() {
           }}
         />
         <CartSync />
+        <TariffSync />
         <SnackbarHost />
       </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
+}
+
+/** Prix rechargés quand l'équipe change le tarif du client (sans rendu). */
+function TariffSync() {
+  useTariffChangeRefresh();
+  return null;
 }
 
 /** Synchronisation du panier avec le compte (sans rendu). */

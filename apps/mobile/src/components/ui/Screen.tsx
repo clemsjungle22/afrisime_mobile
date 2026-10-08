@@ -1,5 +1,12 @@
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import type { ReactElement, ReactNode } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  type RefreshControlProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme';
 
@@ -11,6 +18,8 @@ export type ScreenProps = {
   /** Par défaut 'top' : la barre d'onglets gère déjà le bas. */
   edges?: Edge[];
   contentStyle?: StyleProp<ViewStyle>;
+  /** Tirer vers le bas pour actualiser (avec `scroll`). */
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
 export function Screen({
@@ -19,6 +28,7 @@ export function Screen({
   padded = true,
   edges = ['top'],
   contentStyle,
+  refreshControl,
 }: ScreenProps) {
   const theme = useTheme();
   const padding = padded ? { padding: theme.spacing.lg } : null;
@@ -29,6 +39,7 @@ export function Screen({
         <ScrollView
           contentContainerStyle={[padding, contentStyle]}
           keyboardShouldPersistTaps="handled"
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

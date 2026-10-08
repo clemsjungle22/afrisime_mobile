@@ -2,7 +2,7 @@ import { maskPhone } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 import { apiConfig } from '@/api/config';
 import { MOCK_OTP_CODE, RATE_LIMITED_PHONE } from '@/api/mock/authServer';
 import { SEED_USER } from '@/api/mock/db';
@@ -12,6 +12,7 @@ import { Badge, Button, Pattern, Screen, Skeleton, Text } from '@/components/ui'
 import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
+import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
 import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { gradients, palette, useTheme } from '@/theme';
@@ -19,8 +20,22 @@ import { gradients, palette, useTheme } from '@/theme';
 export function AccountScreen() {
   const theme = useTheme();
   const status = useSession((s) => s.status);
+  const me = useMe();
   return (
-    <Screen scroll contentStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE }}>
+    <Screen
+      scroll
+      contentStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE }}
+      refreshControl={
+        status === 'authenticated' ? (
+          <RefreshControl
+            refreshing={me.isRefetching}
+            onRefresh={() => void me.refetch()}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        ) : undefined
+      }
+    >
       <Text variant="display" accessibilityRole="header">
         Compte
       </Text>
@@ -100,6 +115,8 @@ function SignedIn() {
   const me = useMe();
   const options = useOnboardingOptions();
   const [leaving, setLeaving] = useState(false);
+  // Profil relu en revenant sur l'onglet (validation d'un profil pro par l'équipe, par exemple).
+  useRefetchOnFocus(me.refetch);
 
   const user = me.data;
   const type = options.data?.customerTypes.find((t) => t.id === user?.customerTypeId);
