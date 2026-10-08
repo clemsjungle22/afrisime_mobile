@@ -9,9 +9,10 @@ import { Alert, Badge, Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Checkbox, TextArea, TextInput } from '@/components/ui/form';
 import { ImageUploader } from '@/components/image-uploader';
+import { PhotoPicker } from '@/components/photo-picker';
 import { initials } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
-import { moveCategoryAction, saveCategoryAction } from '../actions';
+import { imageAction, moveCategoryAction, saveCategoryAction } from '../actions';
 
 export function CategoriesManager({
   categories,
@@ -143,6 +144,7 @@ function CategoryForm({ category, onDone }: { category?: AdminCategory; onDone: 
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [color, setColor] = useState<string>(category?.color ?? CATEGORY_COLORS[0]);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [pending, start] = useTransition();
 
   const submit = (e: FormEvent<HTMLFormElement>) => {
@@ -157,6 +159,14 @@ function CategoryForm({ category, onDone }: { category?: AdminCategory; onDone: 
         isActive: fd.get('isActive') === 'on',
       });
       if (!res.ok) return setError(res.error);
+      // Nouveau rayon : la photo choisie est envoyée maintenant qu'il existe.
+      if (!category && photo && res.data.id) {
+        const form = new FormData();
+        form.set('file', photo);
+        const sent = await imageAction({ kind: 'category', id: res.data.id }, form);
+        if (!sent.ok)
+          return setError(`Rayon créé, mais la photo n’a pas pu être envoyée : ${sent.error}`);
+      }
       router.refresh();
       onDone();
     });
@@ -166,6 +176,9 @@ function CategoryForm({ category, onDone }: { category?: AdminCategory; onDone: 
     <form onSubmit={submit} className="flex flex-col gap-4">
       {error ? <Alert tone="danger">{error}</Alert> : null}
       <TextInput name="name" label="Nom du rayon" required defaultValue={category?.name} />
+      {category ? null : (
+        <PhotoPicker file={photo} onChange={setPhoto} label="Photo du rayon (facultatif)" />
+      )}
       <TextArea
         name="description"
         label="Description (facultatif)"

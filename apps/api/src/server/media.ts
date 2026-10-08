@@ -64,9 +64,17 @@ export const keyOf = (url: string | null) =>
 
 /**
  * Prépare une photo envoyée par l'équipe : format vérifié par son contenu (pas par son nom),
- * orientation corrigée, recadrage carré, WebP compressé (léger à charger en 3G/4G).
+ * orientation corrigée, mise à la bonne taille, WebP compressé (léger à charger en 3G/4G).
  */
-export async function processImage(data: Buffer, size: number): Promise<Buffer> {
+export type ImageShape =
+  /** Recadrée pour remplir exactement la taille (photos produit, rayon, bannière). */
+  | { width: number; height: number; fit: 'cover' }
+  /** Réduite pour tenir dans la taille, sans recadrage ni fond (logo, transparence conservée). */
+  | { width: number; height: number; fit: 'inside' };
+
+export async function processImage(data: Buffer, shape: ImageShape | number): Promise<Buffer> {
+  const { width, height, fit } =
+    typeof shape === 'number' ? { width: shape, height: shape, fit: 'cover' as const } : shape;
   if (data.byteLength > MEDIA_MAX_BYTES) {
     throw new ApiError(
       'VALIDATION_ERROR',
@@ -89,21 +97,24 @@ export async function processImage(data: Buffer, size: number): Promise<Buffer> 
       422,
     );
   }
-  return sharp(data, { limitInputPixels: 40_000_000 })
-    .rotate()
-    .resize(size, size, { fit: 'cover', position: 'attention' })
-    .webp({ quality: 80 })
+  const image = sharp(data, { limitInputPixels: 40_000_000 }).rotate();
+  return (
+    fit === 'cover'
+      ? image.resize(width, height, { fit: 'cover', position: 'attention' })
+      : image.resize(width, height, { fit: 'inside', withoutEnlargement: true })
+  )
+    .webp({ quality: fit === 'inside' ? 90 : 80, alphaQuality: 100 })
     .toBuffer();
 }
 
 /** Enregistre une photo et renvoie son adresse publique (relative). */
 export async function storeImage(
-  folder: 'products' | 'categories',
+  folder: 'products' | 'categories' | 'banners' | 'branding',
   ownerId: string,
   data: Buffer,
-  size: number,
+  shape: ImageShape | number,
 ) {
-  const processed = await processImage(data, size);
+  const processed = await processImage(data, shape);
   const key = `${folder}/${ownerId.toLowerCase().replace(/[^a-z0-9_-]/g, '')}-${Date.now().toString(36)}.webp`;
   await mediaStorage().put(key, processed, 'image/webp');
   return `/media/${key}`;

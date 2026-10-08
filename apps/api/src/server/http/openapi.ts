@@ -62,6 +62,10 @@ const components = {
   AdminStockBody: shared.AdminStockBody,
   AdminThresholdBody: shared.AdminThresholdBody,
   AdminStockMovement: shared.AdminStockMovement,
+  AdminHome: shared.AdminHome,
+  AdminBannerInput: shared.AdminBannerInput,
+  AdminBannerMoveBody: shared.AdminBannerMoveBody,
+  AdminHomeSettingsBody: shared.AdminHomeSettingsBody,
   ValidatedCart: shared.ValidatedCart,
   Address: shared.Address,
   DeliveryOptions: shared.DeliveryOptions,
@@ -669,6 +673,96 @@ export function buildOpenApi(serverUrl?: string) {
           summary: 'Back-office : historique des mouvements de stock',
           params: idParam,
           response: { type: 'array', items: ref('AdminStockMovement') },
+        }),
+      },
+      '/v1/admin/home': {
+        get: op({
+          summary: "Back-office : accueil de l'app (cartes, textes, logo)",
+          response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/home/settings': {
+        put: op({
+          summary: 'Back-office : phrase d’accueil et textes des sections',
+          body: 'AdminHomeSettingsBody',
+          response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/home/logo': {
+        post: {
+          ...op({
+            summary: "Back-office : logo de l'en-tête (multipart, champ « file »)",
+            response: ref('AdminHome'),
+          }),
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: { file: { type: 'string', format: 'binary' } },
+                },
+              },
+            },
+          },
+        },
+        delete: op({
+          summary: "Back-office : revenir au logo intégré à l'app",
+          response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/home/banners': {
+        post: op({
+          summary: 'Back-office : nouvelle carte défilante',
+          body: 'AdminBannerInput',
+          response: ref('AdminHome'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/home/banners/{id}': {
+        patch: op({
+          summary: 'Back-office : modifier une carte défilante',
+          params: idParam,
+          body: 'AdminBannerInput',
+          response: ref('AdminHome'),
+        }),
+        delete: op({
+          summary: 'Back-office : supprimer une carte défilante',
+          params: idParam,
+          response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/home/banners/{id}/move': {
+        post: op({
+          summary: 'Back-office : monter ou descendre une carte',
+          params: idParam,
+          body: 'AdminBannerMoveBody',
+          response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/home/banners/{id}/image': {
+        post: {
+          ...op({
+            summary: 'Back-office : photo de fond de la carte (multipart, champ « file »)',
+            params: idParam,
+            response: ref('AdminHome'),
+          }),
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: { file: { type: 'string', format: 'binary' } },
+                },
+              },
+            },
+          },
+        },
+        delete: op({
+          summary: 'Back-office : retirer la photo de la carte',
+          params: idParam,
+          response: ref('AdminHome'),
         }),
       },
       '/v1/admin/dashboard': {

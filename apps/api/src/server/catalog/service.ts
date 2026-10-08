@@ -6,6 +6,8 @@ import {
   type ProductListQuery,
   type ProductListResponse,
   type SearchSuggestResponse,
+  DEFAULT_HOME_APPEARANCE,
+  HomeAppearance,
   buildHomeSections,
   searchProducts,
   suggest,
@@ -42,7 +44,8 @@ export function getCatalog(segment = 'retail'): Promise<CatalogSnapshot> {
 }
 
 /** Segment tarifaire du client connecté (prix publics pour un visiteur). */
-export const segmentOf = (auth: { customer: { segment: string } } | null) => auth?.customer.segment ?? 'retail';
+export const segmentOf = (auth: { customer: { segment: string } } | null) =>
+  auth?.customer.segment ?? 'retail';
 
 /** Curseur opaque : l'app le renvoie tel quel, sans l'interpréter. */
 export const encodeCursor = (offset: number) => Buffer.from(`o:${offset}`).toString('base64url');
@@ -54,7 +57,10 @@ export function decodeCursor(cursor: string | undefined): number {
   return Number(match[1]);
 }
 
-export async function listProducts(query: ProductListQuery, segment = 'retail'): Promise<ProductListResponse> {
+export async function listProducts(
+  query: ProductListQuery,
+  segment = 'retail',
+): Promise<ProductListResponse> {
   const catalog = await getCatalog(segment);
   const result = searchProducts(catalog.products, query, catalog.categories);
   const limit = query.limit ?? DEFAULT_LIMIT;
@@ -80,17 +86,52 @@ export async function listCategories(segment = 'retail'): Promise<Category[]> {
   return (await getCatalog(segment)).categories;
 }
 
-export async function suggestProducts(q: string, segment = 'retail'): Promise<SearchSuggestResponse> {
+export async function suggestProducts(
+  q: string,
+  segment = 'retail',
+): Promise<SearchSuggestResponse> {
   const catalog = await getCatalog(segment);
   return { query: q, ...suggest(catalog.products, q, catalog.categories) };
 }
 
+/** Clé du réglage « apparence de l'accueil » (logo, phrase d'accueil, textes des sections). */
+export const HOME_APPEARANCE_KEY = 'home.appearance';
+
+/**
+ * Apparence de l'accueil : réglages de l'équipe complétés par les textes d'origine
+ * (un réglage absent ou incomplet ne casse jamais l'accueil).
+ */
+export async function loadAppearance(db = getDb()): Promise<HomeAppearance> {
+  const [row] = await db
+    .select()
+    .from(s.appSettings)
+    .where(eq(s.appSettings.key, HOME_APPEARANCE_KEY));
+  const stored = (row?.value ?? {}) as Partial<HomeAppearance>;
+  const merged: HomeAppearance = {
+    logoUrl: stored.logoUrl ?? null,
+    greetingSubtitle: stored.greetingSubtitle || DEFAULT_HOME_APPEARANCE.greetingSubtitle,
+    blocks: { ...DEFAULT_HOME_APPEARANCE.blocks, ...(stored.blocks ?? {}) },
+  };
+  const parsed = HomeAppearance.safeParse(merged);
+  return parsed.success ? parsed.data : DEFAULT_HOME_APPEARANCE;
+}
+
 export async function getHome(segment = 'retail'): Promise<Home> {
-  const catalog = await getCatalog(segment);
+  const [catalog, appearance] = await Promise.all([getCatalog(segment), loadAppearance()]);
   return {
     banners: catalog.banners,
-    categories: catalog.categories.map(({ id, slug, name, imageUrl, color }) => ({ id, slug, name, imageUrl, color })),
-    sections: buildHomeSections(catalog.products.map(toSummary), catalog.flashEndsAt),
+    categories:
+      appearance.blocks.categories?.visible === false
+        ? []
+        : catalog.categories.map(({ id, slug, name, imageUrl, color }) => ({
+            id,
+            slug,
+            name,
+            imageUrl,
+            color,
+          })),
+    sections: buildHomeSections(catalog.products.map(toSummary), catalog.flashEndsAt, appearance),
+    appearance,
   };
 }
 
@@ -98,15 +139,28 @@ export async function getOnboardingOptions(): Promise<OnboardingOptions> {
   const db = getDb();
   const [types, agencies, terms] = await Promise.all([
     db.select().from(s.customerTypes).orderBy(asc(s.customerTypes.sortOrder)),
-    db.select().from(s.agencies).where(eq(s.agencies.isActive, true)).orderBy(asc(s.agencies.sortOrder)),
+    db
+      .select()
+      .from(s.agencies)
+      .where(eq(s.agencies.isActive, true))
+      .orderBy(asc(s.agencies.sortOrder)),
     db.select().from(s.appSettings).where(eq(s.appSettings.key, 'legal.terms')),
   ]);
-  const legal = (terms[0]?.value ?? {}) as { version?: string; termsUrl?: string; privacyUrl?: string };
+  const legal = (terms[0]?.value ?? {}) as {
+    version?: string;
+    termsUrl?: string;
+    privacyUrl?: string;
+  };
   if (!legal.version || !legal.termsUrl || !legal.privacyUrl) {
     throw new Error('Paramètre legal.terms manquant ou incomplet');
   }
   return {
-    customerTypes: types.map(({ id, label, description, requiresReview }) => ({ id, label, description, requiresReview })),
+    customerTypes: types.map(({ id, label, description, requiresReview }) => ({
+      id,
+      label,
+      description,
+      requiresReview,
+    })),
     agencies: agencies.map(({ id, name, city, address, phone, openingHours, isDefault }) => ({
       id,
       name,

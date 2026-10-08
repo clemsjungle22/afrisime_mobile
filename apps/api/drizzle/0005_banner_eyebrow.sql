@@ -1,0 +1,1 @@
+ALTER TABLE "home_banners" ADD COLUMN "eyebrow" text;

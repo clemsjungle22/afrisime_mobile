@@ -6,6 +6,7 @@ import {
   Package,
   Settings,
   ShoppingBag,
+  Smartphone,
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -19,6 +20,7 @@ const ITEMS: Item[] = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/commandes', label: 'Commandes', icon: ShoppingBag },
   { href: '/catalogue', label: 'Catalogue', icon: Package },
+  { href: '/accueil-app', label: 'Accueil de l’app', icon: Smartphone },
   { href: '/clients', label: 'Clients', icon: Users, soon: true },
   { href: '/parametres', label: 'Paramètres', icon: Settings, soon: true },
 ];

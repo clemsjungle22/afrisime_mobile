@@ -31,7 +31,14 @@ export type CatalogSnapshot = {
   flashEndsAt: string;
 };
 
-export type PriceRow = { variantId: string; segment: string; amount: number; compareAtAmount: number | null; validFrom: Date; validTo: Date | null };
+export type PriceRow = {
+  variantId: string;
+  segment: string;
+  amount: number;
+  compareAtAmount: number | null;
+  validFrom: Date;
+  validTo: Date | null;
+};
 
 /**
  * Prix applicable parmi les prix en vigueur, dans cet ordre :
@@ -41,7 +48,11 @@ export type PriceRow = { variantId: string; segment: string; amount: number; com
  */
 export function pickPrices(rows: PriceRow[], segment: string): Map<string, PriceRow> {
   const best = new Map<string, PriceRow>();
-  const score = (r: PriceRow) => [r.segment === segment ? 1 : 0, r.validTo ? 1 : 0, r.validFrom.getTime()];
+  const score = (r: PriceRow) => [
+    r.segment === segment ? 1 : 0,
+    r.validTo ? 1 : 0,
+    r.validFrom.getTime(),
+  ];
   const better = (a: PriceRow, b: PriceRow) => {
     const [x, y] = [score(a), score(b)];
     for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i]! > y[i]!;
@@ -74,57 +85,69 @@ function endOfDayUtc(now: Date): Date {
   return end;
 }
 
-export async function loadCatalog(db: Db, options: { segment?: string; now?: Date } = {}): Promise<CatalogSnapshot> {
+export async function loadCatalog(
+  db: Db,
+  options: { segment?: string; now?: Date } = {},
+): Promise<CatalogSnapshot> {
   const segment = options.segment ?? 'retail';
   const now = options.now ?? new Date();
 
-  const [categoryRows, productRows, variantRows, priceRows, stockRows, bannerRows] = await Promise.all([
-    db.select().from(s.categories).where(eq(s.categories.isActive, true)).orderBy(asc(s.categories.sortOrder), asc(s.categories.name)),
-    db.select().from(s.products).where(eq(s.products.isActive, true)).orderBy(asc(s.products.sortOrder), asc(s.products.name)),
-    db
-      .select()
-      .from(s.productVariants)
-      .where(eq(s.productVariants.isActive, true))
-      .orderBy(asc(s.productVariants.productId), asc(s.productVariants.sortOrder)),
-    db
-      .select({
-        variantId: s.prices.variantId,
-        segment: s.prices.segment,
-        amount: s.prices.amount,
-        compareAtAmount: s.prices.compareAtAmount,
-        validFrom: s.prices.validFrom,
-        validTo: s.prices.validTo,
-      })
-      .from(s.prices)
-      .where(
-        and(
-          isNull(s.prices.agencyId),
-          or(eq(s.prices.segment, segment), eq(s.prices.segment, 'retail')),
-          lte(s.prices.validFrom, now),
-          or(isNull(s.prices.validTo), gt(s.prices.validTo, now)),
+  const [categoryRows, productRows, variantRows, priceRows, stockRows, bannerRows] =
+    await Promise.all([
+      db
+        .select()
+        .from(s.categories)
+        .where(eq(s.categories.isActive, true))
+        .orderBy(asc(s.categories.sortOrder), asc(s.categories.name)),
+      db
+        .select()
+        .from(s.products)
+        .where(eq(s.products.isActive, true))
+        .orderBy(asc(s.products.sortOrder), asc(s.products.name)),
+      db
+        .select()
+        .from(s.productVariants)
+        .where(eq(s.productVariants.isActive, true))
+        .orderBy(asc(s.productVariants.productId), asc(s.productVariants.sortOrder)),
+      db
+        .select({
+          variantId: s.prices.variantId,
+          segment: s.prices.segment,
+          amount: s.prices.amount,
+          compareAtAmount: s.prices.compareAtAmount,
+          validFrom: s.prices.validFrom,
+          validTo: s.prices.validTo,
+        })
+        .from(s.prices)
+        .where(
+          and(
+            isNull(s.prices.agencyId),
+            or(eq(s.prices.segment, segment), eq(s.prices.segment, 'retail')),
+            lte(s.prices.validFrom, now),
+            or(isNull(s.prices.validTo), gt(s.prices.validTo, now)),
+          ),
         ),
-      ),
-    db
-      .select({
-        variantId: s.stockLevels.variantId,
-        sellable: sql<number>`sum(${s.stockLevels.onHand} - ${s.stockLevels.reserved})::int`,
-      })
-      .from(s.stockLevels)
-      .innerJoin(s.agencies, eq(s.agencies.id, s.stockLevels.agencyId))
-      .where(eq(s.agencies.isActive, true))
-      .groupBy(s.stockLevels.variantId),
-    db
-      .select()
-      .from(s.homeBanners)
-      .where(
-        and(
-          eq(s.homeBanners.isActive, true),
-          or(isNull(s.homeBanners.startsAt), lte(s.homeBanners.startsAt, now)),
-          or(isNull(s.homeBanners.endsAt), gt(s.homeBanners.endsAt, now)),
-        ),
-      )
-      .orderBy(asc(s.homeBanners.sortOrder)),
-  ]);
+      db
+        .select({
+          variantId: s.stockLevels.variantId,
+          sellable: sql<number>`sum(${s.stockLevels.onHand} - ${s.stockLevels.reserved})::int`,
+        })
+        .from(s.stockLevels)
+        .innerJoin(s.agencies, eq(s.agencies.id, s.stockLevels.agencyId))
+        .where(eq(s.agencies.isActive, true))
+        .groupBy(s.stockLevels.variantId),
+      db
+        .select()
+        .from(s.homeBanners)
+        .where(
+          and(
+            eq(s.homeBanners.isActive, true),
+            or(isNull(s.homeBanners.startsAt), lte(s.homeBanners.startsAt, now)),
+            or(isNull(s.homeBanners.endsAt), gt(s.homeBanners.endsAt, now)),
+          ),
+        )
+        .orderBy(asc(s.homeBanners.sortOrder)),
+    ]);
 
   const prices = pickPrices(priceRows, segment);
   const sellable = new Map(stockRows.map((r) => [r.variantId, Number(r.sellable)]));
@@ -149,7 +172,8 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
       isPro: v.isPro,
     };
     const stock = sellable.get(v.id) ?? 0;
-    if (v.saleMode === 'standard' && stock > 0 && stock < MAX_LINE_QUANTITY) stockLimits.set(v.id, stock);
+    if (v.saleMode === 'standard' && stock > 0 && stock < MAX_LINE_QUANTITY)
+      stockLimits.set(v.id, stock);
     const list = variantsByProduct.get(v.productId) ?? [];
     list.push(variant);
     variantsByProduct.set(v.productId, list);
@@ -196,7 +220,9 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
   const promoEnds = priceRows
     .filter((r) => r.compareAtAmount !== null && r.validTo !== null)
     .map((r) => r.validTo!.getTime());
-  const flashEndsAt = new Date(promoEnds.length > 0 ? Math.min(...promoEnds) : endOfDayUtc(now).getTime()).toISOString();
+  const flashEndsAt = new Date(
+    promoEnds.length > 0 ? Math.min(...promoEnds) : endOfDayUtc(now).getTime(),
+  ).toISOString();
 
   return {
     segment,
@@ -206,6 +232,7 @@ export async function loadCatalog(db: Db, options: { segment?: string; now?: Dat
     categories,
     banners: bannerRows.map((b) => ({
       id: b.id,
+      eyebrow: b.eyebrow,
       title: b.title,
       subtitle: b.subtitle,
       imageUrl: b.imageUrl,

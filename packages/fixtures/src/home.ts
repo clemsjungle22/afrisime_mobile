@@ -1,4 +1,5 @@
 import type { Home, HomeBanner, ProductSummary } from '@afrisime/shared';
+import { DEFAULT_HOME_APPEARANCE } from '@afrisime/shared';
 import { buildHomeSections } from '@afrisime/shared';
 import { mockCategories } from './categories';
 import { mockProducts, toSummary } from './products';
@@ -9,6 +10,7 @@ const summaries: ProductSummary[] = mockProducts.map(toSummary);
 export const homeBanners: HomeBanner[] = [
   {
     id: 'ban_bienvenue',
+    eyebrow: 'AFRISIME · LOMÉ',
     title: 'La distribution alimentaire, autrement',
     subtitle: 'Vos produits du quotidien livrés à Lomé, au prix juste.',
     imageUrl: null,
@@ -18,6 +20,7 @@ export const homeBanners: HomeBanner[] = [
   },
   {
     id: 'ban_pro',
+    eyebrow: 'FORMATS PRO',
     title: 'Revendeurs, restaurants, PME',
     subtitle: 'Formats pro et tarifs dégressifs sur les sacs et bidons.',
     imageUrl: null,
@@ -27,6 +30,7 @@ export const homeBanners: HomeBanner[] = [
   },
   {
     id: 'ban_local',
+    eyebrow: 'MADE IN TOGO',
     title: 'Le meilleur du Togo',
     subtitle: 'Gari, soja, karité : soutenez les producteurs locaux.',
     imageUrl: null,
@@ -43,7 +47,14 @@ export function buildMockHome(now: Date = new Date()): Home {
 
   return {
     banners: homeBanners,
-    categories: mockCategories.map(({ id, slug, name, imageUrl, color }) => ({ id, slug, name, imageUrl, color })),
+    categories: mockCategories.map(({ id, slug, name, imageUrl, color }) => ({
+      id,
+      slug,
+      name,
+      imageUrl,
+      color,
+    })),
     sections: buildHomeSections(summaries, flashEnd.toISOString()),
+    appearance: DEFAULT_HOME_APPEARANCE,
   };
 }

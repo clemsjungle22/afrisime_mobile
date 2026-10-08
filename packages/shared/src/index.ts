@@ -16,3 +16,4 @@ export * from './checkoutLogic';
 export * from './admin';
 export * from './adminOrders';
 export * from './adminCatalog';
+export * from './adminHome';

@@ -16,7 +16,8 @@ import * as s from './schema';
 /** Quantité posée pour un format « non limité » dans les données d'exemple. */
 export const UNLIMITED_DEMO_STOCK = 1000;
 
-const DEFAULT_AGENCY = mockOnboardingOptions.agencies.find((a) => a.isDefault)?.id ?? 'agc_lome_centre';
+const DEFAULT_AGENCY =
+  mockOnboardingOptions.agencies.find((a) => a.isDefault)?.id ?? 'agc_lome_centre';
 
 /** Segment tarifaire d'un type de client (les pros passent en « pro » une fois validés). */
 const segmentOf = (customerTypeId: string) => (customerTypeId === 'particulier' ? 'retail' : 'pro');
@@ -55,7 +56,10 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
       sku: `${p.slug.toUpperCase().slice(0, 12)}-${i}`,
       label: v.label,
       packaging: v.packaging,
-      saleMode: v.availability === 'on_order' || v.availability === 'quote_only' ? v.availability : ('standard' as const),
+      saleMode:
+        v.availability === 'on_order' || v.availability === 'quote_only'
+          ? v.availability
+          : ('standard' as const),
       leadTimeDays: v.leadTimeDays ?? null,
       minQuantity: v.minQuantity ?? 1,
       isPro: v.isPro ?? false,
@@ -67,7 +71,14 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
     p.variants.flatMap((v, i) =>
       v.price === null
         ? []
-        : [{ variantId: variantId(p.slug, i), segment: 'retail', amount: v.price, compareAtAmount: v.compareAtPrice ?? null }],
+        : [
+            {
+              variantId: variantId(p.slug, i),
+              segment: 'retail',
+              amount: v.price,
+              compareAtAmount: v.compareAtPrice ?? null,
+            },
+          ],
     ),
   );
 
@@ -82,11 +93,31 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
   );
 
   const settings = [
-    { key: 'delivery.free_above', value: DELIVERY_RULES.freeAbove, description: 'Livraison offerte à partir de ce sous-total (FCFA)' },
-    { key: 'delivery.min_order', value: DELIVERY_RULES.minOrderAmount, description: 'Sous-total minimum pour être livré (FCFA)' },
-    { key: 'payment.cod_max', value: DELIVERY_RULES.cashOnDeliveryMax, description: 'Plafond du paiement à la livraison (FCFA)' },
-    { key: 'checkout.lead_time_min', value: DELIVERY_RULES.leadTimeMs / 60_000, description: 'Préparation minimale avant un créneau (minutes)' },
-    { key: 'checkout.quote_ttl_min', value: DELIVERY_RULES.quoteTtlMs / 60_000, description: "Validité d'un devis (minutes)" },
+    {
+      key: 'delivery.free_above',
+      value: DELIVERY_RULES.freeAbove,
+      description: 'Livraison offerte à partir de ce sous-total (FCFA)',
+    },
+    {
+      key: 'delivery.min_order',
+      value: DELIVERY_RULES.minOrderAmount,
+      description: 'Sous-total minimum pour être livré (FCFA)',
+    },
+    {
+      key: 'payment.cod_max',
+      value: DELIVERY_RULES.cashOnDeliveryMax,
+      description: 'Plafond du paiement à la livraison (FCFA)',
+    },
+    {
+      key: 'checkout.lead_time_min',
+      value: DELIVERY_RULES.leadTimeMs / 60_000,
+      description: 'Préparation minimale avant un créneau (minutes)',
+    },
+    {
+      key: 'checkout.quote_ttl_min',
+      value: DELIVERY_RULES.quoteTtlMs / 60_000,
+      description: "Validité d'un devis (minutes)",
+    },
     {
       key: 'legal.terms',
       value: {
@@ -191,7 +222,12 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
       .values(stockRows)
       .onConflictDoUpdate({
         target: [s.stockLevels.variantId, s.stockLevels.agencyId],
-        set: { onHand: ex('on_hand'), reserved: ex('reserved'), lowThreshold: ex('low_threshold'), updatedAt: sql`now()` },
+        set: {
+          onHand: ex('on_hand'),
+          reserved: ex('reserved'),
+          lowThreshold: ex('low_threshold'),
+          updatedAt: sql`now()`,
+        },
       });
 
     await tx
@@ -227,7 +263,13 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
 
     await tx
       .insert(s.customerTypes)
-      .values(mockOnboardingOptions.customerTypes.map((t, i) => ({ ...t, segment: segmentOf(t.id), sortOrder: i })))
+      .values(
+        mockOnboardingOptions.customerTypes.map((t, i) => ({
+          ...t,
+          segment: segmentOf(t.id),
+          sortOrder: i,
+        })),
+      )
       .onConflictDoUpdate({
         target: s.customerTypes.id,
         set: {
@@ -245,6 +287,7 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
       .onConflictDoUpdate({
         target: s.homeBanners.id,
         set: {
+          eyebrow: ex('eyebrow'),
           title: ex('title'),
           subtitle: ex('subtitle'),
           imageUrl: ex('image_url'),

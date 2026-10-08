@@ -1,4 +1,4 @@
-import type { HomeBanner } from '@afrisime/shared';
+import { DEFAULT_BANNER_EYEBROWS, type HomeBanner } from '@afrisime/shared';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
@@ -12,16 +12,32 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import { ProductIllustration, type PackagingKind } from '@/components/illustrations/ProductIllustration';
+import {
+  ProductIllustration,
+  type PackagingKind,
+} from '@/components/illustrations/ProductIllustration';
 import { Pattern, Text } from '@/components/ui';
 import { gradients, palette, useTheme } from '@/theme';
+import { mediaUri } from '@/lib/media';
 
 type Props = {
   banners: HomeBanner[];
   onPressBanner: (banner: HomeBanner) => void;
 };
 
-const TONES: Record<HomeBanner['tone'], { colors: readonly [string, string]; fg: string; muted: string; overline: string; cta: string; ctaText: string; art: PackagingKind; artColor: string }> = {
+const TONES: Record<
+  HomeBanner['tone'],
+  {
+    colors: readonly [string, string];
+    fg: string;
+    muted: string;
+    overline: string;
+    cta: string;
+    ctaText: string;
+    art: PackagingKind;
+    artColor: string;
+  }
+> = {
   brand: {
     colors: gradients.brand,
     fg: palette.white,
@@ -52,12 +68,6 @@ const TONES: Record<HomeBanner['tone'], { colors: readonly [string, string]; fg:
     art: 'jar',
     artColor: '#4f8a2b',
   },
-};
-
-const OVERLINES: Record<HomeBanner['tone'], string> = {
-  brand: 'AFRISIME · LOMÉ',
-  accent: 'FORMATS PRO',
-  neutral: 'MADE IN TOGO',
 };
 
 const AUTOPLAY_MS = 5500;
@@ -116,11 +126,35 @@ export function BannerCarousel({ banners, onPressBanner }: Props) {
               onPress={() => onPressBanner(b)}
               accessibilityRole="button"
               accessibilityLabel={[b.title, b.subtitle, b.ctaLabel].filter(Boolean).join('. ')}
-              style={[styles.banner, { width: cardWidth, borderRadius: theme.radius.xl, boxShadow: theme.shadows.md }]}
+              style={[
+                styles.banner,
+                { width: cardWidth, borderRadius: theme.radius.xl, boxShadow: theme.shadows.md },
+              ]}
             >
-              <LinearGradient colors={tone.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-              {b.imageUrl ? (
-                <Image source={{ uri: b.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+              <LinearGradient
+                colors={tone.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              {mediaUri(b.imageUrl) ? (
+                <>
+                  <Image
+                    source={{ uri: mediaUri(b.imageUrl)! }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                  />
+                  {/* Voile de la couleur du style, côté texte : lisible quelle que soit la photo. */}
+                  <LinearGradient
+                    colors={[tone.colors[0], `${tone.colors[0]}e6`, `${tone.colors[0]}00`]}
+                    locations={[0, 0.45, 0.85]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </>
               ) : (
                 <>
                   <Pattern color={tone.fg} opacity={0.08} size={30} />
@@ -132,9 +166,13 @@ export function BannerCarousel({ banners, onPressBanner }: Props) {
               )}
               <View style={styles.text}>
                 <Text variant="overline" style={{ color: tone.overline }}>
-                  {OVERLINES[b.tone]}
+                  {b.eyebrow ?? DEFAULT_BANNER_EYEBROWS[b.tone]}
                 </Text>
-                <Text variant="title" style={{ color: tone.fg, fontSize: 21, lineHeight: 26 }} numberOfLines={3}>
+                <Text
+                  variant="title"
+                  style={{ color: tone.fg, fontSize: 21, lineHeight: 26 }}
+                  numberOfLines={3}
+                >
                   {b.title}
                 </Text>
                 {b.subtitle ? (
@@ -143,9 +181,14 @@ export function BannerCarousel({ banners, onPressBanner }: Props) {
                   </Text>
                 ) : null}
                 {b.ctaLabel ? (
-                  <View style={[styles.cta, { backgroundColor: tone.cta, borderRadius: theme.radius.pill }]}>
+                  <View
+                    style={[
+                      styles.cta,
+                      { backgroundColor: tone.cta, borderRadius: theme.radius.pill },
+                    ]}
+                  >
                     <Text variant="label" style={{ color: tone.ctaText, fontSize: 14 }}>
-                      {b.ctaLabel}  →
+                      {b.ctaLabel} →
                     </Text>
                   </View>
                 ) : null}
@@ -155,13 +198,19 @@ export function BannerCarousel({ banners, onPressBanner }: Props) {
         })}
       </ScrollView>
       {banners.length > 1 ? (
-        <View style={styles.dots} accessibilityLabel={`Bannière ${index + 1} sur ${banners.length}`}>
+        <View
+          style={styles.dots}
+          accessibilityLabel={`Bannière ${index + 1} sur ${banners.length}`}
+        >
           {banners.map((b, i) => (
             <View
               key={b.id}
               style={[
                 styles.dot,
-                { width: i === index ? 22 : 7, backgroundColor: i === index ? theme.colors.primary : theme.colors.border },
+                {
+                  width: i === index ? 22 : 7,
+                  backgroundColor: i === index ? theme.colors.primary : theme.colors.border,
+                },
               ]}
             />
           ))}

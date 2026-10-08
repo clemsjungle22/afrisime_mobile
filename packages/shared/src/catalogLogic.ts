@@ -1,4 +1,9 @@
-import type { HomeSection } from './home';
+import {
+  DEFAULT_HOME_APPEARANCE,
+  type HomeAppearance,
+  type HomeBlock,
+  type HomeSection,
+} from './home';
 import type { ProductDetail, ProductSummary, Variant } from './catalog';
 
 /**
@@ -32,46 +37,65 @@ export function toSummary(p: ProductDetail): ProductSummary {
 /** Produits associés : d'abord le même rayon, puis des populaires d'autres rayons (6 au plus). */
 export function relatedOf(all: readonly ProductDetail[], p: ProductDetail): ProductSummary[] {
   const sameCategory = all.filter((o) => o.categoryId === p.categoryId && o.slug !== p.slug);
-  const popular = all.filter((o) => o.badges.includes('popular') && o.slug !== p.slug && o.categoryId !== p.categoryId);
+  const popular = all.filter(
+    (o) => o.badges.includes('popular') && o.slug !== p.slug && o.categoryId !== p.categoryId,
+  );
   return [...sameCategory, ...popular].slice(0, 6).map(toSummary);
 }
 
-/** Sections de l'accueil (les sections vides sont omises). */
-export function buildHomeSections(summaries: readonly ProductSummary[], flashEndsAt: string | null): HomeSection[] {
-  const pick = (filter: (p: ProductSummary) => boolean, max = 8) => summaries.filter(filter).slice(0, max);
-  const sections: HomeSection[] = [
-    {
-      id: 'sec_flash',
-      type: 'flash_sale',
-      title: 'Ventes flash',
-      endsAt: flashEndsAt,
-      link: '/boutique',
-      items: pick((p) => p.badges.includes('promotion')),
-    },
-    {
-      id: 'sec_best',
-      type: 'best_sellers',
-      title: 'Les plus achetés',
-      endsAt: null,
-      link: '/boutique',
-      items: pick((p) => p.badges.includes('popular')),
-    },
-    {
-      id: 'sec_local',
-      type: 'local_products',
-      title: "Produits d'ici",
-      endsAt: null,
-      link: '/boutique?category=produits-locaux',
-      items: pick((p) => p.origin === 'local'),
-    },
-    {
-      id: 'sec_new',
-      type: 'new_arrivals',
-      title: 'Nouveautés',
-      endsAt: null,
-      link: '/boutique',
-      items: pick((p) => p.badges.includes('new')),
-    },
-  ];
-  return sections.filter((s) => s.items.length > 0);
+/** Sections de l'accueil : textes et affichage réglés par l'équipe ; les sections vides sont omises. */
+export function buildHomeSections(
+  summaries: readonly ProductSummary[],
+  flashEndsAt: string | null,
+  appearance: HomeAppearance = DEFAULT_HOME_APPEARANCE,
+): HomeSection[] {
+  const pick = (filter: (p: ProductSummary) => boolean, max = 8) =>
+    summaries.filter(filter).slice(0, max);
+  const block = (type: Exclude<HomeBlock, 'categories'>) =>
+    appearance.blocks[type] ?? DEFAULT_HOME_APPEARANCE.blocks[type]!;
+  const section = (
+    id: string,
+    type: Exclude<HomeBlock, 'categories'>,
+    link: string,
+    items: ProductSummary[],
+    endsAt: string | null = null,
+  ): HomeSection & { visible: boolean } => ({
+    id,
+    type,
+    title: block(type).title,
+    overline: block(type).overline || null,
+    endsAt,
+    link,
+    items,
+    visible: block(type).visible,
+  });
+  return [
+    section(
+      'sec_flash',
+      'flash_sale',
+      '/boutique',
+      pick((p) => p.badges.includes('promotion')),
+      flashEndsAt,
+    ),
+    section(
+      'sec_best',
+      'best_sellers',
+      '/boutique',
+      pick((p) => p.badges.includes('popular')),
+    ),
+    section(
+      'sec_local',
+      'local_products',
+      '/boutique?category=produits-locaux',
+      pick((p) => p.origin === 'local'),
+    ),
+    section(
+      'sec_new',
+      'new_arrivals',
+      '/boutique',
+      pick((p) => p.badges.includes('new')),
+    ),
+  ]
+    .filter((s) => s.visible && s.items.length > 0)
+    .map(({ visible: _visible, ...s }) => s);
 }

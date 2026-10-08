@@ -1,10 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { Home, HomeCategory, HomeSection, ProductSummary } from '@afrisime/shared';
+import {
+  DEFAULT_HOME_APPEARANCE,
+  type Home,
+  type HomeCategory,
+  type HomeSection,
+  type ProductSummary,
+} from '@afrisime/shared';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
@@ -13,6 +19,7 @@ import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { BannerCarousel } from '@/features/catalog/components/BannerCarousel';
 import { CategoryTile } from '@/features/catalog/components/CategoryTile';
+import { mediaUri } from '@/lib/media';
 import { FlashCountdown } from '@/features/catalog/components/FlashCountdown';
 import { ProductCardSkeleton } from '@/features/catalog/components/ProductCard';
 import { ProductCarousel } from '@/features/catalog/components/ProductCarousel';
@@ -86,7 +93,11 @@ export function HomeScreen() {
         <View>
           <OfflineBanner updatedAt={home.dataUpdatedAt} />
           {home.data ? (
-            <HomeContent home={home.data} onPressProduct={onPressProduct} onPressCategory={onPressCategory} />
+            <HomeContent
+              home={home.data}
+              onPressProduct={onPressProduct}
+              onPressCategory={onPressCategory}
+            />
           ) : home.isError ? (
             <View style={{ minHeight: 360 }}>
               <ErrorState error={home.error} onRetry={() => void home.refetch()} />
@@ -103,11 +114,25 @@ export function HomeScreen() {
 function TopBar() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const remoteLogo = mediaUri(useHome().data?.appearance?.logoUrl);
+  const [logoFailed, setLogoFailed] = useState(false);
   return (
-    <View style={[styles.topBar, { paddingTop: insets.top + theme.spacing.sm, paddingHorizontal: theme.spacing.lg }]}>
+    <View
+      style={[
+        styles.topBar,
+        { paddingTop: insets.top + theme.spacing.sm, paddingHorizontal: theme.spacing.lg },
+      ]}
+    >
       <Pattern color={palette.white} opacity={0.07} size={40} />
       <View style={[styles.logoPill, { borderRadius: theme.radius.md }]}>
-        <Image source={logo} style={styles.logo} contentFit="contain" accessibilityLabel="AfriSime" />
+        <Image
+          source={remoteLogo && !logoFailed ? { uri: remoteLogo } : logo}
+          onError={() => setLogoFailed(true)}
+          style={styles.logo}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          accessibilityLabel="AfriSime"
+        />
       </View>
       <Pressable
         onPress={() => comingSoon('Les notifications')}
@@ -124,12 +149,16 @@ function TopBar() {
 /** Salutation et adresse : défilent normalement et passent sous l'en-tête fixe. */
 function Greeting() {
   const theme = useTheme();
+  const greetingSubtitle =
+    useHome().data?.appearance?.greetingSubtitle ?? DEFAULT_HOME_APPEARANCE.greetingSubtitle;
   const authenticated = useSession((s) => s.status === 'authenticated');
   const me = useMe();
   const addresses = useAddresses(authenticated);
   const selectedId = useCheckout((s) => s.addressId);
   const address =
-    addresses.data?.find((a) => a.id === selectedId) ?? addresses.data?.find((a) => a.isDefault) ?? addresses.data?.[0];
+    addresses.data?.find((a) => a.id === selectedId) ??
+    addresses.data?.find((a) => a.isDefault) ??
+    addresses.data?.[0];
 
   return (
     <View style={[styles.greeting, { paddingHorizontal: theme.spacing.lg }]}>
@@ -138,13 +167,18 @@ function Greeting() {
         <Text variant="hero" style={{ color: palette.white }} accessibilityRole="header">
           {greeting(authenticated ? me.data?.firstName : null)}
         </Text>
-        <Text style={{ color: palette.brand200 }}>Qu’allons-nous vous livrer aujourd’hui ?</Text>
+        <Text style={{ color: palette.brand200 }}>{greetingSubtitle}</Text>
       </FadeIn>
       <Pressable
         onPress={() => (authenticated ? router.push('/checkout/address') : router.push('/login'))}
         accessibilityRole="button"
-        accessibilityLabel={address ? `Livraison à ${address.district}` : 'Choisir mon adresse de livraison'}
-        style={({ pressed }) => [styles.location, { borderRadius: theme.radius.pill, opacity: pressed ? 0.8 : 1 }]}
+        accessibilityLabel={
+          address ? `Livraison à ${address.district}` : 'Choisir mon adresse de livraison'
+        }
+        style={({ pressed }) => [
+          styles.location,
+          { borderRadius: theme.radius.pill, opacity: pressed ? 0.8 : 1 },
+        ]}
       >
         <Ionicons name="location" size={16} color={palette.accent500} />
         <Text variant="caption" style={{ color: palette.white }} numberOfLines={1}>
@@ -185,6 +219,10 @@ type ContentProps = {
 
 function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
   const theme = useTheme();
+  // Réglé dans le back-office (textes d'origine si l'accueil vient d'une ancienne version).
+  const categoriesBlock =
+    (home.appearance ?? DEFAULT_HOME_APPEARANCE).blocks.categories ??
+    DEFAULT_HOME_APPEARANCE.blocks.categories!;
   const flash = home.sections.find((s) => s.type === 'flash_sale');
   const others = home.sections.filter((s) => s.type !== 'flash_sale');
   let i = 0;
@@ -195,14 +233,16 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
         <BannerCarousel banners={home.banners} onPressBanner={(b) => openAppLink(b.link)} />
       </FadeIn>
 
-      {home.categories.length > 0 ? (
+      {home.categories.length > 0 && categoriesBlock.visible ? (
         <FadeIn index={i++} style={{ gap: theme.spacing.md }}>
           <View style={{ gap: 4, paddingHorizontal: theme.spacing.lg }}>
-            <Text variant="overline" color="accent">
-              FAITES LE TOUR
-            </Text>
+            {categoriesBlock.overline ? (
+              <Text variant="overline" color="accent">
+                {categoriesBlock.overline}
+              </Text>
+            ) : null}
             <Text variant="title" accessibilityRole="header">
-              Nos rayons
+              {categoriesBlock.title}
             </Text>
           </View>
           {/* Rangée horizontale, comme les sections de produits. */}
@@ -210,10 +250,19 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
             horizontal
             showsHorizontalScrollIndicator={false}
             accessibilityLabel="Rayons"
-            contentContainerStyle={{ paddingHorizontal: theme.spacing.lg, paddingVertical: 6, gap: theme.spacing.md }}
+            contentContainerStyle={{
+              paddingHorizontal: theme.spacing.lg,
+              paddingVertical: 6,
+              gap: theme.spacing.md,
+            }}
           >
             {home.categories.map((c) => (
-              <CategoryTile key={c.id} category={c} onPress={onPressCategory} size={CATEGORY_TILE} />
+              <CategoryTile
+                key={c.id}
+                category={c}
+                onPress={onPressCategory}
+                size={CATEGORY_TILE}
+              />
             ))}
           </ScrollView>
         </FadeIn>
@@ -223,11 +272,16 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
         <FadeIn index={i++}>
           {/* Bande pleine largeur : les produits défilent d'un bord à l'autre de l'écran. */}
           <View style={styles.flash}>
-            <LinearGradient colors={gradients.night} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <LinearGradient
+              colors={gradients.night}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
             <Pattern color={palette.accent500} opacity={0.07} size={34} />
             <ProductCarousel
               tone="dark"
-              overline="⚡ À NE PAS MANQUER"
+              overline={flash.overline ?? undefined}
               title={flash.title}
               products={flash.items}
               onPressProduct={onPressProduct}
@@ -241,7 +295,7 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
       {others.map((s) => (
         <FadeIn key={s.id} index={i++}>
           <ProductCarousel
-            overline={SECTION_OVERLINES[s.type]}
+            overline={s.overline ?? SECTION_OVERLINES[s.type]}
             title={s.title}
             products={s.items}
             onPressProduct={onPressProduct}
@@ -256,11 +310,19 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
 function HomeSkeleton() {
   const theme = useTheme();
   return (
-    <View style={{ padding: theme.spacing.lg, gap: theme.spacing.xl }} accessibilityLabel="Chargement">
+    <View
+      style={{ padding: theme.spacing.lg, gap: theme.spacing.xl }}
+      accessibilityLabel="Chargement"
+    >
       <Skeleton height={214} radius={theme.radius.xl} />
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
         {[0, 1, 2].map((k) => (
-          <Skeleton key={k} width={CATEGORY_TILE} height={CATEGORY_TILE * 1.08} radius={theme.radius.lg} />
+          <Skeleton
+            key={k}
+            width={CATEGORY_TILE}
+            height={CATEGORY_TILE * 1.08}
+            radius={theme.radius.lg}
+          />
         ))}
       </View>
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>

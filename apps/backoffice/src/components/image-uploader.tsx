@@ -4,26 +4,49 @@ import { MEDIA_ACCEPTED_TYPES, MEDIA_MAX_BYTES } from '@afrisime/shared';
 import { ImagePlus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { type ChangeEvent, useRef, useState, useTransition } from 'react';
-import type { Result } from '@/app/(app)/catalogue/actions';
+import type { ImageTarget, Result } from '@/app/(app)/catalogue/actions';
 import { imageAction } from '@/app/(app)/catalogue/actions';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/** Forme de l'aperçu : carré (produit, rayon), paysage (carte d'accueil) ou logo. */
+type Shape = 'square' | 'wide' | 'logo';
+
 type Props = {
-  target: { kind: 'product' | 'category'; id: string };
+  target: ImageTarget;
   /** Adresse affichable de la photo actuelle (null : aucune). */
   src: string | null;
-  /** Ce qui s'affiche sans photo (initiales sur la couleur du rayon). */
-  fallback: { color: string; text: string };
+  /** Sans photo : initiales sur une couleur, ou image par défaut (logo intégré à l'app). */
+  fallback: { color: string; text: string } | { src: string };
   canEdit: boolean;
   size?: 'md' | 'lg';
+  shape?: Shape;
+  /** Explication sous les boutons (règles de la photo). */
+  hint?: string;
+  /** Texte du retrait (« l'app affichera… »). */
+  removeMessage?: string;
+};
+
+const HINTS: Record<Shape, string> = {
+  square: 'JPEG, PNG ou WebP, 5 Mo maximum. Recadrée en carré automatiquement.',
+  wide: 'JPEG, PNG ou WebP, 5 Mo maximum. Recadrée au format de la carte (paysage).',
+  logo: 'PNG à fond transparent conseillé, 5 Mo maximum. Jamais recadré.',
 };
 
 /**
- * Photo d'un produit ou d'un rayon : aperçu, ajout / remplacement, retrait.
- * Le serveur recadre en carré et compresse : une photo de téléphone convient très bien.
+ * Photo d'un produit, d'un rayon, d'une carte d'accueil ou logo : aperçu, ajout / remplacement, retrait.
+ * Le serveur met à la bonne taille et compresse : une photo de téléphone convient très bien.
  */
-export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: Props) {
+export function ImageUploader({
+  target,
+  src,
+  fallback,
+  canEdit,
+  size = 'lg',
+  shape = 'square',
+  hint,
+  removeMessage,
+}: Props) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,17 +72,20 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
   };
 
   const remove = () => {
-    if (
-      !window.confirm(
-        'Retirer la photo ? L’app affichera de nouveau ' +
-          (target.kind === 'product' ? 'les initiales.' : 'la couleur du rayon.'),
-      )
-    )
-      return;
+    if (!window.confirm(removeMessage ?? 'Retirer la photo ?')) return;
     start(async () => finish(await imageAction(target, null)));
   };
 
-  const box = size === 'lg' ? 'size-40' : 'size-24';
+  const box =
+    shape === 'wide'
+      ? 'aspect-[15/8] w-full max-w-md'
+      : shape === 'logo'
+        ? 'h-20 w-64 bg-brand-900 p-3'
+        : size === 'lg'
+          ? 'size-40'
+          : 'size-24';
+  const shown = src ?? ('src' in fallback ? fallback.src : null);
+
   return (
     <div className="flex flex-col gap-3">
       <div
@@ -69,10 +95,14 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
           pending && 'opacity-60',
         )}
       >
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element -- photo servie par l'API (déjà optimisée)
-          <img src={src} alt="" className="size-full object-cover" />
-        ) : (
+        {shown ? (
+          // eslint-disable-next-line @next/next/no-img-element -- image servie par l'API (déjà optimisée)
+          <img
+            src={shown}
+            alt=""
+            className={cn('size-full', shape === 'logo' ? 'object-contain' : 'object-cover')}
+          />
+        ) : 'text' in fallback ? (
           <div
             className="grid size-full place-items-center text-3xl font-extrabold text-white"
             style={{
@@ -81,7 +111,7 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
           >
             {fallback.text}
           </div>
-        )}
+        ) : null}
         {pending ? (
           <span className="absolute inset-0 grid place-items-center bg-white/50 text-sm font-semibold text-ink">
             Envoi…
@@ -96,7 +126,7 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
             accept={MEDIA_ACCEPTED_TYPES.join(',')}
             className="sr-only"
             onChange={onFile}
-            aria-label="Choisir une photo"
+            aria-label="Choisir une image"
             tabIndex={-1}
           />
           <Button
@@ -107,7 +137,7 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
             onClick={() => input.current?.click()}
           >
             <ImagePlus className="size-3.5" aria-hidden />{' '}
-            {src ? 'Remplacer la photo' : 'Ajouter une photo'}
+            {src ? 'Remplacer' : shape === 'logo' ? 'Remplacer le logo' : 'Ajouter une photo'}
           </Button>
           {src ? (
             <Button
@@ -118,7 +148,8 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
               disabled={pending}
               onClick={remove}
             >
-              <Trash2 className="size-3.5" aria-hidden /> Retirer
+              <Trash2 className="size-3.5" aria-hidden />{' '}
+              {shape === 'logo' ? 'Revenir au logo d’origine' : 'Retirer'}
             </Button>
           ) : null}
         </div>
@@ -128,9 +159,7 @@ export function ImageUploader({ target, src, fallback, canEdit, size = 'lg' }: P
           {error}
         </p>
       ) : (
-        <p className="text-xs text-muted">
-          JPEG, PNG ou WebP, 5 Mo maximum. Recadrée en carré automatiquement.
-        </p>
+        <p className="text-xs text-muted">{hint ?? HINTS[shape]}</p>
       )}
     </div>
   );

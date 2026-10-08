@@ -85,6 +85,9 @@ export default async function ProductPage({
       {query.cree ? (
         <Alert tone="success">Produit créé. Il est visible dans l’app en moins d’une minute.</Alert>
       ) : null}
+      {query.photo === 'echec' ? (
+        <Alert tone="warning">La photo n’a pas pu être envoyée : ajoutez-la ci-dessous.</Alert>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.6fr]">
         <div className="flex flex-col gap-6">
@@ -99,6 +102,7 @@ export default async function ProductPage({
                 src={mediaSrc(product.imageUrl)}
                 fallback={{ color: category?.color ?? '#0f3d2e', text: initials(product.name) }}
                 canEdit={canEdit}
+                removeMessage="Retirer la photo ? L’app affichera de nouveau les initiales."
               />
             </div>
           </Card>

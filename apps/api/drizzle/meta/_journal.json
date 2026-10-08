@@ -36,6 +36,13 @@
       "when": 1791454880294,
       "tag": "0004_stock_movements",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791468235737,
+      "tag": "0005_banner_eyebrow",
+      "breakpoints": true
     }
   ]
 }

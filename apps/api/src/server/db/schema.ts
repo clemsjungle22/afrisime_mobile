@@ -35,7 +35,13 @@ export const productOrigin = pgEnum('product_origin', ['local', 'imported']);
 export const saleMode = pgEnum('sale_mode', ['standard', 'on_order', 'quote_only']);
 export const bannerTone = pgEnum('banner_tone', ['brand', 'accent', 'neutral']);
 export const fulfillment = pgEnum('fulfillment', ['delivery', 'pickup']);
-export const paymentMethod = pgEnum('payment_method', ['mixx', 'flooz', 'card', 'cash_on_delivery', 'pay_at_agency']);
+export const paymentMethod = pgEnum('payment_method', [
+  'mixx',
+  'flooz',
+  'card',
+  'cash_on_delivery',
+  'pay_at_agency',
+]);
 export const orderStatus = pgEnum('order_status', [
   'pending_payment',
   'payment_failed',
@@ -48,7 +54,14 @@ export const orderStatus = pgEnum('order_status', [
   'cancelled',
   'refunded',
 ]);
-export const paymentStatus = pgEnum('payment_status', ['initiated', 'pending', 'succeeded', 'failed', 'expired', 'refunded']);
+export const paymentStatus = pgEnum('payment_status', [
+  'initiated',
+  'pending',
+  'succeeded',
+  'failed',
+  'expired',
+  'refunded',
+]);
 
 // ─── Catalogue ────────────────────────────────────────────────────────────────
 
@@ -80,7 +93,10 @@ export const products = pgTable(
     description: text().notNull().default(''),
     imageUrl: text(),
     /** Badges éditoriaux (popular, promotion, new, b2b) ; rupture / sur commande sont calculés. */
-    badges: text().array().notNull().default(sql`'{}'::text[]`),
+    badges: text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     sortOrder: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),
     createdAt: createdAt(),
@@ -166,6 +182,8 @@ export const stockLevels = pgTable(
 
 export const homeBanners = pgTable('home_banners', {
   id: text().primaryKey(),
+  /** Petit texte au-dessus du titre (null : texte par défaut du style). */
+  eyebrow: text(),
   title: text().notNull(),
   subtitle: text(),
   imageUrl: text(),
@@ -187,7 +205,10 @@ export const deliveryZones = pgTable('delivery_zones', {
   fee: integer().notNull(),
   cashOnDelivery: boolean().notNull().default(false),
   /** Quartiers couverts (comparaison sans accents ni casse). */
-  districts: text().array().notNull().default(sql`'{}'::text[]`),
+  districts: text()
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   city: text().notNull().default('Lomé'),
   sortOrder: integer().notNull().default(0),
   isActive: boolean().notNull().default(true),
@@ -297,7 +318,9 @@ export const carts = pgTable('carts', {
   customerId: text()
     .primaryKey()
     .references(() => customers.id, { onDelete: 'cascade' }),
-  lines: jsonb().notNull().default(sql`'[]'::jsonb`),
+  lines: jsonb()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
   version: integer().notNull().default(1),
   updatedAt: updatedAt(),
 });
@@ -524,7 +547,13 @@ export const outbox = pgTable(
 
 // ─── Back-office : comptes de l'équipe ───────────────────────────────────────
 
-export const adminRole = pgEnum('admin_role', ['admin', 'catalog', 'orders', 'support', 'readonly']);
+export const adminRole = pgEnum('admin_role', [
+  'admin',
+  'catalog',
+  'orders',
+  'support',
+  'readonly',
+]);
 
 /** Comptes de l'équipe AfriSime : séparés des clients, mot de passe haché, 2FA chiffré. */
 export const adminUsers = pgTable('admin_users', {

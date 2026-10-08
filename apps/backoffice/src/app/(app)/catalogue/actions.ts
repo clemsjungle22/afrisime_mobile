@@ -2,6 +2,7 @@
 
 import {
   AdminCategory,
+  AdminHome,
   type AdminCategoryInput,
   type AdminNewVariant,
   type AdminPriceBody,
@@ -141,7 +142,7 @@ const Categories = z.array(AdminCategory);
 export async function saveCategoryAction(
   id: string | null,
   body: AdminCategoryInput,
-): Promise<Result> {
+): Promise<Result<{ id: string | null }>> {
   const res = await attempt(
     () =>
       id
@@ -153,7 +154,9 @@ export async function saveCategoryAction(
         : api('/v1/admin/catalog/categories', { method: 'POST', body, schema: Categories }),
     ['/catalogue/rayons', '/catalogue'],
   );
-  return res.ok ? { ok: true, data: undefined } : res;
+  if (!res.ok) return res;
+  // Création : le nouveau rayon est le dernier de la liste (placé en fin d'ordre d'affichage).
+  return { ok: true, data: { id: id ?? res.data.at(-1)?.id ?? null } };
 }
 
 export async function moveCategoryAction(id: string, direction: 'up' | 'down'): Promise<Result> {
@@ -169,18 +172,43 @@ export async function moveCategoryAction(id: string, direction: 'up' | 'down'): 
   return res.ok ? { ok: true, data: undefined } : res;
 }
 
-/** Photo d'un produit ou d'un rayon : envoi (formulaire avec « file ») ou retrait (form = null). */
-export async function imageAction(
-  target: { kind: 'product'; id: string } | { kind: 'category'; id: string },
-  form: FormData | null,
-): Promise<Result> {
-  const path =
-    target.kind === 'product'
-      ? `/v1/admin/catalog/products/${enc(target.id)}/image`
-      : `/v1/admin/catalog/categories/${enc(target.id)}/image`;
-  const schema = target.kind === 'product' ? AdminProductDetail : Categories;
-  const paths =
-    target.kind === 'product' ? productPaths(target.id) : ['/catalogue/rayons', '/catalogue'];
+/** Destination d'une photo envoyée depuis le back-office. */
+export type ImageTarget =
+  | { kind: 'product'; id: string }
+  | { kind: 'category'; id: string }
+  | { kind: 'banner'; id: string }
+  | { kind: 'logo' };
+
+/** Photo d'un produit, d'un rayon, d'une carte d'accueil ou logo : envoi (« file ») ou retrait (form = null). */
+export async function imageAction(target: ImageTarget, form: FormData | null): Promise<Result> {
+  const { path, schema, paths } = (() => {
+    switch (target.kind) {
+      case 'product':
+        return {
+          path: `/v1/admin/catalog/products/${enc(target.id)}/image`,
+          schema: AdminProductDetail as z.ZodType,
+          paths: productPaths(target.id),
+        };
+      case 'category':
+        return {
+          path: `/v1/admin/catalog/categories/${enc(target.id)}/image`,
+          schema: Categories as z.ZodType,
+          paths: ['/catalogue/rayons', '/catalogue'],
+        };
+      case 'banner':
+        return {
+          path: `/v1/admin/home/banners/${enc(target.id)}/image`,
+          schema: AdminHome as z.ZodType,
+          paths: ['/accueil-app'],
+        };
+      case 'logo':
+        return {
+          path: '/v1/admin/home/logo',
+          schema: AdminHome as z.ZodType,
+          paths: ['/accueil-app'],
+        };
+    }
+  })();
   const res = await attempt<unknown>(
     () => (form ? apiUpload(path, form, schema) : api(path, { method: 'DELETE', schema })),
     paths,

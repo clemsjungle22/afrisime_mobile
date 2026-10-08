@@ -17,11 +17,13 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/card';
 import { Checkbox, SelectInput, TextArea, TextInput } from '@/components/ui/form';
+import { PhotoPicker } from '@/components/photo-picker';
 import { ORIGIN_LABELS } from '@/lib/catalog';
 import {
   type Result,
   addVariantAction,
   createProductAction,
+  imageAction,
   updateProductAction,
   variantAction,
 } from './actions';
@@ -201,6 +203,7 @@ export function ProductCreateForm({
 }) {
   const router = useRouter();
   const { error, setError } = useServerError();
+  const [photo, setPhoto] = useState<File | null>(null);
   const { register, handleSubmit, control, formState } = useForm<CreateValues>({
     resolver: zodResolver(CreateForm),
     defaultValues: {
@@ -247,6 +250,13 @@ export function ProductCreateForm({
       },
     });
     if (!res.ok) return setError(res.error);
+    // Photo choisie pendant la saisie : envoyée maintenant que le produit existe.
+    if (photo) {
+      const form = new FormData();
+      form.set('file', photo);
+      const sent = await imageAction({ kind: 'product', id: res.data.id }, form);
+      if (!sent.ok) return router.push(`/catalogue/${res.data.id}?cree=1&photo=echec`);
+    }
     router.push(`/catalogue/${res.data.id}?cree=1`);
   });
 
@@ -260,6 +270,9 @@ export function ProductCreateForm({
           errors={(errors.product ?? {}) as FieldErrors<AdminProductInput>}
           categories={categories}
         />
+        <div className="mt-5 border-t border-line pt-5">
+          <PhotoPicker file={photo} onChange={setPhoto} label="Photo du produit (facultatif)" />
+        </div>
       </section>
       <section className="rounded-2xl border border-line bg-white p-5">
         <h2 className="mb-1 text-base font-bold">Premier format</h2>
