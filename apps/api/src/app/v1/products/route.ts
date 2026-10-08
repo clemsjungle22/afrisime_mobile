@@ -7,6 +7,12 @@ export const dynamic = 'force-dynamic';
 
 /** Recherche, filtres, tris, facettes et pagination du catalogue. */
 export const GET = route(
-  { auth: 'optional', query: ProductListParams, response: ProductListResponse, headers: PUBLIC_CACHE, privateWhenAuthenticated: true },
+  {
+    auth: 'optional',
+    query: ProductListParams,
+    response: ProductListResponse,
+    headers: PUBLIC_CACHE,
+    privateWhenAuthenticated: true,
+  },
   ({ query, auth }) => listProducts(query, segmentOf(auth)),
 );

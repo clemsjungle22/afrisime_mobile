@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { HexColor, ProductSummary } from './catalog';
+import { HexColor, ProductSummary, MediaUrl } from './catalog';
 
 /** Lien interne de l'app (chemin Expo Router), validé avant navigation. */
 export const AppLink = z.string().regex(/^\/[a-z0-9\-/[\]?=&_]*$/i);
@@ -8,7 +8,7 @@ export const HomeBanner = z.object({
   id: z.string(),
   title: z.string(),
   subtitle: z.string().nullable(),
-  imageUrl: z.string().url().nullable(),
+  imageUrl: MediaUrl.nullable(),
   ctaLabel: z.string().nullable(),
   link: AppLink.nullable(),
   /** Ton visuel décidé par le back-office (paramétrable, RB-010). */
@@ -41,7 +41,7 @@ export const HomeCategory = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
-  imageUrl: z.string().url().nullable(),
+  imageUrl: MediaUrl.nullable(),
   color: HexColor,
 });
 export type HomeCategory = z.infer<typeof HomeCategory>;

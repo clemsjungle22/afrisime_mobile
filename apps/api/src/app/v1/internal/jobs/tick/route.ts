@@ -6,7 +6,11 @@ import { ApiError } from '@/server/http/errors';
 import { route } from '@/server/http/route';
 import { tick } from '@/server/jobs';
 
-const Result = z.object({ paymentsChecked: z.number(), ordersExpired: z.number(), ordersAdvanced: z.number() });
+const Result = z.object({
+  paymentsChecked: z.number(),
+  ordersExpired: z.number(),
+  ordersAdvanced: z.number(),
+});
 
 /** Appelée chaque minute par le planificateur de l'hébergeur (en-tête Authorization: Bearer CRON_SECRET). */
 export const POST = route({ response: Result }, ({ req }) => {

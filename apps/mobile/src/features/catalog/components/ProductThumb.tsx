@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Pattern, Text } from '@/components/ui';
+import { mediaUri } from '@/lib/media';
 import { fontFamilies, palette, shade, tint } from '@/theme';
 
 type Props = {
@@ -38,10 +39,13 @@ export function ProductThumb({ name, imageUrl, color, variant = 'soft' }: Props)
     setSize(Math.min(width, height));
   };
 
-  if (imageUrl) {
+  const uri = mediaUri(imageUrl);
+  const [failed, setFailed] = useState(false);
+  if (uri && !failed) {
     return (
       <Image
-        source={{ uri: imageUrl }}
+        source={{ uri }}
+        onError={() => setFailed(true)}
         style={styles.fill}
         contentFit="cover"
         cachePolicy="memory-disk"
@@ -59,9 +63,23 @@ export function ProductThumb({ name, imageUrl, color, variant = 'soft' }: Props)
   const fontSize = Math.max(14, size * (vivid ? 0.28 : 0.3));
 
   return (
-    <View style={styles.fill} onLayout={onLayout} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      {vivid ? <Pattern color="#ffffff" opacity={0.09} size={34} /> : <Pattern color={color} opacity={0.08} size={28} />}
+    <View
+      style={styles.fill}
+      onLayout={onLayout}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {vivid ? (
+        <Pattern color="#ffffff" opacity={0.09} size={34} />
+      ) : (
+        <Pattern color={color} opacity={0.08} size={28} />
+      )}
       {size > 0 ? (
         <View style={styles.center}>
           <View

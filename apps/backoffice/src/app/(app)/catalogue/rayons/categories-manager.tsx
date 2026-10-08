@@ -8,14 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Alert, Badge, Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Checkbox, TextArea, TextInput } from '@/components/ui/form';
+import { ImageUploader } from '@/components/image-uploader';
+import { initials } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
 import { moveCategoryAction, saveCategoryAction } from '../actions';
 
 export function CategoriesManager({
   categories,
+  srcs,
   canEdit,
 }: {
   categories: AdminCategory[];
+  /** Adresse affichable de la photo de chaque rayon. */
+  srcs: Record<string, string | null>;
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -55,11 +60,20 @@ export function CategoriesManager({
                 !c.isActive && 'opacity-60',
               )}
             >
-              <span
-                className="size-9 shrink-0 rounded-xl"
-                style={{ background: c.color }}
-                aria-hidden
-              />
+              {srcs[c.id] ? (
+                // eslint-disable-next-line @next/next/no-img-element -- photo servie par l'API (déjà optimisée)
+                <img
+                  src={srcs[c.id] ?? ''}
+                  alt=""
+                  className="size-9 shrink-0 rounded-xl object-cover"
+                />
+              ) : (
+                <span
+                  className="size-9 shrink-0 rounded-xl"
+                  style={{ background: c.color }}
+                  aria-hidden
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-ink">
                   {c.name}{' '}
@@ -102,7 +116,18 @@ export function CategoriesManager({
                       </Button>
                     )}
                   >
-                    {(close) => <CategoryForm category={c} onDone={close} />}
+                    {(close) => (
+                      <div className="flex flex-col gap-5">
+                        <ImageUploader
+                          target={{ kind: 'category', id: c.id }}
+                          src={srcs[c.id] ?? null}
+                          fallback={{ color: c.color, text: initials(c.name) }}
+                          canEdit
+                          size="md"
+                        />
+                        <CategoryForm category={c} onDone={close} />
+                      </div>
+                    )}
                   </Dialog>
                 </div>
               ) : null}

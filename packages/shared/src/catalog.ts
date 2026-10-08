@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { Money } from './money';
 
+/**
+ * Adresse d'une image : absolue (https://…) ou relative au serveur AfriSime (/media/…).
+ * L'app complète une adresse relative avec l'adresse du serveur.
+ */
+export const MediaUrl = z
+  .string()
+  .regex(/^(?!.*\.\.)(\/media\/[\w./-]+|https?:\/\/\S+)$/, 'Adresse d’image invalide');
+
 /** Couleur hexadécimale #rrggbb, paramétrée côté back-office. */
 export const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -42,7 +50,7 @@ export const ProductSummary = z.object({
   name: z.string(),
   brand: z.string(),
   origin: ProductOrigin,
-  imageUrl: z.string().url().nullable(),
+  imageUrl: MediaUrl.nullable(),
   badges: z.array(ProductBadge),
   priceFrom: Money.nullable(),
   priceTo: Money.nullable(),
@@ -57,7 +65,7 @@ export type ProductSummary = z.infer<typeof ProductSummary>;
 export const ProductDetail = ProductSummary.extend({
   description: z.string(),
   categoryId: z.string(),
-  images: z.array(z.string().url()),
+  images: z.array(MediaUrl),
   variants: z.array(Variant).min(1),
   /** « Souvent achetés avec » : résumés inclus pour éviter N requêtes. */
   related: z.array(ProductSummary),
@@ -83,7 +91,7 @@ export const Category: z.ZodType<Category> = z.lazy(() =>
     slug: z.string(),
     name: z.string(),
     description: z.string().nullable(),
-    imageUrl: z.string().url().nullable(),
+    imageUrl: MediaUrl.nullable(),
     color: HexColor,
     productCount: z.number().int().nonnegative(),
     children: z.array(Category),

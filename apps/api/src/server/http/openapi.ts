@@ -556,6 +556,56 @@ export function buildOpenApi(serverUrl?: string) {
           response: ref('AdminProductDetail'),
         }),
       },
+      '/v1/admin/catalog/products/{id}/image': {
+        post: {
+          ...op({
+            summary: 'Back-office : photo du produit (multipart, champ « file »)',
+            params: idParam,
+            response: ref('AdminProductDetail'),
+          }),
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: { file: { type: 'string', format: 'binary' } },
+                },
+              },
+            },
+          },
+        },
+        delete: op({
+          summary: 'Back-office : retirer la photo du produit',
+          params: idParam,
+          response: ref('AdminProductDetail'),
+        }),
+      },
+      '/v1/admin/catalog/categories/{id}/image': {
+        post: {
+          ...op({
+            summary: 'Back-office : photo du rayon (multipart, champ « file »)',
+            params: idParam,
+            response: { type: 'array', items: ref('AdminCategory') },
+          }),
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: { file: { type: 'string', format: 'binary' } },
+                },
+              },
+            },
+          },
+        },
+        delete: op({
+          summary: 'Back-office : retirer la photo du rayon',
+          params: idParam,
+          response: { type: 'array', items: ref('AdminCategory') },
+        }),
+      },
       '/v1/admin/catalog/products/{id}/variants': {
         post: op({
           summary: 'Back-office : nouveau format',

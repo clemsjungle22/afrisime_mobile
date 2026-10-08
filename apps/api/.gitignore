@@ -3,3 +3,6 @@ next-env.d.ts
 *.tsbuildinfo
 .env*.local
 .env
+
+# Photos du catalogue (stockage local de développement)
+.media/

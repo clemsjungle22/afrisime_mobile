@@ -6,6 +6,11 @@ import { route } from '@/server/http/route';
 export const dynamic = 'force-dynamic';
 
 export const GET = route(
-  { auth: 'optional', response: ProductDetail, headers: PUBLIC_CACHE, privateWhenAuthenticated: true },
+  {
+    auth: 'optional',
+    response: ProductDetail,
+    headers: PUBLIC_CACHE,
+    privateWhenAuthenticated: true,
+  },
   ({ params, auth }) => getProduct(params.slug ?? '', segmentOf(auth)),
 );

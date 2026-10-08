@@ -8,6 +8,7 @@ export const GET = route({ auth: 'required', response: AddressList }, ({ auth })
 );
 
 /** Nouvelle adresse : la zone de livraison est attribuée par le serveur. */
-export const POST = route({ auth: 'required', body: AddressInput, response: Address, status: 201 }, ({ auth, body }) =>
-  createAddress(getDb(), auth.customer.id, body),
+export const POST = route(
+  { auth: 'required', body: AddressInput, response: Address, status: 201 },
+  ({ auth, body }) => createAddress(getDb(), auth.customer.id, body),
 );

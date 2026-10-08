@@ -5,6 +5,7 @@ import { route } from '@/server/http/route';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = route({ auth: 'optional', response: Home, headers: PUBLIC_CACHE, privateWhenAuthenticated: true }, ({ auth }) =>
-  getHome(segmentOf(auth)),
+export const GET = route(
+  { auth: 'optional', response: Home, headers: PUBLIC_CACHE, privateWhenAuthenticated: true },
+  ({ auth }) => getHome(segmentOf(auth)),
 );

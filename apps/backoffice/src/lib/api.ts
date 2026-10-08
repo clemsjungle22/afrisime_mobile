@@ -93,3 +93,51 @@ export async function api<S extends z.ZodType>(
     throw new ApiError('INVALID_RESPONSE', 'Réponse inattendue du serveur.', res.status);
   return parsed.data;
 }
+
+/** Adresse d'une photo du catalogue, telle que le navigateur peut l'afficher. */
+export function mediaSrc(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith('/') ? `${API_URL}${url}` : url;
+}
+
+/** Envoi d'un fichier (formulaire multipart) à l'API, avec la session de l'équipe. */
+export async function apiUpload<S extends z.ZodType>(
+  path: string,
+  form: FormData,
+  schema: S,
+): Promise<z.infer<S>> {
+  const token = await getToken();
+  if (!token) throw new ApiError('UNAUTHENTICATED', 'Session expirée. Reconnectez-vous.', 401);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+      body: form,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    throw new ApiError(
+      'NETWORK_ERROR',
+      'Le serveur AfriSime ne répond pas. Vérifiez qu’il est lancé (npm run api).',
+      0,
+    );
+  }
+  const json: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = ApiErrorBody.safeParse(json);
+    if (err.success)
+      throw new ApiError(
+        err.data.error.code,
+        err.data.error.message,
+        res.status,
+        err.data.error.details,
+      );
+    throw new ApiError('INTERNAL_ERROR', 'Une erreur est survenue. Réessayez.', res.status);
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success)
+    throw new ApiError('INVALID_RESPONSE', 'Réponse inattendue du serveur.', res.status);
+  return parsed.data;
+}

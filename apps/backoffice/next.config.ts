@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   transpilePackages: ['@afrisime/shared'],
   poweredByHeader: false,
+  experimental: {
+    // Photos du catalogue : 5 Mo maximum, plus l'enveloppe du formulaire multipart.
+    serverActions: { bodySizeLimit: '6mb' },
+  },
   // Back-office interne : jamais indexé, jamais affiché dans un cadre d'un autre site.
   async headers() {
     return [

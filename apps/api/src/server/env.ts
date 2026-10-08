@@ -33,6 +33,8 @@ const Env = z.object({
   CRON_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
   /** Clé de chiffrement des secrets 2FA de l'équipe (≥ 32 caractères). Obligatoire en production. */
   ADMIN_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
+  /** Dossier des photos du catalogue (stockage sur disque, en développement). */
+  MEDIA_DIR: z.string().min(1).default('.media'),
 });
 export type Env = z.infer<typeof Env>;
 

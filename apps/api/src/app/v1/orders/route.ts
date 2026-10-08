@@ -5,10 +5,14 @@ import { route } from '@/server/http/route';
 import { idempotencyKey } from '@/server/idempotency';
 import { createOrder, listOrders } from '@/server/orders/service';
 
-const Params = z.object({ status: z.enum(['active', 'history']).default('active'), cursor: z.string().optional() });
+const Params = z.object({
+  status: z.enum(['active', 'history']).default('active'),
+  cursor: z.string().optional(),
+});
 
-export const GET = route({ auth: 'required', query: Params, response: OrderList }, ({ auth, query }) =>
-  listOrders(getDb(), auth.customer.id, query.status, query.cursor),
+export const GET = route(
+  { auth: 'required', query: Params, response: OrderList },
+  ({ auth, query }) => listOrders(getDb(), auth.customer.id, query.status, query.cursor),
 );
 
 /** Commande sur un devis (Idempotency-Key obligatoire : jamais de double commande). */

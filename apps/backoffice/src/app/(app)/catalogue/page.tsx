@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { Badge, Card } from '@/components/ui/card';
 import { requireAdmin } from '@/lib/admin';
-import { api } from '@/lib/api';
+import { api, mediaSrc } from '@/lib/api';
 import { CATALOG_EDIT_ROLES, CATALOG_VIEW_ROLES, initials } from '@/lib/catalog';
 import { cn, formatFCFA } from '@/lib/utils';
 
@@ -170,15 +170,24 @@ export default async function CatalogPage({
                   <tr key={p.id} className="relative hover:bg-brand-50/60">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <span
-                          className="grid size-10 shrink-0 place-items-center rounded-xl text-sm font-extrabold text-white"
-                          style={{
-                            background: `linear-gradient(135deg, ${p.category.color}, ${p.category.color}cc)`,
-                          }}
-                          aria-hidden
-                        >
-                          {initials(p.name)}
-                        </span>
+                        {p.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- photo servie par l'API (déjà optimisée)
+                          <img
+                            src={mediaSrc(p.imageUrl) ?? ''}
+                            alt=""
+                            className="size-10 shrink-0 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <span
+                            className="grid size-10 shrink-0 place-items-center rounded-xl text-sm font-extrabold text-white"
+                            style={{
+                              background: `linear-gradient(135deg, ${p.category.color}, ${p.category.color}cc)`,
+                            }}
+                            aria-hidden
+                          >
+                            {initials(p.name)}
+                          </span>
+                        )}
                         <div>
                           <Link
                             href={`/catalogue/${p.id}`}

@@ -16,7 +16,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { ApiError, api } from '@/lib/api';
+import { ApiError, api, apiUpload } from '@/lib/api';
 
 export type Result<T = undefined> =
   { ok: true; data: T } | { ok: false; error: string; field?: string };
@@ -165,6 +165,25 @@ export async function moveCategoryAction(id: string, direction: 'up' | 'down'): 
         schema: Categories,
       }),
     ['/catalogue/rayons'],
+  );
+  return res.ok ? { ok: true, data: undefined } : res;
+}
+
+/** Photo d'un produit ou d'un rayon : envoi (formulaire avec « file ») ou retrait (form = null). */
+export async function imageAction(
+  target: { kind: 'product'; id: string } | { kind: 'category'; id: string },
+  form: FormData | null,
+): Promise<Result> {
+  const path =
+    target.kind === 'product'
+      ? `/v1/admin/catalog/products/${enc(target.id)}/image`
+      : `/v1/admin/catalog/categories/${enc(target.id)}/image`;
+  const schema = target.kind === 'product' ? AdminProductDetail : Categories;
+  const paths =
+    target.kind === 'product' ? productPaths(target.id) : ['/catalogue/rayons', '/catalogue'];
+  const res = await attempt<unknown>(
+    () => (form ? apiUpload(path, form, schema) : api(path, { method: 'DELETE', schema })),
+    paths,
   );
   return res.ok ? { ok: true, data: undefined } : res;
 }

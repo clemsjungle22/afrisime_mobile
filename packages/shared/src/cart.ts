@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Availability, HexColor } from './catalog';
+import { Availability, HexColor, MediaUrl } from './catalog';
 import { Money } from './money';
 
 /** Quantité maximale par ligne côté app (le serveur peut réduire selon le stock). */
@@ -39,7 +39,7 @@ export const ValidatedCartLine = z.object({
   productName: z.string(),
   brand: z.string(),
   variantLabel: z.string(),
-  imageUrl: z.string().url().nullable(),
+  imageUrl: MediaUrl.nullable(),
   color: HexColor,
   availability: Availability,
   leadTimeDays: z.number().int().nonnegative().nullable(),

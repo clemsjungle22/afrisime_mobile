@@ -10,6 +10,12 @@ const Params = z.object({ q: z.string().max(100).default('') });
 
 /** Suggestions pendant la saisie (rayons, marques, produits) et correction des fautes de frappe. */
 export const GET = route(
-  { auth: 'optional', query: Params, response: SearchSuggestResponse, headers: PUBLIC_CACHE, privateWhenAuthenticated: true },
+  {
+    auth: 'optional',
+    query: Params,
+    response: SearchSuggestResponse,
+    headers: PUBLIC_CACHE,
+    privateWhenAuthenticated: true,
+  },
   ({ query, auth }) => suggestProducts(query.q, segmentOf(auth)),
 );

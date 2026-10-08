@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/admin';
-import { api } from '@/lib/api';
+import { api, mediaSrc } from '@/lib/api';
 import { CATALOG_EDIT_ROLES, CATALOG_VIEW_ROLES } from '@/lib/catalog';
 import { CategoriesManager } from './categories-manager';
 
@@ -27,6 +27,7 @@ export default async function CategoriesPage() {
       </div>
       <CategoriesManager
         categories={categories}
+        srcs={Object.fromEntries(categories.map((c) => [c.id, mediaSrc(c.imageUrl)]))}
         canEdit={CATALOG_EDIT_ROLES.includes(admin.role)}
       />
     </div>

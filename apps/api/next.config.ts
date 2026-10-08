@@ -6,7 +6,7 @@ const config: NextConfig = {
   // API uniquement : pas d'en-tête révélant la technologie.
   poweredByHeader: false,
   // Le pilote PostgreSQL et PGlite restent côté serveur, non bundlés.
-  serverExternalPackages: ['pg', '@electric-sql/pglite'],
+  serverExternalPackages: ['pg', '@electric-sql/pglite', 'sharp'],
 };
 
 export default config;

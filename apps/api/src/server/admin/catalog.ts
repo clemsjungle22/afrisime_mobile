@@ -43,6 +43,7 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
+import { removeImage, storeImage } from '../media';
 import { type AdminContext, adminAudit } from './auth';
 
 /** Tout le monde consulte le catalogue (le service client répond sur le stock) ; seuls Catalogue et Admin modifient. */
@@ -112,6 +113,7 @@ export async function listCategories(db: Db): Promise<AdminCategory[]> {
     name: c.name,
     description: c.description,
     color: c.color,
+    imageUrl: c.imageUrl,
     sortOrder: c.sortOrder,
     isActive: c.isActive,
     productCount: byCategory.get(c.id) ?? 0,
@@ -288,6 +290,7 @@ export async function listProducts(
       brand: p.brand,
       origin: p.origin,
       category: { id: c.id, name: c.name, color: c.color },
+      imageUrl: p.imageUrl,
       isActive: p.isActive,
       variantsCount: own.length,
       priceFrom: retail.length ? Math.min(...retail.map((x) => x.amount)) : null,
@@ -349,6 +352,7 @@ export async function getProduct(
     name: p.name,
     brand: p.brand,
     origin: p.origin,
+    imageUrl: p.imageUrl,
     categoryId: p.categoryId,
     description: p.description,
     badges: p.badges.filter((b): b is EditorialBadge => EditorialBadgeSchema.safeParse(b).success),
@@ -894,4 +898,69 @@ export async function listMovements(db: Db, variantId: string): Promise<AdminSto
     actor: orderNumber ? `Commande ${orderNumber}` : (adminName ?? 'Système'),
     at: m.createdAt.toISOString(),
   }));
+}
+
+// ─── Photos ──────────────────────────────────────────────────────────────────
+
+/** Taille des photos (carré, en pixels) : assez net sur téléphone, léger à charger. */
+const PRODUCT_IMAGE_SIZE = 800;
+const CATEGORY_IMAGE_SIZE = 600;
+
+/** Met (ou remplace) la photo d'un produit ; l'ancienne est supprimée. */
+export async function setProductImage(
+  db: Db,
+  ctx: AdminContext,
+  productId: string,
+  data: Buffer | null,
+  now = new Date(),
+) {
+  const [p] = await db.select().from(s.products).where(eq(s.products.id, productId));
+  if (!p) throw notFound('Produit');
+  const url = data ? await storeImage('products', productId, data, PRODUCT_IMAGE_SIZE) : null;
+  await write(db, async (tx) => {
+    await tx
+      .update(s.products)
+      .set({ imageUrl: url, updatedAt: now })
+      .where(eq(s.products.id, productId));
+    await audit(
+      tx,
+      ctx,
+      url ? 'product.image_set' : 'product.image_removed',
+      'product',
+      productId,
+      { imageUrl: p.imageUrl },
+      { imageUrl: url },
+    );
+  });
+  await removeImage(p.imageUrl);
+  return getProduct(db, productId, now);
+}
+
+/** Met (ou remplace) la photo d'un rayon ; l'ancienne est supprimée. */
+export async function setCategoryImage(
+  db: Db,
+  ctx: AdminContext,
+  categoryId: string,
+  data: Buffer | null,
+) {
+  const [c] = await db.select().from(s.categories).where(eq(s.categories.id, categoryId));
+  if (!c) throw notFound('Rayon');
+  const url = data ? await storeImage('categories', categoryId, data, CATEGORY_IMAGE_SIZE) : null;
+  await write(db, async (tx) => {
+    await tx
+      .update(s.categories)
+      .set({ imageUrl: url, updatedAt: new Date() })
+      .where(eq(s.categories.id, categoryId));
+    await audit(
+      tx,
+      ctx,
+      url ? 'category.image_set' : 'category.image_removed',
+      'category',
+      categoryId,
+      { imageUrl: c.imageUrl },
+      { imageUrl: url },
+    );
+  });
+  await removeImage(c.imageUrl);
+  return listCategories(db);
 }

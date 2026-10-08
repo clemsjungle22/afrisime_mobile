@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Availability, HexColor, ProductOrigin } from './catalog';
+import { Availability, HexColor, MediaUrl, ProductOrigin } from './catalog';
 import { Money } from './money';
 
 /**
@@ -48,6 +48,8 @@ export const AdminCategory = z.object({
   name: z.string(),
   description: z.string().nullable(),
   color: HexColor,
+  /** Photo du rayon (sinon : couleur). */
+  imageUrl: MediaUrl.nullable(),
   sortOrder: z.number().int(),
   isActive: z.boolean(),
   productCount: z.number().int().nonnegative(),
@@ -83,6 +85,8 @@ export const AdminProductRow = z.object({
   brand: z.string(),
   origin: ProductOrigin,
   category: z.object({ id: z.string(), name: z.string(), color: HexColor }),
+  /** Photo du produit (sinon : initiales). */
+  imageUrl: MediaUrl.nullable(),
   isActive: z.boolean(),
   variantsCount: z.number().int().nonnegative(),
   /** Prix publics en vigueur (null : sur devis ou sans prix). */
@@ -296,6 +300,7 @@ export const AdminProductDetail = z.object({
   name: z.string(),
   brand: z.string(),
   origin: ProductOrigin,
+  imageUrl: MediaUrl.nullable(),
   categoryId: z.string(),
   description: z.string(),
   badges: z.array(EditorialBadge),
@@ -305,3 +310,7 @@ export const AdminProductDetail = z.object({
   variants: z.array(AdminVariant),
 });
 export type AdminProductDetail = z.infer<typeof AdminProductDetail>;
+
+/** Règles des photos envoyées depuis le back-office (vérifiées par le serveur). */
+export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+export const MEDIA_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
