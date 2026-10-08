@@ -176,7 +176,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           <Card>
             <CardHeader title="Client" />
             <div className="flex flex-col gap-2 px-5 py-4 text-sm">
-              <p className="font-bold text-ink">{o.customer.name ?? 'Client sans nom'}</p>
+              <Link
+                href={`/clients/${o.customer.id}`}
+                className="w-fit font-bold text-ink hover:text-brand-700 hover:underline"
+              >
+                {o.customer.name ?? 'Client sans nom'}
+              </Link>
               <a
                 href={`tel:${o.customer.phone}`}
                 className="inline-flex w-fit items-center gap-2 font-semibold text-brand-700 hover:underline"

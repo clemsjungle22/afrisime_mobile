@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Alert, Badge, Card, CardHeader } from '@/components/ui/card';
 import { requireAdmin } from '@/lib/admin';
 import { api } from '@/lib/api';
+import { CUSTOMER_VIEW_ROLES } from '@/lib/customers';
 import { ORDER_STATUS_LABELS, cn, formatDay, formatFCFA } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Tableau de bord' };
@@ -129,6 +130,9 @@ export default async function DashboardPage({
           icon={<UserCheck className="size-5" />}
           tone={data.pendingProAccounts > 0 ? 'warning' : 'brand'}
           hint="Revendeurs, restaurants, PME"
+          href={
+            CUSTOMER_VIEW_ROLES.includes(admin.role) ? '/clients?filter=pending_pro' : undefined
+          }
         />
       </section>
 

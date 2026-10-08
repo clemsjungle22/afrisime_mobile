@@ -63,6 +63,11 @@ const components = {
   AdminThresholdBody: shared.AdminThresholdBody,
   AdminStockMovement: shared.AdminStockMovement,
   AdminHome: shared.AdminHome,
+  AdminCustomerList: shared.AdminCustomerList,
+  AdminCustomerDetail: shared.AdminCustomerDetail,
+  AdminReviewProBody: shared.AdminReviewProBody,
+  AdminPricingBody: shared.AdminPricingBody,
+  AdminBlockBody: shared.AdminBlockBody,
   AdminBannerInput: shared.AdminBannerInput,
   AdminBannerMoveBody: shared.AdminBannerMoveBody,
   AdminHomeSettingsBody: shared.AdminHomeSettingsBody,
@@ -251,7 +256,10 @@ export function buildOpenApi(serverUrl?: string) {
           auth: false,
           body: 'OtpRequestBody',
           response: ref('OtpRequestResponse'),
-          errors: { '429': 'Trop de demandes (RATE_LIMITED, en-tête Retry-After)' },
+          errors: {
+            '403': 'Compte suspendu par l’équipe (ACCOUNT_SUSPENDED)',
+            '429': 'Trop de demandes (RATE_LIMITED, en-tête Retry-After)',
+          },
         }),
       },
       '/v1/auth/otp/verify': {
@@ -763,6 +771,51 @@ export function buildOpenApi(serverUrl?: string) {
           summary: 'Back-office : retirer la photo de la carte',
           params: idParam,
           response: ref('AdminHome'),
+        }),
+      },
+      '/v1/admin/customers': {
+        get: op({
+          summary: 'Back-office : clients (filtres, recherche, compteurs)',
+          response: ref('AdminCustomerList'),
+        }),
+      },
+      '/v1/admin/customers/{id}': {
+        get: op({
+          summary: 'Back-office : fiche client',
+          params: idParam,
+          response: ref('AdminCustomerDetail'),
+        }),
+      },
+      '/v1/admin/customers/{id}/review': {
+        post: op({
+          summary: 'Back-office : valider ou refuser un profil pro',
+          params: idParam,
+          body: 'AdminReviewProBody',
+          response: ref('AdminCustomerDetail'),
+        }),
+      },
+      '/v1/admin/customers/{id}/pricing': {
+        post: op({
+          summary: 'Back-office : changer le profil et le tarif (motif obligatoire)',
+          params: idParam,
+          body: 'AdminPricingBody',
+          response: ref('AdminCustomerDetail'),
+        }),
+      },
+      '/v1/admin/customers/{id}/block': {
+        post: op({
+          summary: 'Back-office : bloquer un compte client (administrateur)',
+          params: idParam,
+          body: 'AdminBlockBody',
+          response: ref('AdminCustomerDetail'),
+        }),
+      },
+      '/v1/admin/customers/{id}/unblock': {
+        post: op({
+          summary: 'Back-office : débloquer un compte client (administrateur)',
+          params: idParam,
+          body: 'AdminBlockBody',
+          response: ref('AdminCustomerDetail'),
         }),
       },
       '/v1/admin/dashboard': {

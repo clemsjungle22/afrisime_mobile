@@ -25,6 +25,8 @@ export const ApiErrorCode = z.enum([
   // Le back-office : la commande a été modifiée entre-temps par quelqu'un d'autre.
   'ORDER_CHANGED',
   'UNAUTHENTICATED',
+  // Compte client suspendu par l'équipe : connexion refusée.
+  'ACCOUNT_SUSPENDED',
   'FORBIDDEN',
   'NOT_FOUND',
   'RATE_LIMITED',

@@ -23,10 +23,24 @@ const HOUR_MS = 3_600_000;
 const tooManyAttempts = () => new ApiError('OTP_TOO_MANY_ATTEMPTS', "Trop d'essais. Demandez un nouveau code.");
 const expired = () => new ApiError('OTP_EXPIRED', 'Ce code a expiré. Demandez-en un nouveau.');
 
+/** Compte suspendu par l'équipe : aucun code envoyé, connexion refusée avec un message clair. */
+async function refuseSuspended(db: Db, phone: string) {
+  const [customer] = await db
+    .select({ status: s.customers.status })
+    .from(s.customers)
+    .where(eq(s.customers.phone, phone));
+  if (customer && customer.status !== 'active')
+    throw new ApiError(
+      'ACCOUNT_SUSPENDED',
+      'Ce compte est suspendu. Contactez le service client AfriSime.',
+    );
+}
+
 /** Code de la demande : fixe si OTP_DEV_CODE est défini (interdit en production), sinon aléatoire. */
 const generateCode = () => env().OTP_DEV_CODE ?? randomOtpCode();
 
 export async function requestOtp(db: Db, phone: string, ip: string, now = new Date()): Promise<OtpRequestResponse> {
+  await refuseSuspended(db, phone);
   const since = new Date(now.getTime() - HOUR_MS);
 
   const [last] = await db
@@ -76,6 +90,8 @@ export async function verifyOtp(db: Db, body: OtpVerifyBody, ip: string, now = n
   const [otp] = await db.select().from(s.otpRequests).where(eq(s.otpRequests.id, body.requestId)).limit(1);
   if (!otp || otp.consumedAt || otp.expiresAt <= now) throw expired();
   if (otp.attempts >= MAX_ATTEMPTS) throw tooManyAttempts();
+  // Bloqué entre la demande du code et sa saisie.
+  await refuseSuspended(db, otp.phone);
 
   if (!safeEqual(otpHash(otp.id, body.code), otp.codeHash)) {
     // Incrément atomique : deux essais simultanés ne peuvent pas dépasser la limite.

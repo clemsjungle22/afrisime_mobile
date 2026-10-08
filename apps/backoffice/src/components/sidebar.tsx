@@ -21,7 +21,7 @@ const ITEMS: Item[] = [
   { href: '/commandes', label: 'Commandes', icon: ShoppingBag },
   { href: '/catalogue', label: 'Catalogue', icon: Package },
   { href: '/accueil-app', label: 'Accueil de l’app', icon: Smartphone },
-  { href: '/clients', label: 'Clients', icon: Users, soon: true },
+  { href: '/clients', label: 'Clients', icon: Users },
   { href: '/parametres', label: 'Paramètres', icon: Settings, soon: true },
 ];
 

@@ -46,6 +46,8 @@ export function otpErrorMessage(code: string, details: unknown, fallback: string
       return 'Trop d’essais. Demandez un nouveau code.';
     case 'OTP_EXPIRED':
       return 'Ce code a expiré. Demandez-en un nouveau.';
+    case 'ACCOUNT_SUSPENDED':
+      return 'Ce compte est suspendu. Contactez le service client AfriSime.';
     case 'RATE_LIMITED':
       return fallback || 'Trop de demandes. Patientez quelques minutes.';
     case 'NETWORK_ERROR':
