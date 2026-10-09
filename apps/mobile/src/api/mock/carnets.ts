@@ -174,6 +174,7 @@ export const mockCarnetsApi: CarnetsApi = {
           simulate(CarnetList, () =>
             withCarnets(token, (carnets, now) => ({
               items: [...carnets]
+                .filter((c) => !(c.status === 'abandoned' && c.paid === 0))
                 .sort((a, b) => Number(a.status !== 'active') - Number(b.status !== 'active') || b.startedAt.localeCompare(a.startedAt))
                 .map((c) => toCarnet(c, now)),
             })),

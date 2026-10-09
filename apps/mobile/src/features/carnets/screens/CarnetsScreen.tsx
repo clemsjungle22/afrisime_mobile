@@ -36,7 +36,22 @@ export function CarnetsScreen() {
       data={carnets.data.items}
       keyExtractor={(c) => c.id}
       contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md, flexGrow: 1 }}
-      renderItem={({ item }) => <CarnetCard carnet={item} />}
+      renderItem={({ item, index }) => {
+        // Titre « Terminés » avant le premier carnet remis ou clos.
+        const finished = item.status === 'delivered' || item.status === 'abandoned';
+        const prev = carnets.data.items[index - 1];
+        const firstFinished = finished && (!prev || prev.status === 'active' || prev.status === 'completed');
+        return (
+          <View style={{ gap: theme.spacing.md }}>
+            {firstFinished ? (
+              <Text variant="subtitle" style={{ marginTop: index > 0 ? theme.spacing.md : 0 }}>
+                Terminés
+              </Text>
+            ) : null}
+            <CarnetCard carnet={item} />
+          </View>
+        );
+      }}
       refreshControl={
         <RefreshControl
           refreshing={carnets.isRefetching}

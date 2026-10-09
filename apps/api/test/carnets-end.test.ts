@@ -4,7 +4,13 @@ import { POST as abandonRoute } from '@/app/v1/me/carnets/[id]/abandon/route';
 import { POST as redeemRoute } from '@/app/v1/me/carnets/[id]/redeem/route';
 import { GET as storeCreditRoute } from '@/app/v1/me/store-credit/route';
 import { createSession } from '@/server/auth/sessions';
-import { abandonCarnet, getCarnet, redeemCarnet, subscribe } from '@/server/carnets/service';
+import {
+  abandonCarnet,
+  getCarnet,
+  listCarnets,
+  redeemCarnet,
+  subscribe,
+} from '@/server/carnets/service';
 import { invalidateCatalog } from '@/server/catalog/service';
 import { createQuote, getDeliveryOptions } from '@/server/checkout/service';
 import { createAddress } from '@/server/customers/addresses';
@@ -118,6 +124,18 @@ describe('abandon et délai dépassé', () => {
     const after = await getCarnet(t.db, c, carnet.id);
     expect(after).toMatchObject({ status: 'abandoned', creditedAmount: 1300 });
     expect(await storeCreditBalance(t.db, c.id)).toBe(1300);
+  });
+});
+
+describe('liste des carnets', () => {
+  it('abandonné sans versement : retiré de « Mes carnets » ; avec versements : gardé', async () => {
+    const c = await customer();
+    const empty = await carnetWith(c, 0);
+    const paid = await carnetWith(c, 1300);
+    await abandonCarnet(t.db, c, empty.id);
+    await abandonCarnet(t.db, c, paid.id);
+    const ids = (await listCarnets(t.db, c)).items.map((x) => x.id);
+    expect(ids).toEqual([paid.id]);
   });
 });
 

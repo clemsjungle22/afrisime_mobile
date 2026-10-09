@@ -229,7 +229,9 @@ export async function listCarnets(
     .where(eq(s.carnets.customerId, customer.id))
     .orderBy(desc(s.carnets.startedAt));
   rows.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
-  return { items: await present(db, rows, now) };
+  // Abandonné sans aucun versement : plus rien à suivre, il n'encombre pas la liste.
+  const visible = rows.filter((r) => !(r.status === 'abandoned' && r.paid === 0));
+  return { items: await present(db, visible, now) };
 }
 
 export async function getCarnet(db: Db, customer: Customer, carnetId: string, now = new Date()) {

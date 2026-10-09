@@ -24,7 +24,7 @@ import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { ProgressBar } from '../components/ProgressBar';
-import { useAbandon, useCarnet, useContribute } from '../hooks';
+import { useAbandon, useCarnet, useContribute, useSubscribe } from '../hooks';
 import { STATUS_TONES } from './CarnetsScreen';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Africa/Lome' });
@@ -118,6 +118,7 @@ export function CarnetDetailScreen() {
         {c.status === 'completed' ? (
           <Button label="Recevoir mon pack" size="lg" fullWidth onPress={() => router.push({ pathname: '/recevoir-pack/[id]', params: { id: c.id } })} icon={<Ionicons name="gift-outline" size={22} color={theme.colors.onPrimary} />} />
         ) : null}
+        {c.status === 'delivered' || c.status === 'abandoned' ? <ReopenButton packId={c.packId} /> : null}
         {c.status === 'delivered' && c.orderId ? (
           <Button label="Voir la commande" variant="secondary" fullWidth onPress={() => router.push({ pathname: '/orders/[orderId]', params: { orderId: c.orderId! } })} />
         ) : null}
@@ -175,6 +176,28 @@ export function CarnetDetailScreen() {
   );
 }
 
+/** Rouvrir le même pack : nouveau carnet, au contenu et au prix du jour. */
+function ReopenButton({ packId }: { packId: string }) {
+  const subscribe = useSubscribe();
+  return (
+    <Button
+      label="Ouvrir à nouveau ce pack"
+      variant="secondary"
+      fullWidth
+      loading={subscribe.isPending}
+      onPress={() =>
+        subscribe.mutate(packId, {
+          onSuccess: (carnet) => {
+            haptics.success();
+            router.replace({ pathname: '/carnets/[id]', params: { id: carnet.id } });
+          },
+          onError: (e) => showSnackbar({ message: isApiError(e) && !e.isNetwork ? e.message : 'Impossible pour le moment. Réessayez.' }),
+        })
+      }
+    />
+  );
+}
+
 /** Abandon (confirmé) : les sommes versées deviennent un avoir. */
 function AbandonButton({ carnet: c }: { carnet: Carnet }) {
   const abandon = useAbandon(c.id);
@@ -191,7 +214,11 @@ function AbandonButton({ carnet: c }: { carnet: Carnet }) {
           style: 'destructive',
           onPress: () =>
             abandon.mutate(undefined, {
-              onSuccess: () => showSnackbar({ message: c.paid > 0 ? `Carnet abandonné : ${formatFCFA(c.paid)} d’avoir.` : 'Carnet abandonné.' }),
+              onSuccess: () => {
+                showSnackbar({ message: c.paid > 0 ? `Carnet abandonné : ${formatFCFA(c.paid)} d’avoir.` : 'Carnet abandonné.' });
+                // Sans versement, il quitte « Mes carnets » : retour à la liste.
+                if (c.paid === 0) router.back();
+              },
               onError: (e) => showSnackbar({ message: isApiError(e) && !e.isNetwork ? e.message : 'Impossible pour le moment. Réessayez.' }),
             }),
         },
