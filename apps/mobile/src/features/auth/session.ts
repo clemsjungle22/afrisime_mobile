@@ -7,6 +7,7 @@ import { isApiError } from '@/api/errors';
 import { useCart } from '@/features/cart/store';
 import { queryClient } from '@/lib/queryClient';
 import { showSnackbar } from '@/stores/snackbar';
+import { unregisterPush } from '@/features/notifications/push';
 import { authApi } from './api';
 import { storageKey } from '@/api/config';
 
@@ -133,7 +134,8 @@ export async function signOut(): Promise<void> {
   let guard: ReturnType<typeof setTimeout> | undefined;
   try {
     await Promise.race([
-      authApi.logout(),
+      // Plus de push sur ce téléphone, puis révocation de la session.
+      unregisterPush().then(() => authApi.logout()),
       new Promise((resolve) => {
         guard = setTimeout(resolve, 4000);
       }),

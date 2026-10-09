@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "tg.afrisime.market"
+      "package": "tg.afrisime.market",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +35,14 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "AfriSime utilise votre position, si vous l’acceptez, pour aider le livreur à trouver votre adresse."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#0f3d2e",
+          "defaultChannel": "default"
         }
       ]
     ],

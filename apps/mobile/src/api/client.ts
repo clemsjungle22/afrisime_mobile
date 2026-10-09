@@ -141,6 +141,8 @@ async function attempt<S extends z.ZodType>(
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey;
   if (token) headers.Authorization = `Bearer ${token}`;
+  // Tunnel ngrok gratuit (présentations) : pas de page d'avertissement à la place des données.
+  if (apiConfig.baseUrl.includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true';
 
   let response: Response;
   try {

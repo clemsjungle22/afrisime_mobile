@@ -15,6 +15,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, SnackbarHost, Text } from '@/components/ui';
 import { useTariffChangeRefresh } from '@/features/auth/hooks';
+import { PushSync } from '@/features/notifications/push';
 import { bootstrapSession } from '@/features/auth/session';
 import { useCartSync } from '@/features/cart/sync';
 import { wireFocusManager, wireOnlineManager } from '@/lib/network';
@@ -85,6 +86,7 @@ export default function RootLayout() {
         />
         <CartSync />
         <TariffSync />
+        <PushSync />
         <SnackbarHost />
       </PersistQueryClientProvider>
     </SafeAreaProvider>
