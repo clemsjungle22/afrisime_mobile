@@ -10,6 +10,7 @@ import { and, count, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { newId } from '../ids';
+import { schedulePush } from './push';
 
 /**
  * Centre de notifications du client : une ligne par événement qui le concerne, écrite dans la même
@@ -33,6 +34,7 @@ export async function notify(tx: Db, customerId: string, n: NewNotification, at 
     link: n.link ?? null,
     createdAt: at,
   });
+  schedulePush();
 }
 
 function toNotification(r: typeof s.notifications.$inferSelect): AppNotification {

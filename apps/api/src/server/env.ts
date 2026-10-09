@@ -35,6 +35,8 @@ const Env = z.object({
   ADMIN_ENCRYPTION_KEY: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
   /** Dossier des photos du catalogue (stockage sur disque, en développement). */
   MEDIA_DIR: z.string().min(1).default('.media'),
+  /** Fichier JSON du compte de service Firebase (notifications push). Absent : pas de push. */
+  FCM_SERVICE_ACCOUNT_FILE: z.string().optional().or(z.literal('').transform(() => undefined)),
 });
 export type Env = z.infer<typeof Env>;
 

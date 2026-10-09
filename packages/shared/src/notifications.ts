@@ -40,5 +40,12 @@ export type NotificationList = z.infer<typeof NotificationList>;
 export const MarkNotificationsReadBody = z.object({ ids: z.array(z.string()).max(200).optional() });
 export type MarkNotificationsReadBody = z.infer<typeof MarkNotificationsReadBody>;
 
+/** POST/DELETE /v1/me/push-tokens : inscription du téléphone aux notifications push. */
+export const PushTokenBody = z.object({
+  token: z.string().min(10).max(4096),
+  platform: z.enum(['android', 'ios']),
+});
+export type PushTokenBody = z.infer<typeof PushTokenBody>;
+
 /** Nombre de notifications gardées par client (les plus anciennes sont effacées). */
 export const MAX_NOTIFICATIONS = 100;

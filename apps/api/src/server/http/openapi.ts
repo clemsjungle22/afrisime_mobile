@@ -79,6 +79,7 @@ const components = {
   CreditAccount: shared.CreditAccount,
   NotificationList: shared.NotificationList,
   MarkNotificationsReadBody: shared.MarkNotificationsReadBody,
+  PushTokenBody: shared.PushTokenBody,
   CreditRequestBody: shared.CreditRequestBody,
   RepayBody: shared.RepayBody,
   AdminCreditList: shared.AdminCreditList,
@@ -1204,6 +1205,10 @@ export function buildOpenApi(serverUrl?: string) {
       },
       '/v1/me/notifications/read': {
         post: op({ summary: 'Marquer des notifications comme lues', body: 'MarkNotificationsReadBody', response: ref('NotificationList') }),
+      },
+      '/v1/me/push-tokens': {
+        post: op({ summary: 'Inscrire le téléphone aux notifications push', body: 'PushTokenBody', response: { type: 'object' } }),
+        delete: op({ summary: 'Désinscrire le téléphone (déconnexion)', body: 'PushTokenBody', response: { type: 'object' } }),
       },
       '/v1/me/credit': {
         get: op({ summary: 'Mon crédit : plafond, disponible, dettes et remboursements', response: ref('CreditAccount') }),
