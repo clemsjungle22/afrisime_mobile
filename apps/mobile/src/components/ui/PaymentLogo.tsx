@@ -20,6 +20,7 @@ const ICONS: Partial<Record<PaymentMethodId, ComponentProps<typeof Ionicons>['na
   card: 'card',
   cash_on_delivery: 'cash',
   pay_at_agency: 'storefront',
+  credit: 'calendar',
 };
 
 type Props = {

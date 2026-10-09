@@ -76,6 +76,15 @@ const components = {
   AdminCarnetList: shared.AdminCarnetList,
   AdminCarnetDetail: shared.AdminCarnetDetail,
   AdminCashBody: shared.AdminCashBody,
+  CreditAccount: shared.CreditAccount,
+  CreditRequestBody: shared.CreditRequestBody,
+  RepayBody: shared.RepayBody,
+  AdminCreditList: shared.AdminCreditList,
+  AdminCreditDetail: shared.AdminCreditDetail,
+  AdminCreditGrantBody: shared.AdminCreditGrantBody,
+  AdminCreditRejectBody: shared.AdminCreditRejectBody,
+  AdminCreditSuspendBody: shared.AdminCreditSuspendBody,
+  AdminCreditCashBody: shared.AdminCreditCashBody,
   FavoriteList: shared.FavoriteList,
   ShoppingList: shared.ShoppingList,
   ShoppingListIndex: shared.ShoppingListIndex,
@@ -1186,6 +1195,62 @@ export function buildOpenApi(serverUrl?: string) {
           params: idParam,
           body: 'AdminCashBody',
           response: ref('AdminCarnetDetail'),
+        }),
+      },
+      '/v1/me/credit': {
+        get: op({ summary: 'Mon crédit : plafond, disponible, dettes et remboursements', response: ref('CreditAccount') }),
+      },
+      '/v1/me/credit/requests': {
+        post: op({
+          summary: 'Demander un crédit (comptes pros validés)',
+          body: 'CreditRequestBody',
+          response: ref('CreditAccount'),
+          status: '201',
+        }),
+      },
+      '/v1/me/credit/repayments': {
+        post: op({
+          summary: 'Rembourser le crédit par Mobile Money',
+          idempotent: true,
+          body: 'RepayBody',
+          response: ref('CreditAccount'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/credit': {
+        get: op({ summary: 'Back-office : crédits des clientes', response: ref('AdminCreditList') }),
+      },
+      '/v1/admin/credit/{id}': {
+        get: op({ summary: 'Back-office : crédit d’une cliente', params: idParam, response: ref('AdminCreditDetail') }),
+        put: op({
+          summary: 'Back-office : accorder ou modifier le crédit',
+          params: idParam,
+          body: 'AdminCreditGrantBody',
+          response: ref('AdminCreditDetail'),
+        }),
+      },
+      '/v1/admin/credit/{id}/reject': {
+        post: op({
+          summary: 'Back-office : refuser la demande de crédit',
+          params: idParam,
+          body: 'AdminCreditRejectBody',
+          response: ref('AdminCreditDetail'),
+        }),
+      },
+      '/v1/admin/credit/{id}/suspend': {
+        post: op({
+          summary: 'Back-office : suspendre ou rétablir le crédit',
+          params: idParam,
+          body: 'AdminCreditSuspendBody',
+          response: ref('AdminCreditDetail'),
+        }),
+      },
+      '/v1/admin/credit/{id}/cash': {
+        post: op({
+          summary: 'Back-office : remboursement reçu en espèces',
+          params: idParam,
+          body: 'AdminCreditCashBody',
+          response: ref('AdminCreditDetail'),
         }),
       },
       '/v1/admin/dashboard': {

@@ -2,7 +2,9 @@ import { FINAL_ORDER_STATUSES, type Order } from '@afrisime/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useRef } from 'react';
 import { newIdempotencyKey } from '@/api/client';
+import { carnetsKeys } from '@/features/carnets/hooks';
 import { useCart } from '@/features/cart/store';
+import { creditKeys } from '@/features/credit/hooks';
 import { ordersApi, type OrderFilter } from './api';
 
 export const ordersKeys = {
@@ -74,6 +76,8 @@ export function usePlaceOrder() {
       clearCart();
       client.setQueryData(ordersKeys.detail(order.id), order);
       void client.invalidateQueries({ queryKey: ordersKeys.all });
+      // Achat à crédit ou avec l'avoir : encours et solde changent.
+      void client.invalidateQueries({ queryKey: creditKeys.account });
     },
     onSettled: () => {
       inFlight.current = false;
@@ -96,6 +100,9 @@ export function useCancelOrder(orderId: string) {
     onSuccess: (order) => {
       client.setQueryData(ordersKeys.detail(order.id), order);
       void client.invalidateQueries({ queryKey: [...ordersKeys.all, 'list'] });
+      // Annulée : sa dette de crédit est effacée, l'avoir éventuel rendu.
+      void client.invalidateQueries({ queryKey: creditKeys.account });
+      void client.invalidateQueries({ queryKey: carnetsKeys.storeCredit });
     },
   });
 }

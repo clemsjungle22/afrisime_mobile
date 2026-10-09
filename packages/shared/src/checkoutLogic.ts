@@ -112,13 +112,34 @@ export const PAYMENT_LABELS: Record<PaymentMethodId, string> = {
   cash_on_delivery: 'Paiement à la livraison',
   pay_at_agency: 'Paiement en agence',
   card: 'Carte bancaire',
+  credit: 'Payer à crédit',
 };
+
+/** Crédit du client au moment de commander (null = pas de crédit : l'option n'est pas proposée). */
+export type CheckoutCredit = { available: number; blockedReason: string | null } | null;
 
 /** Moyens de paiement payés en ligne (Mobile Money) : la commande attend leur confirmation. */
 export const ONLINE_PAYMENT_METHODS: ReadonlySet<PaymentMethodId> = new Set(['mixx', 'flooz']);
 
-export function paymentMethods(zone: CheckoutZone | null, hasAddress: boolean, rules: CheckoutRules): PaymentMethodOption[] {
+export function paymentMethods(
+  zone: CheckoutZone | null,
+  hasAddress: boolean,
+  rules: CheckoutRules,
+  credit: CheckoutCredit = null,
+): PaymentMethodOption[] {
   const codAllowed = zone?.cashOnDelivery ?? false;
+  const creditOption: PaymentMethodOption[] = credit
+    ? [
+        {
+          id: 'credit',
+          label: PAYMENT_LABELS.credit,
+          description: `Remboursez un peu chaque jour. Disponible : ${formatFCFA(credit.available)}.`,
+          fulfillments: ['delivery', 'pickup'],
+          available: credit.blockedReason === null && credit.available > 0,
+          unavailableReason: credit.blockedReason ?? (credit.available > 0 ? null : 'Crédit entièrement utilisé.'),
+        },
+      ]
+    : [];
   return [
     {
       id: 'mixx',
@@ -160,6 +181,7 @@ export function paymentMethods(zone: CheckoutZone | null, hasAddress: boolean, r
       available: false,
       unavailableReason: 'Bientôt disponible.',
     },
+    ...creditOption,
   ];
 }
 
@@ -171,9 +193,10 @@ export type DeliveryContext = {
   rules: CheckoutRules;
   now: Date;
   isFull?: IsSlotFull;
+  credit?: CheckoutCredit;
 };
 
-export function buildDeliveryOptions({ address, zone, agencies, rules, now, isFull }: DeliveryContext): DeliveryOptions {
+export function buildDeliveryOptions({ address, zone, agencies, rules, now, isFull, credit }: DeliveryContext): DeliveryOptions {
   return {
     delivery: address
       ? zone
@@ -207,7 +230,7 @@ export function buildDeliveryOptions({ address, zone, agencies, rules, now, isFu
         slots: pickupSlots(a.id, now, rules, isFull),
       })),
     },
-    paymentMethods: paymentMethods(zone, address !== null, rules),
+    paymentMethods: paymentMethods(zone, address !== null, rules, credit),
   };
 }
 
@@ -218,8 +241,22 @@ function checkPayment(
   hasAddress: boolean,
   total: number,
   rules: CheckoutRules,
+  credit: CheckoutCredit,
 ) {
-  const option = paymentMethods(zone, hasAddress, rules).find((m) => m.id === method);
+  if (method === 'credit') {
+    if (!credit) throw new CheckoutRuleError('CREDIT_NOT_ELIGIBLE', 'Vous n’avez pas de crédit ouvert.', 403);
+    if (credit.blockedReason) throw new CheckoutRuleError('CREDIT_SUSPENDED', credit.blockedReason, 403);
+    if (total > credit.available) {
+      throw new CheckoutRuleError(
+        'CREDIT_INSUFFICIENT',
+        `Crédit disponible : ${formatFCFA(credit.available)}. Réduisez votre panier ou payez autrement.`,
+        422,
+        { available: credit.available },
+      );
+    }
+    return;
+  }
+  const option = paymentMethods(zone, hasAddress, rules, credit).find((m) => m.id === method);
   if (!option || !option.fulfillments.includes(fulfillment) || !option.available) {
     throw new CheckoutRuleError('PAYMENT_METHOD_UNAVAILABLE', option?.unavailableReason ?? 'Moyen de paiement indisponible.', 422);
   }
@@ -246,6 +283,7 @@ export type QuoteContext = {
   isFull?: IsSlotFull;
   /** Solde d'avoir du client (utilisé si la demande le prévoit). */
   storeCreditBalance?: number;
+  credit?: CheckoutCredit;
 };
 
 /** Devis final : panier revalidé, frais, créneau et moyen de paiement. Le total fait foi. */
@@ -296,7 +334,7 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
     ? Math.max(0, Math.min(ctx.storeCreditBalance ?? 0, beforeCredit))
     : 0;
   const total = beforeCredit - storeCreditApplied;
-  checkPayment(request.paymentMethod, request.fulfillment, zone, address !== null, total, rules);
+  checkPayment(request.paymentMethod, request.fulfillment, zone, address !== null, total, rules, ctx.credit ?? null);
 
   return {
     quoteId: ctx.quoteId,

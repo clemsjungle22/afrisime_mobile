@@ -14,6 +14,7 @@ import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
 import { useCarnets, useStoreCredit } from '@/features/carnets/hooks';
+import { useCreditAccount } from '@/features/credit/hooks';
 import { useFavorites, useLists } from '@/features/lists/hooks';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
@@ -137,6 +138,7 @@ function SignedIn() {
   const favorites = useFavorites();
   const lists = useLists();
   const carnets = useCarnets();
+  const credit = useCreditAccount();
   const storeCredit = useStoreCredit();
 
   const user = me.data;
@@ -241,6 +243,23 @@ function SignedIn() {
           <Row label="Offres et promotions" value={user.consents.marketing ? 'Acceptées' : 'Refusées'} />
           {(storeCredit.data?.balance ?? 0) > 0 ? (
             <Row label="Mon avoir" value={`${formatFCFA(storeCredit.data!.balance)} · voir le détail`} onPress={() => router.push('/avoir')} />
+          ) : null}
+          {credit.data && (credit.data.status !== 'none' || type?.requiresReview) ? (
+            <Row
+              label="Mon crédit"
+              value={
+                credit.data.status === 'suspended'
+                  ? 'Suspendu · voir le détail'
+                  : credit.data.status === 'active'
+                    ? credit.data.daysLate > 0
+                      ? `En retard : ${formatFCFA(credit.data.dueToday)} à verser`
+                      : `${formatFCFA(credit.data.available)} disponibles`
+                    : credit.data.request?.status === 'pending'
+                      ? 'Demande en cours d’examen'
+                      : 'Acheter à crédit, rembourser chaque jour'
+              }
+              onPress={() => router.push('/credit')}
+            />
           ) : null}
         </View>
       ) : me.isError ? (

@@ -12,6 +12,7 @@ import {
 import { randomInt } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { validate } from '../cart/service';
+import { createDebt } from '../credit/service';
 import { addStoreCredit, lockStoreCredit, storeCreditBalance } from '../customers/storeCredit';
 import { loadRules, slotOccupancy } from '../checkout/rules';
 import { decodeCursor, encodeCursor } from '../catalog/service';
@@ -251,11 +252,17 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
       if (credit > 0) {
         await addStoreCredit(tx, { customerId: customer.id, amount: -credit, reason: 'order', orderId: id, at: now });
       }
+      // À crédit : plafond et retard revérifiés sous verrou, puis la dette est créée.
+      if (q.paymentMethod === 'credit' && !settled) {
+        await createDebt(tx, { customerId: customer.id, orderId: id, amount: q.total, now });
+      }
       const note = settled
         ? 'Réglée avec votre avoir'
         : online
         ? 'En attente du paiement'
-        : q.paymentMethod === 'cash_on_delivery'
+        : q.paymentMethod === 'credit'
+          ? 'Payée à crédit : à rembourser chaque jour'
+          : q.paymentMethod === 'cash_on_delivery'
           ? 'Paiement à la livraison'
           : 'Paiement au retrait en agence';
       await tx.insert(s.orderStatusEvents).values({ orderId: id, status, note, at: now, actor: 'customer' });

@@ -1,5 +1,6 @@
 import {
   type Address,
+  type CheckoutCredit,
   type CheckoutZone,
   CheckoutRuleError,
   type DeliveryOptions,
@@ -37,7 +38,7 @@ export function buildSlots(kind: string, windows: { from: number; to: number }[]
   return buildSlotsShared(kind, windows, now, DELIVERY_RULES.leadTimeMs, demoFull);
 }
 
-export function deliveryOptions(address: Address | null, now: Date): DeliveryOptions {
+export function deliveryOptions(address: Address | null, now: Date, credit: CheckoutCredit = null): DeliveryOptions {
   return buildDeliveryOptions({
     address,
     zone: zoneOf(address),
@@ -45,6 +46,7 @@ export function deliveryOptions(address: Address | null, now: Date): DeliveryOpt
     rules: DELIVERY_RULES,
     now,
     isFull: demoFull,
+    credit,
   });
 }
 
@@ -63,6 +65,8 @@ type QuoteContext = {
   newId: () => string;
   /** Solde d'avoir du client. */
   storeCreditBalance?: number;
+  /** Crédit de la cliente (vente à crédit). */
+  credit?: CheckoutCredit;
 };
 
 /** Devis final : revalidation du panier, frais, créneau et moyen de paiement. Le total fait foi. */
@@ -83,6 +87,7 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
       quoteId: ctx.newId(),
       isFull: demoFull,
       storeCreditBalance: ctx.storeCreditBalance,
+      credit: ctx.credit ?? null,
     });
   } catch (error) {
     rethrow(error);

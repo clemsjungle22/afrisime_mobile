@@ -27,6 +27,7 @@ export const PAYMENT_SHORT: Record<PaymentMethodId, string> = {
   card: 'Carte',
   cash_on_delivery: 'À la livraison',
   pay_at_agency: 'En agence',
+  credit: 'À crédit',
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, { label: string; tone: Tone }> = {

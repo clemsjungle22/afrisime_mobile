@@ -41,6 +41,7 @@ export const paymentMethod = pgEnum('payment_method', [
   'card',
   'cash_on_delivery',
   'pay_at_agency',
+  'credit',
 ]);
 export const orderStatus = pgEnum('order_status', [
   'pending_payment',
@@ -463,6 +464,104 @@ export const storeCreditEntries = pgTable(
     index('store_credit_customer_idx').on(t.customerId),
     uniqueIndex('store_credit_order_reason_uidx').on(t.orderId, t.reason),
     uniqueIndex('store_credit_carnet_reason_uidx').on(t.carnetId, t.reason),
+  ],
+);
+
+// ─── Vente à crédit ───────────────────────────────────────────────────────────
+
+/** Crédit accordé par l'équipe à une cliente pro : plafond et durée de remboursement. */
+export const creditAccounts = pgTable('credit_accounts', {
+  customerId: text()
+    .primaryKey()
+    .references(() => customers.id, { onDelete: 'cascade' }),
+  limit: integer().notNull(),
+  termDays: integer().notNull(),
+  /** active | suspended */
+  status: text().notNull().default('active'),
+  suspendedReason: text(),
+  grantedBy: text().references(() => adminUsers.id),
+  grantedAt: timestamp({ withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** Demandes de crédit des clientes pros : pending → approved | rejected. */
+export const creditRequests = pgTable(
+  'credit_requests',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    amount: integer().notNull(),
+    message: text(),
+    status: text().notNull().default('pending'),
+    /** Motif du refus. */
+    reason: text(),
+    reviewedBy: text().references(() => adminUsers.id),
+    reviewedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('credit_requests_customer_idx').on(t.customerId), index('credit_requests_status_idx').on(t.status)],
+);
+
+/** Une dette par commande payée à crédit, remboursée chaque jour (durée figée à l'achat). */
+export const creditDebts = pgTable(
+  'credit_debts',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    orderId: text()
+      .notNull()
+      .unique()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    amount: integer().notNull(),
+    /** Somme des remboursements affectés à cette dette. */
+    paid: integer().notNull().default(0),
+    termDays: integer().notNull(),
+    dailyAmount: integer().notNull(),
+    /** open | settled | cancelled */
+    status: text().notNull().default('open'),
+    startedAt: timestamp({ withTimezone: true }).notNull(),
+    dueAt: timestamp({ withTimezone: true }).notNull(),
+    settledAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('credit_debts_customer_idx').on(t.customerId, t.status)],
+);
+
+/** Remboursements : Mobile Money (via le prestataire) ou espèces en agence ; répartis à la confirmation. */
+export const creditRepayments = pgTable(
+  'credit_repayments',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    method: text().notNull(),
+    amount: integer().notNull(),
+    status: text().notNull(),
+    provider: text(),
+    providerReference: text(),
+    providerData: jsonb(),
+    phone: text(),
+    agencyId: text().references(() => agencies.id),
+    /** Membre de l'équipe qui a encaissé l'espèce. */
+    recordedBy: text().references(() => adminUsers.id),
+    note: text(),
+    failureReason: text(),
+    /** Montant affecté à chaque dette : [{ debtId, amount }]. */
+    allocations: jsonb(),
+    expiresAt: timestamp({ withTimezone: true }),
+    settledAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('credit_repayments_customer_idx').on(t.customerId),
+    uniqueIndex('credit_repayments_provider_ref_uidx').on(t.provider, t.providerReference),
   ],
 );
 

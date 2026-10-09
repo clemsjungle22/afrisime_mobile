@@ -20,6 +20,7 @@ export const paymentMethodLabels: Record<PaymentMethodId, string> = {
   card: 'Carte bancaire',
   cash_on_delivery: 'Paiement à la livraison',
   pay_at_agency: 'Paiement en agence',
+  credit: 'Payée à crédit',
 };
 
 export const isMobileMoney = (m: PaymentMethodId): m is 'mixx' | 'flooz' => m === 'mixx' || m === 'flooz';

@@ -11,6 +11,7 @@ import type { CheckoutApi } from '@/features/checkout/api';
 import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
 import { buildQuote, deliveryOptions, withZone } from './checkoutEngine';
+import { mockCheckoutCredit } from './credit';
 import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, saveDb } from './db';
 import { registerQuote } from './orderServer';
@@ -100,7 +101,7 @@ export const mockCheckoutApi: CheckoutApi = {
           simulate(DeliveryOptions, async () => {
             const user = await requireUser(token);
             const address = addressId ? ((await userAddresses(user.id)).find((a) => a.id === addressId) ?? null) : null;
-            return deliveryOptions(address, new Date());
+            return deliveryOptions(address, new Date(), mockCheckoutCredit(await loadDb(), user.id));
           }),
         ),
       signal,
@@ -121,6 +122,7 @@ export const mockCheckoutApi: CheckoutApi = {
               now: new Date(),
               newId: () => newId('qte'),
               storeCreditBalance: creditBalance(await loadDb(), user.id),
+              credit: mockCheckoutCredit(await loadDb(), user.id),
             });
             // Le serveur garde le devis signé : seule une commande sur ce devis sera acceptée.
             registerQuote(user.id, quote);

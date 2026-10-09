@@ -172,6 +172,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
               <Row label="Avoir">
                 {c.storeCreditBalance > 0 ? formatFCFA(c.storeCreditBalance) : '—'}
               </Row>
+              <Row label="Vente à crédit">
+                <Link href={`/credit/${c.id}`} className="font-semibold text-brand-800 hover:underline">
+                  Voir ou accorder un crédit
+                </Link>
+              </Row>
             </dl>
           </Card>
 

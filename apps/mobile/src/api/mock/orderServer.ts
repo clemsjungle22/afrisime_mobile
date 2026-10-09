@@ -12,6 +12,7 @@ import {
   type ReorderResponse,
 } from '@afrisime/shared';
 import { loadDb, saveDb, type MockDb, type MockPayment } from './db';
+import { cancelMockDebt, createMockDebt } from './credit';
 import { addCredit, creditBalance } from './storeCredit';
 import { mockError } from './simulate';
 
@@ -132,7 +133,9 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
             now,
             settled
               ? 'Réglée'
-              : q.paymentMethod === 'cash_on_delivery'
+              : q.paymentMethod === 'credit'
+                ? 'Payée à crédit : à rembourser chaque jour'
+                : q.paymentMethod === 'cash_on_delivery'
                 ? 'Paiement à la livraison'
                 : 'Paiement au retrait en agence',
           ),
@@ -140,6 +143,8 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
     cancellable: true,
     paymentDeadline: online ? new Date(now + PAYMENT_DEADLINE_MS).toISOString() : null,
   };
+  // À crédit : plafond et retard revérifiés, puis la dette est créée.
+  if (q.paymentMethod === 'credit' && !settled) createMockDebt(db, userId, order, now);
   quotes.delete(body.quoteId);
   if (credit > 0) addCredit(db, userId, { amount: -credit, reason: 'order', orderId: order.id, at: now });
   await saveDb({
@@ -239,6 +244,7 @@ export async function cancelOrder(userId: string, orderId: string, now = Date.no
   if ((stored.storeCreditUsed ?? 0) > 0) {
     addCredit(db, userId, { amount: stored.storeCreditUsed, reason: 'order_cancelled', orderId, at: now });
   }
+  cancelMockDebt(db, userId, orderId, now);
   // Pack remis par cette commande : il redevient « soldé, à remettre ».
   for (const c of db.carnets[userId] ?? []) {
     if (c.orderId === orderId && c.status === 'delivered') {

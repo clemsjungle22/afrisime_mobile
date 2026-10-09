@@ -71,6 +71,13 @@
       "when": 1791542097738,
       "tag": "0009_store_credit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791549830368,
+      "tag": "0010_credit",
+      "breakpoints": true
     }
   ]
 }

@@ -53,7 +53,7 @@ export const Slot = z.object({
 });
 export type Slot = z.infer<typeof Slot>;
 
-export const PaymentMethodId = z.enum(['mixx', 'flooz', 'card', 'cash_on_delivery', 'pay_at_agency']);
+export const PaymentMethodId = z.enum(['mixx', 'flooz', 'card', 'cash_on_delivery', 'pay_at_agency', 'credit']);
 export type PaymentMethodId = z.infer<typeof PaymentMethodId>;
 
 export const PaymentMethodOption = z.object({

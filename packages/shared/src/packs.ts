@@ -144,7 +144,7 @@ export const RedeemBody = z
 export type RedeemBody = z.infer<typeof RedeemBody>;
 
 /** Avoir du client : solde et mouvements (le plus récent d'abord). */
-export const StoreCreditReason = z.enum(['carnet_abandoned', 'carnet_expired', 'order', 'order_cancelled', 'adjustment']);
+export const StoreCreditReason = z.enum(['carnet_abandoned', 'carnet_expired', 'order', 'order_cancelled', 'credit_cancelled', 'adjustment']);
 export type StoreCreditReason = z.infer<typeof StoreCreditReason>;
 
 export const STORE_CREDIT_REASON_LABELS: Record<StoreCreditReason, string> = {
@@ -152,6 +152,7 @@ export const STORE_CREDIT_REASON_LABELS: Record<StoreCreditReason, string> = {
   carnet_expired: 'Carnet clos (délai dépassé)',
   order: 'Utilisé pour une commande',
   order_cancelled: 'Commande annulée : avoir rendu',
+  credit_cancelled: 'Commande à crédit annulée : remboursements rendus',
   adjustment: 'Ajustement par l’équipe',
 };
 

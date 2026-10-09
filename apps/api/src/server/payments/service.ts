@@ -1,6 +1,7 @@
 import { type CreatePaymentBody, ONLINE_PAYMENT_METHODS, PAYMENT_LABELS, type PaymentAction, type PaymentIntent } from '@afrisime/shared';
 import { and, eq, gt, inArray, lte } from 'drizzle-orm';
 import { settleContributionByReference } from '../carnets/service';
+import { settleRepaymentByReference } from '../credit/service';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
@@ -240,8 +241,11 @@ export async function handleWebhook(db: Db, providerName: string, rawBody: strin
     if (event.status !== 'pending') await settle(db, payment.id, event.status, event.failureReason);
   } else if (event.status === 'pending') {
     // Rien à enregistrer.
-  } else if (!(await settleContributionByReference(db, provider.name, event.reference, event.status, event.failureReason))) {
-    // Ni une commande ni une cotisation de carnet.
+  } else if (
+    !(await settleContributionByReference(db, provider.name, event.reference, event.status, event.failureReason)) &&
+    !(await settleRepaymentByReference(db, provider.name, event.reference, event.status, event.failureReason))
+  ) {
+    // Ni une commande, ni une cotisation de carnet, ni un remboursement de crédit.
     log.warn('webhook pour un paiement inconnu', { provider: provider.name, reference: event.reference });
   }
 

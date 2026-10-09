@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  HandCoins,
   LayoutDashboard,
   type LucideIcon,
   Package,
@@ -38,6 +39,7 @@ const ITEMS: Item[] = [
   { href: '/packs', label: 'Packs Famille', icon: Wallet },
   { href: '/accueil-app', label: 'Accueil de l’app', icon: Smartphone },
   { href: '/clients', label: 'Clients', icon: Users, roles: CUSTOMER_VIEW_ROLES },
+  { href: '/credit', label: 'Vente à crédit', icon: HandCoins, roles: CUSTOMER_VIEW_ROLES },
   { href: '/parametres', label: 'Paramètres', icon: Settings, roles: ['admin'] },
 ];
 

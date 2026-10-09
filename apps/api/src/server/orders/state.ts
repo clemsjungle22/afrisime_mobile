@@ -1,5 +1,6 @@
 import type { OrderStatus } from '@afrisime/shared';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { cancelDebt } from '../credit/service';
 import { addStoreCredit } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
@@ -49,7 +50,7 @@ export async function transition(
 
 /**
  * Commande annulée : l'avoir utilisé est rendu ; un pack remis par cette commande redevient
- * « soldé, à remettre » (le client pourra le recevoir à nouveau).
+ * « soldé, à remettre » (le client pourra le recevoir à nouveau) ; une dette de crédit est effacée.
  */
 async function onCancelled(
   tx: Db,
@@ -69,6 +70,7 @@ async function onCancelled(
     .update(s.carnets)
     .set({ status: 'completed', orderId: null, updatedAt: at })
     .where(and(eq(s.carnets.orderId, order.id), eq(s.carnets.status, 'delivered')));
+  await cancelDebt(tx, order.id, at);
 }
 
 /**
@@ -195,8 +197,8 @@ async function simulateProgress(db: Db, order: OrderRow, now: Date) {
     await db.transaction(async (txn) => {
       const tx = txn as unknown as Db;
       const final = to === 'delivered' || to === 'completed';
-      // Payé à la livraison ou en agence : l'encaissement a lieu à la remise.
-      const paidOnHandover = final && order.paymentStatus !== 'succeeded';
+      // Payé à la livraison ou en agence : l'encaissement a lieu à la remise (à crédit : par les remboursements).
+      const paidOnHandover = final && order.paymentStatus !== 'succeeded' && order.paymentMethod !== 'credit';
       const done = await transition(tx, order.id, [from], to, note, at, paidOnHandover ? { paymentStatus: 'succeeded', paidAt: at } : {});
       if (done && final) await closeReservations(tx, order.id, 'consume', at);
     });

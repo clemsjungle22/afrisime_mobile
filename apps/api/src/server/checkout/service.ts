@@ -9,6 +9,7 @@ import {
 } from '@afrisime/shared';
 import { eq } from 'drizzle-orm';
 import { validate } from '../cart/service';
+import { checkoutCredit } from '../credit/service';
 import { listAddresses } from '../customers/addresses';
 import { storeCreditBalance as balanceOf } from '../customers/storeCredit';
 import type { Db } from '../db/client';
@@ -41,8 +42,8 @@ export async function getDeliveryOptions(
   const address = await findAddress(db, customer.id, addressId);
   if (addressId && !address) throw new ApiError('NOT_FOUND', 'Adresse introuvable.');
   const [rules, agencies, zone] = await Promise.all([loadRules(db), loadAgencies(db), loadZone(db, address?.zoneId ?? null)]);
-  const isFull = await slotOccupancy(db, rules, now);
-  return buildDeliveryOptions({ address, zone, agencies, rules, now, isFull });
+  const [isFull, credit] = await Promise.all([slotOccupancy(db, rules, now), checkoutCredit(db, customer.id, now)]);
+  return buildDeliveryOptions({ address, zone, agencies, rules, now, isFull, credit });
 }
 
 /**
@@ -63,10 +64,11 @@ export async function createQuote(
     loadAgencies(db),
     findAddress(db, customer.id, request.addressId),
   ]);
-  const [zone, isFull, storeCreditBalance] = await Promise.all([
+  const [zone, isFull, storeCreditBalance, credit] = await Promise.all([
     loadZone(db, address?.zoneId ?? null),
     slotOccupancy(db, rules, now),
     request.useStoreCredit ? balanceOf(db, customer.id) : Promise.resolve(0),
+    request.paymentMethod === 'credit' ? checkoutCredit(db, customer.id, now) : Promise.resolve(null),
   ]);
 
   let quote: Quote;
@@ -81,6 +83,7 @@ export async function createQuote(
       quoteId: newId('qte'),
       isFull,
       storeCreditBalance,
+      credit,
     });
   } catch (error) {
     asApiError(error);

@@ -97,7 +97,9 @@ function OrderContent({ order }: { order: Order }) {
       'Annuler la commande ?',
       order.payment.status === 'succeeded'
         ? 'Le montant payé vous sera remboursé sur votre compte Mobile Money.'
-        : 'Cette action est définitive.',
+        : order.payment.method === 'credit'
+          ? 'Cet achat sera retiré de votre crédit ; ce que vous avez déjà remboursé deviendra un avoir.'
+          : 'Cette action est définitive.',
       [
         { text: 'Garder ma commande', style: 'cancel' },
         {
@@ -230,8 +232,13 @@ function OrderContent({ order }: { order: Order }) {
                 ? 'À régler au livreur'
                 : order.payment.method === 'pay_at_agency'
                   ? 'À régler en agence'
-                  : 'Non payé'}
+                  : order.payment.method === 'credit'
+                    ? 'À rembourser chaque jour depuis « Mon crédit »'
+                    : 'Non payé'}
         </Text>
+        {order.payment.method === 'credit' && order.status !== 'cancelled' ? (
+          <Button label="Voir mon crédit" variant="ghost" onPress={() => router.push('/credit')} />
+        ) : null}
       </Card>
 
       <View style={{ gap: theme.spacing.sm }}>

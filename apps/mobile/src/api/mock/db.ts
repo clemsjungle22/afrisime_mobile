@@ -35,6 +35,41 @@ export type MockDb = {
   carnets: Record<string, MockCarnet[]>;
   /** Avoir par utilisateur (mouvements dans l'ordre d'arrivée). */
   storeCredit: Record<string, MockCreditEntry[]>;
+  /** Vente à crédit par utilisateur. */
+  credit: Record<string, MockCreditState>;
+};
+
+export type MockDebt = {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  amount: number;
+  paid: number;
+  termDays: number;
+  dailyAmount: number;
+  status: 'open' | 'settled' | 'cancelled';
+  startedAt: string;
+  dueAt: string;
+};
+
+export type MockRepayment = {
+  id: string;
+  amount: number;
+  method: 'mixx' | 'flooz';
+  status: ContributionStatus;
+  /** Issue simulée selon le numéro de test. */
+  outcome: 'succeed' | 'fail' | 'expire';
+  createdAt: string;
+  expiresAt: string;
+  failureReason: string | null;
+};
+
+export type MockCreditState = {
+  account: { limit: number; termDays: number; status: 'active' | 'suspended' } | null;
+  request: { id: string; amount: number; message: string | null; status: 'pending' | 'approved' | 'rejected'; createdAt: string } | null;
+  debts: MockDebt[];
+  /** Dans l'ordre d'arrivée. */
+  repayments: MockRepayment[];
 };
 
 export type MockCreditEntry = {
@@ -116,6 +151,7 @@ function emptyDb(): MockDb {
     lists: {},
     carnets: {},
     storeCredit: {},
+    credit: {},
   };
 }
 
