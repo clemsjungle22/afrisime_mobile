@@ -2,12 +2,13 @@ import { formatNationalInput, isValidTogoMobile, nationalDigits, toE164, TOGO_DI
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { isApiError } from '@/api/errors';
 import { Button, Text } from '@/components/ui';
 import { fontFamilies, minTouchSize, useTheme } from '@/theme';
 import { authApi } from '../api';
 import { AuthHero } from '../components/AuthHero';
+import { ServerSettingsSheet } from '../components/ServerSettingsSheet';
 import { otpErrorMessage, useOtpFlow } from '../otpFlow';
 
 export function PhoneScreen() {
@@ -15,6 +16,7 @@ export function PhoneScreen() {
   const startFlow = useOtpFlow((s) => s.start);
   const [input, setInput] = useState(() => formatNationalInput(useOtpFlow.getState().phone ?? ''));
   const [touched, setTouched] = useState(false);
+  const [settings, setSettings] = useState(false);
 
   const digits = nationalDigits(input);
   const valid = isValidTogoMobile(digits);
@@ -61,10 +63,16 @@ export function PhoneScreen() {
               gap: theme.spacing.lg,
             }}
           >
-          <View style={{ gap: theme.spacing.xs }}>
+          <Pressable
+            // Réglage caché (présentations) : appui long sur le titre.
+            onLongPress={() => setSettings(true)}
+            delayLongPress={1200}
+            accessible={false}
+            style={{ gap: theme.spacing.xs }}
+          >
             <Text variant="title">Votre numéro</Text>
             <Text color="textMuted">Nous vous envoyons un code par SMS. Pas de mot de passe à retenir.</Text>
-          </View>
+          </Pressable>
 
           <View style={{ gap: theme.spacing.xs }}>
             <Text variant="label">Numéro de téléphone</Text>
@@ -121,6 +129,7 @@ export function PhoneScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ServerSettingsSheet visible={settings} onClose={() => setSettings(false)} />
     </View>
   );
 }

@@ -1,11 +1,38 @@
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
 
 /**
  * Configuration de l'API. Les EXPO_PUBLIC_* sont embarquées dans le bundle : publiques, aucun secret.
  * Accès direct à process.env.EXPO_PUBLIC_X obligatoire (Expo les remplace au build).
  */
 
-const mock = process.env.EXPO_PUBLIC_API_MOCK === 'true';
+/**
+ * Réglage choisi sur le téléphone (écran caché : appui long sur le logo de connexion), prioritaire sur
+ * la configuration embarquée : mode démo, ou adresse du serveur. Lu une fois au démarrage.
+ */
+export type ServerOverride = { mode: 'demo' } | { mode: 'server'; url: string };
+const OVERRIDE_KEY = 'afrisime.server';
+
+function readOverride(): ServerOverride | null {
+  try {
+    const raw = SecureStore.getItem(OVERRIDE_KEY);
+    const value = raw ? (JSON.parse(raw) as ServerOverride) : null;
+    return value?.mode === 'demo' || (value?.mode === 'server' && typeof value.url === 'string') ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Enregistre le réglage (null : revenir à la configuration de l'app). Pris en compte au redémarrage. */
+export function saveServerOverride(value: ServerOverride | null): void {
+  SecureStore.setItem(OVERRIDE_KEY, value ? JSON.stringify(value) : '');
+}
+
+const override = readOverride();
+/** Réglage du téléphone en vigueur (null : configuration de l'app). */
+export const serverOverride = override;
+
+const mock = override ? override.mode === 'demo' : process.env.EXPO_PUBLIC_API_MOCK === 'true';
 
 /** Port du serveur de développement (apps/api : npm run api). */
 const DEV_API_PORT = 4000;
@@ -39,6 +66,7 @@ function serverIssue(): string | null {
 
 /** Adresse explicite (EXPO_PUBLIC_API_URL) en priorité, sinon déduite en développement. */
 function resolveBaseUrl(): string {
+  if (override?.mode === 'server') return override.url.trim().replace(/\/+$/, '');
   const explicit = (process.env.EXPO_PUBLIC_API_URL ?? '').trim();
   if (explicit) return explicit.replace(/\/+$/, '');
   return (__DEV__ ? devServerUrl() : null) ?? '';
