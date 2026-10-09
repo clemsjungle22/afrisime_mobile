@@ -3,6 +3,7 @@ import {
   SEED_ADDRESS,
   SEED_USER,
   homeBanners,
+  packSeeds,
   mockCategories,
   mockOnboardingOptions,
   mockZones,
@@ -280,6 +281,12 @@ export async function seedDatabase(db: Db): Promise<SeedCounts> {
           sortOrder: ex('sort_order'),
         },
       });
+
+    // Packs d'exemple : jamais écrasés (l'équipe les modifie dans le back-office).
+    await tx
+      .insert(s.packs)
+      .values(packSeeds.map((p, i) => ({ ...p, sortOrder: i })))
+      .onConflictDoNothing();
 
     await tx
       .insert(s.homeBanners)

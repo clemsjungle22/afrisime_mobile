@@ -361,6 +361,82 @@ export const shoppingLists = pgTable(
   (t) => [index('shopping_lists_customer_idx').on(t.customerId)],
 );
 
+// ─── Packs Famille et carnets de cotisation ───────────────────────────────────
+
+/** Offre de pack : produits, prix et durée de cotisation (paramétrable dans le back-office). */
+export const packs = pgTable('packs', {
+  id: text().primaryKey(),
+  name: text().notNull(),
+  description: text(),
+  imageUrl: text(),
+  /** [{ variantId, quantity }] */
+  items: jsonb().notNull(),
+  price: integer().notNull(),
+  durationDays: integer().notNull(),
+  isActive: boolean().notNull().default(true),
+  sortOrder: integer().notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** Souscription d'un client : contenu et prix figés le jour de la souscription. */
+export const carnets = pgTable(
+  'carnets',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id),
+    packId: text()
+      .notNull()
+      .references(() => packs.id),
+    /** Nom, image et produits (noms et formats) tels qu'au jour de la souscription. */
+    snapshot: jsonb().notNull(),
+    price: integer().notNull(),
+    durationDays: integer().notNull(),
+    dailyAmount: integer().notNull(),
+    /** Somme des cotisations réussies. */
+    paid: integer().notNull().default(0),
+    status: text().notNull().default('active'),
+    startedAt: timestamp({ withTimezone: true }).notNull(),
+    dueAt: timestamp({ withTimezone: true }).notNull(),
+    completedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('carnets_customer_idx').on(t.customerId), index('carnets_status_idx').on(t.status)],
+);
+
+/** Cotisations : Mobile Money (via le prestataire de paiement) ou espèces en agence. */
+export const carnetContributions = pgTable(
+  'carnet_contributions',
+  {
+    id: text().primaryKey(),
+    carnetId: text()
+      .notNull()
+      .references(() => carnets.id, { onDelete: 'cascade' }),
+    method: text().notNull(),
+    amount: integer().notNull(),
+    status: text().notNull(),
+    provider: text(),
+    providerReference: text(),
+    providerData: jsonb(),
+    phone: text(),
+    agencyId: text().references(() => agencies.id),
+    /** Membre de l'équipe qui a encaissé l'espèce. */
+    recordedBy: text().references(() => adminUsers.id),
+    note: text(),
+    failureReason: text(),
+    expiresAt: timestamp({ withTimezone: true }),
+    settledAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('carnet_contributions_carnet_idx').on(t.carnetId),
+    uniqueIndex('carnet_contributions_provider_ref_uidx').on(t.provider, t.providerReference),
+  ],
+);
+
 // ─── Checkout, commandes, paiements ───────────────────────────────────────────
 
 /** Devis signés : une commande n'est acceptée que sur un devis valide et non consommé. */

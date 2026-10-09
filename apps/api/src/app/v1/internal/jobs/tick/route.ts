@@ -8,6 +8,7 @@ import { tick } from '@/server/jobs';
 
 const Result = z.object({
   paymentsChecked: z.number(),
+  contributionsChecked: z.number(),
   ordersExpired: z.number(),
   ordersAdvanced: z.number(),
 });

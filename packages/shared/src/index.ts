@@ -21,3 +21,5 @@ export * from './adminCustomers';
 export * from './slotConfig';
 export * from './adminSettings';
 export * from './lists';
+export * from './packs';
+export * from './adminPacks';

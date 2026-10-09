@@ -57,6 +57,13 @@
       "when": 1791495071654,
       "tag": "0007_favorites_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791535521310,
+      "tag": "0008_packs_carnets",
+      "breakpoints": true
     }
   ]
 }

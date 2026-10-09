@@ -63,6 +63,17 @@ const components = {
   AdminThresholdBody: shared.AdminThresholdBody,
   AdminStockMovement: shared.AdminStockMovement,
   AdminHome: shared.AdminHome,
+  PackList: shared.PackList,
+  Carnet: shared.Carnet,
+  CarnetList: shared.CarnetList,
+  SubscribeBody: shared.SubscribeBody,
+  ContributeBody: shared.ContributeBody,
+  AdminPack: shared.AdminPack,
+  AdminPackInput: shared.AdminPackInput,
+  AdminPackFormat: shared.AdminPackFormat,
+  AdminCarnetList: shared.AdminCarnetList,
+  AdminCarnetDetail: shared.AdminCarnetDetail,
+  AdminCashBody: shared.AdminCashBody,
   FavoriteList: shared.FavoriteList,
   ShoppingList: shared.ShoppingList,
   ShoppingListIndex: shared.ShoppingListIndex,
@@ -1057,6 +1068,102 @@ export function buildOpenApi(serverUrl?: string) {
           summary: "Retirer un format de la liste",
           params: [...idParam, { name: 'variantId', in: 'path', required: true, schema: { type: 'string' } }],
           response: ref('ShoppingList'),
+        }),
+      },
+      '/v1/packs': {
+        get: op({
+          summary: "Packs Famille proposés",
+          auth: false,
+          response: ref('PackList'),
+        }),
+      },
+      '/v1/me/carnets': {
+        get: op({
+          summary: "Carnets du client",
+          response: ref('CarnetList'),
+        }),
+        post: op({
+          summary: "Souscrire à un pack (contenu et prix figés)",
+          idempotent: true,
+          body: 'SubscribeBody',
+          response: ref('Carnet'),
+          status: '201',
+        }),
+      },
+      '/v1/me/carnets/{id}': {
+        get: op({
+          summary: "Carnet : progression, retard, historique",
+          params: idParam,
+          response: ref('Carnet'),
+        }),
+      },
+      '/v1/me/carnets/{id}/contributions': {
+        post: op({
+          summary: "Cotiser par Mobile Money",
+          idempotent: true,
+          params: idParam,
+          body: 'ContributeBody',
+          response: ref('Carnet'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/packs': {
+        get: op({
+          summary: "Back-office : packs",
+          response: { type: 'array', items: ref('AdminPack') },
+        }),
+        post: op({
+          summary: "Back-office : nouveau pack",
+          body: 'AdminPackInput',
+          response: { type: 'array', items: ref('AdminPack') },
+          status: '201',
+        }),
+      },
+      '/v1/admin/packs/formats': {
+        get: op({
+          summary: 'Back-office : formats du catalogue à composer dans un pack',
+          response: { type: 'array', items: ref('AdminPackFormat') },
+        }),
+      },
+      '/v1/admin/packs/{id}': {
+        patch: op({
+          summary: "Back-office : modifier un pack",
+          params: idParam,
+          body: 'AdminPackInput',
+          response: { type: 'array', items: ref('AdminPack') },
+        }),
+      },
+      '/v1/admin/packs/{id}/image': {
+        post: op({
+          summary: "Back-office : photo du pack (multipart, champ « file »)",
+          params: idParam,
+          response: { type: 'array', items: ref('AdminPack') },
+        }),
+        delete: op({
+          summary: "Back-office : retirer la photo du pack",
+          params: idParam,
+          response: { type: 'array', items: ref('AdminPack') },
+        }),
+      },
+      '/v1/admin/carnets': {
+        get: op({
+          summary: "Back-office : carnets des clients",
+          response: ref('AdminCarnetList'),
+        }),
+      },
+      '/v1/admin/carnets/{id}': {
+        get: op({
+          summary: "Back-office : fiche d’un carnet",
+          params: idParam,
+          response: ref('AdminCarnetDetail'),
+        }),
+      },
+      '/v1/admin/carnets/{id}/cash': {
+        post: op({
+          summary: "Back-office : cotisation reçue en espèces",
+          params: idParam,
+          body: 'AdminCashBody',
+          response: ref('AdminCarnetDetail'),
         }),
       },
       '/v1/admin/dashboard': {

@@ -8,3 +8,4 @@ export * from './home';
 export * from './zones';
 export * from './onboarding';
 export * from './demo';
+export * from './packs';

@@ -13,6 +13,7 @@ import { Badge, Button, Pattern, PressableScale, Screen, Skeleton, Text } from '
 import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
+import { useCarnets } from '@/features/carnets/hooks';
 import { useFavorites, useLists } from '@/features/lists/hooks';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
@@ -121,6 +122,7 @@ function SignedIn() {
   useRefetchOnFocus(me.refetch);
   const favorites = useFavorites();
   const lists = useLists();
+  const carnets = useCarnets();
 
   const user = me.data;
   const type = options.data?.customerTypes.find((t) => t.id === user?.customerTypeId);
@@ -201,6 +203,12 @@ function SignedIn() {
           label="Mes favoris"
           detail={favorites.data ? `${favorites.data.items.length} produit${favorites.data.items.length > 1 ? 's' : ''}` : ' '}
           onPress={() => router.push('/favoris')}
+        />
+        <Shortcut
+          icon="wallet-outline"
+          label="Mes carnets"
+          detail={carnets.data ? `${carnets.data.items.filter((c) => c.status === 'active').length} en cours` : ' '}
+          onPress={() => router.push('/carnets')}
         />
         <Shortcut
           icon="list-outline"
@@ -295,7 +303,7 @@ function Shortcut({
   detail,
   onPress,
 }: {
-  icon: 'heart-outline' | 'list-outline';
+  icon: 'heart-outline' | 'list-outline' | 'wallet-outline';
   label: string;
   detail: string;
   onPress: () => void;

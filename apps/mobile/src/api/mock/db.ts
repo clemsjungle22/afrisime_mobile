@@ -1,5 +1,5 @@
 import { SEED_ADDRESS, SEED_USER } from '@afrisime/fixtures';
-import type { Address, CartLine, Order, UserProfile } from '@afrisime/shared';
+import type { Address, CarnetStatus, CartLine, ContributionStatus, Order, PackItemView, UserProfile } from '@afrisime/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -22,6 +22,38 @@ export type MockDb = {
   favorites: Record<string, string[]>;
   /** Listes d'achats par utilisateur. */
   lists: Record<string, MockList[]>;
+  /** Carnets de cotisation par utilisateur. */
+  carnets: Record<string, MockCarnet[]>;
+};
+
+export type MockContribution = {
+  id: string;
+  amount: number;
+  method: 'mixx' | 'flooz' | 'cash';
+  status: ContributionStatus;
+  /** Issue simulée selon le numéro de test. */
+  outcome: 'succeed' | 'fail' | 'expire';
+  createdAt: string;
+  expiresAt: string | null;
+  settledAt: string | null;
+  failureReason: string | null;
+};
+
+export type MockCarnet = {
+  id: string;
+  packId: string;
+  name: string;
+  items: PackItemView[];
+  price: number;
+  durationDays: number;
+  dailyAmount: number;
+  paid: number;
+  status: CarnetStatus;
+  startedAt: string;
+  dueAt: string;
+  completedAt: string | null;
+  /** Dans l'ordre d'arrivée. */
+  contributions: MockContribution[];
 };
 
 export type MockList = { id: string; name: string; lines: CartLine[]; updatedAt: string };
@@ -57,6 +89,7 @@ function emptyDb(): MockDb {
     orderCounter: 122,
     favorites: {},
     lists: {},
+    carnets: {},
   };
 }
 

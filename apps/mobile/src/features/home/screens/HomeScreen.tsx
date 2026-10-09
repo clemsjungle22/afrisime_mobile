@@ -18,6 +18,7 @@ import { ErrorState, FadeIn, OfflineBanner, Pattern, Skeleton, Text } from '@/co
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { BannerCarousel } from '@/features/catalog/components/BannerCarousel';
+import { PacksTeaser } from '@/features/carnets/components/PacksTeaser';
 import { CategoryTile } from '@/features/catalog/components/CategoryTile';
 import { mediaUri } from '@/lib/media';
 import { FlashCountdown } from '@/features/catalog/components/FlashCountdown';
@@ -267,6 +268,10 @@ function HomeContent({ home, onPressProduct, onPressCategory }: ContentProps) {
           </ScrollView>
         </FadeIn>
       ) : null}
+
+      <FadeIn index={i++}>
+        <PacksTeaser />
+      </FadeIn>
 
       {flash ? (
         <FadeIn index={i++}>

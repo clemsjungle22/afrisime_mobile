@@ -3,6 +3,7 @@
 import {
   AdminCategory,
   AdminHome,
+  AdminPack,
   type AdminCategoryInput,
   type AdminNewVariant,
   type AdminPriceBody,
@@ -177,6 +178,7 @@ export type ImageTarget =
   | { kind: 'product'; id: string }
   | { kind: 'category'; id: string }
   | { kind: 'banner'; id: string }
+  | { kind: 'pack'; id: string }
   | { kind: 'logo' };
 
 /** Photo d'un produit, d'un rayon, d'une carte d'accueil ou logo : envoi (« file ») ou retrait (form = null). */
@@ -200,6 +202,12 @@ export async function imageAction(target: ImageTarget, form: FormData | null): P
           path: `/v1/admin/home/banners/${enc(target.id)}/image`,
           schema: AdminHome as z.ZodType,
           paths: ['/accueil-app'],
+        };
+      case 'pack':
+        return {
+          path: `/v1/admin/packs/${enc(target.id)}/image`,
+          schema: z.array(AdminPack) as z.ZodType,
+          paths: ['/packs'],
         };
       case 'logo':
         return {

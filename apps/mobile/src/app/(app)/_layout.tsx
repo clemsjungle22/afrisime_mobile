@@ -25,6 +25,10 @@ export default function AppLayout() {
       <Stack.Screen name="favoris" options={{ title: 'Mes favoris' }} />
       <Stack.Screen name="listes" options={{ title: 'Mes listes d’achats' }} />
       <Stack.Screen name="listes/[id]" options={{ title: 'Liste' }} />
+      <Stack.Screen name="packs" options={{ title: 'Packs Famille' }} />
+      <Stack.Screen name="packs/[id]" options={{ title: 'Pack' }} />
+      <Stack.Screen name="carnets" options={{ title: 'Mes carnets' }} />
+      <Stack.Screen name="carnets/[id]" options={{ title: 'Carnet' }} />
     </Stack>
   );
 }

@@ -109,7 +109,7 @@ export async function processImage(data: Buffer, shape: ImageShape | number): Pr
 
 /** Enregistre une photo et renvoie son adresse publique (relative). */
 export async function storeImage(
-  folder: 'products' | 'categories' | 'banners' | 'branding',
+  folder: 'products' | 'categories' | 'banners' | 'branding' | 'packs',
   ownerId: string,
   data: Buffer,
   shape: ImageShape | number,

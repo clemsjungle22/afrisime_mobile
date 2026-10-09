@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   Smartphone,
   Users,
+  Wallet,
 } from 'lucide-react';
 import type { AdminRole } from '@afrisime/shared';
 import Image from 'next/image';
@@ -34,6 +35,7 @@ const ITEMS: Item[] = [
     roles: ['admin', 'orders', 'support', 'readonly'],
   },
   { href: '/catalogue', label: 'Catalogue', icon: Package },
+  { href: '/packs', label: 'Packs Famille', icon: Wallet },
   { href: '/accueil-app', label: 'Accueil de l’app', icon: Smartphone },
   { href: '/clients', label: 'Clients', icon: Users, roles: CUSTOMER_VIEW_ROLES },
   { href: '/parametres', label: 'Paramètres', icon: Settings, roles: ['admin'] },

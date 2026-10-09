@@ -1,4 +1,5 @@
 import { and, inArray, isNotNull, lte } from 'drizzle-orm';
+import { refreshPendingContributions } from './carnets/service';
 import type { Db } from './db/client';
 import * as s from './db/schema';
 import { env } from './env';
@@ -12,6 +13,7 @@ import { pendingPaymentIds, refreshPayment } from './payments/service';
 export async function tick(db: Db, now = new Date()) {
   const payments = await pendingPaymentIds(db, now);
   for (const id of payments) await refreshPayment(db, id, now);
+  const contributions = await refreshPendingContributions(db, now);
 
   const expired = await db
     .select({ id: s.orders.id })
@@ -31,5 +33,7 @@ export async function tick(db: Db, now = new Date()) {
     for (const o of open) await refreshOrder(db, o.id, now);
     advanced = open.length;
   }
-  return { paymentsChecked: payments.length, ordersExpired: expired.length, ordersAdvanced: advanced };
+  return {
+    paymentsChecked: payments.length,
+    contributionsChecked: contributions, ordersExpired: expired.length, ordersAdvanced: advanced };
 }
