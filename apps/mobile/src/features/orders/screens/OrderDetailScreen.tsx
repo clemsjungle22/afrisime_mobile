@@ -1,10 +1,12 @@
 import { formatFCFA, type Order } from '@afrisime/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Alert, ScrollView, View } from 'react-native';
 import { z } from 'zod';
 import { isApiError } from '@/api/errors';
 import { Badge, Button, ErrorState, OfflineBanner, PaymentLogo, Skeleton, Text } from '@/components/ui';
 import { ProductThumb } from '@/features/catalog/components/ProductThumb';
+import { SaveOrderAsListSheet } from '@/features/lists/components/SaveOrderAsListSheet';
 import { comingSoon } from '@/lib/comingSoon';
 import { formatSlotDay, formatSlotHours } from '@/lib/dates';
 import { openProduct } from '@/lib/links';
@@ -84,6 +86,7 @@ function OrderContent({ order }: { order: Order }) {
   const theme = useTheme();
   const cancel = useCancelOrder(order.id);
   const reorder = useReorder(order.id);
+  const [saveAsList, setSaveAsList] = useState(false);
   const status = orderStatusInfo[order.status];
   // Rafraîchi chaque minute : le délai de paiement affiché reste juste sans rendu impur.
   const now = useNow(60_000, order.paymentDeadline !== null);
@@ -230,11 +233,18 @@ function OrderContent({ order }: { order: Order }) {
 
       <View style={{ gap: theme.spacing.sm }}>
         <Button label="Commander à nouveau" variant="secondary" loading={reorder.isPending} onPress={onReorder} />
+        <Button label="Enregistrer comme liste d’achats" variant="ghost" onPress={() => setSaveAsList(true)} />
         <Button label="Reçu / facture" variant="ghost" onPress={() => comingSoon('Le reçu PDF')} />
         {order.cancellable ? (
           <Button label="Annuler la commande" variant="ghost" loading={cancel.isPending} onPress={confirmCancel} />
         ) : null}
       </View>
+      <SaveOrderAsListSheet
+        visible={saveAsList}
+        onClose={() => setSaveAsList(false)}
+        orderId={order.id}
+        defaultName={`Comme la commande ${order.orderNumber}`}
+      />
     </ScrollView>
   );
 }

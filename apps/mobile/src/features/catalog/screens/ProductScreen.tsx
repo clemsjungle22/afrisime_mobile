@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { formatFCFA, type ProductDetail, type ProductSummary, type Variant } from '@afrisime/shared';
+import { formatFCFA, toSummary, type ProductDetail, type ProductSummary, type Variant } from '@afrisime/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState, type ComponentProps } from 'react';
+import { useCallback, useMemo, useState, type ComponentProps } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -14,7 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import { isApiError } from '@/api/errors';
 import { Badge, Button, EmptyState, ErrorState, FadeIn, OfflineBanner, Skeleton, Text } from '@/components/ui';
+import { useSession } from '@/features/auth/session';
 import { useCart, useCartCount } from '@/features/cart/store';
+import { AddToListSheet } from '@/features/lists/components/AddToListSheet';
+import { FavoriteButton } from '@/features/lists/components/FavoriteButton';
 import { comingSoon } from '@/lib/comingSoon';
 import { haptics } from '@/lib/haptics';
 import { openProduct } from '@/lib/links';
@@ -127,6 +130,9 @@ function ProductContent({ product }: { product: ProductDetail }) {
   const cartCount = useCartCount();
   const [variant, setVariant] = useState<Variant>(product.defaultVariant);
   const [quantity, setQuantity] = useState(product.defaultVariant.minQuantity);
+  const [listSheet, setListSheet] = useState(false);
+  const authenticated = useSession((st) => st.status === 'authenticated');
+  const summary = useMemo(() => toSummary(product), [product]);
 
   const availability = presentAvailability(variant.availability, variant.leadTimeDays);
   const range = priceRangeLabel(product);
@@ -239,6 +245,19 @@ function ProductContent({ product }: { product: ProductDetail }) {
           <FadeIn index={1} style={{ gap: theme.spacing.md }}>
             <Text variant="subtitle">Choisissez un format</Text>
             <VariantSelector variants={product.variants} selectedId={variant.id} onSelect={selectVariant} />
+            <Button
+              label="Ajouter à une liste d’achats"
+              variant="ghost"
+              icon={<Ionicons name="list-outline" size={20} color={theme.colors.primary} />}
+              onPress={() => {
+                if (authenticated) return setListSheet(true);
+                showSnackbar({
+                  message: 'Connectez-vous pour créer vos listes d’achats.',
+                  actionLabel: 'Se connecter',
+                  onAction: () => router.push('/login'),
+                });
+              }}
+            />
           </FadeIn>
 
           <FadeIn index={2} style={[styles.row, { gap: theme.spacing.sm, flexWrap: 'nowrap' }]}>
@@ -297,13 +316,23 @@ function ProductContent({ product }: { product: ProductDetail }) {
 
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
         <RoundButton icon="arrow-back" label="Retour" onPress={goBack} />
-        <RoundButton
-          icon="bag-handle-outline"
-          label={cartCount > 0 ? `Panier, ${cartCount} articles` : 'Panier'}
-          onPress={() => router.navigate('/panier')}
-          badge={cartCount}
-        />
+        <View style={[styles.row, { gap: theme.spacing.sm }]}>
+          <FavoriteButton product={summary} appearance="round" />
+          <RoundButton
+            icon="bag-handle-outline"
+            label={cartCount > 0 ? `Panier, ${cartCount} articles` : 'Panier'}
+            onPress={() => router.navigate('/panier')}
+            badge={cartCount}
+          />
+        </View>
       </View>
+
+      <AddToListSheet
+        visible={listSheet}
+        onClose={() => setListSheet(false)}
+        item={{ variantId: variant.id, quantity }}
+        label={`${product.name} · ${variant.label} × ${quantity}`}
+      />
 
       <View style={[styles.actionWrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View

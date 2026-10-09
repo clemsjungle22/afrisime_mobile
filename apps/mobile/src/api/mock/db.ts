@@ -18,7 +18,13 @@ export type MockDb = {
   /** Clés d'idempotence : même clé + même corps = même réponse ; corps différent = 409. */
   idempotency: Record<string, { route: string; bodyHash: string; resourceId: string }>;
   orderCounter: number;
+  /** Produits favoris par utilisateur (le plus récent d'abord). */
+  favorites: Record<string, string[]>;
+  /** Listes d'achats par utilisateur. */
+  lists: Record<string, MockList[]>;
 };
+
+export type MockList = { id: string; name: string; lines: CartLine[]; updatedAt: string };
 
 export type MockPayment = {
   id: string;
@@ -49,6 +55,8 @@ function emptyDb(): MockDb {
     payments: {},
     idempotency: {},
     orderCounter: 122,
+    favorites: {},
+    lists: {},
   };
 }
 

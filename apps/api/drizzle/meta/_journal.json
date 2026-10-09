@@ -50,6 +50,13 @@
       "when": 1791490229426,
       "tag": "0006_customer_type_active",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791495071654,
+      "tag": "0007_favorites_lists",
+      "breakpoints": true
     }
   ]
 }

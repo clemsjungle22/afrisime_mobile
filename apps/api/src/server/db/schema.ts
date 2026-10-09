@@ -327,6 +327,40 @@ export const carts = pgTable('carts', {
   updatedAt: updatedAt(),
 });
 
+/** Produits favoris d'un client (un produit, pas un format). */
+export const favorites = pgTable(
+  'favorites',
+  {
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    productId: text()
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.customerId, t.productId] })],
+);
+
+/** Listes d'achats récurrentes : formats et quantités (prix toujours relus au catalogue). */
+export const shoppingLists = pgTable(
+  'shopping_lists',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    /** [{ variantId, quantity }] : une ligne par format. */
+    lines: jsonb()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('shopping_lists_customer_idx').on(t.customerId)],
+);
+
 // ─── Checkout, commandes, paiements ───────────────────────────────────────────
 
 /** Devis signés : une commande n'est acceptée que sur un devis valide et non consommé. */

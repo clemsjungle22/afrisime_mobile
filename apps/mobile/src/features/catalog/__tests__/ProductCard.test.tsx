@@ -1,9 +1,17 @@
 import type { Availability, ProductSummary } from '@afrisime/shared';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render as baseRender, screen } from '@testing-library/react-native';
+import type { ReactElement, ReactNode } from 'react';
 import { useCart } from '@/features/cart/store';
 import { ProductCard } from '../components/ProductCard';
 
-jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
+jest.mock('expo-router', () => ({ router: { navigate: jest.fn(), push: jest.fn() } }));
+
+/** La carte affiche le cœur des favoris (données du compte) : fournisseur de requêtes requis. */
+function wrapper({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+}
+const render = (ui: ReactElement) => baseRender(ui, { wrapper });
 
 const NBSP = ' ';
 

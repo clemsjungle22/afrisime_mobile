@@ -63,6 +63,13 @@ const components = {
   AdminThresholdBody: shared.AdminThresholdBody,
   AdminStockMovement: shared.AdminStockMovement,
   AdminHome: shared.AdminHome,
+  FavoriteList: shared.FavoriteList,
+  ShoppingList: shared.ShoppingList,
+  ShoppingListIndex: shared.ShoppingListIndex,
+  CreateListBody: shared.CreateListBody,
+  RenameListBody: shared.RenameListBody,
+  AddListItemBody: shared.AddListItemBody,
+  SetListItemBody: shared.SetListItemBody,
   AdminDeliverySettings: shared.AdminDeliverySettings,
   AdminZoneInput: shared.AdminZoneInput,
   AdminCheckoutRules: shared.AdminCheckoutRules,
@@ -981,6 +988,75 @@ export function buildOpenApi(serverUrl?: string) {
           summary: "Équipe : débloquer après trop d’essais",
           params: idParam,
           response: { type: 'array', items: ref('AdminTeamMember') },
+        }),
+      },
+      '/v1/me/favorites': {
+        get: op({
+          summary: "Produits favoris, au prix du moment",
+          response: ref('FavoriteList'),
+        }),
+      },
+      '/v1/me/favorites/{productId}': {
+        put: op({
+          summary: "Ajouter aux favoris (rejouable)",
+          params: [{ name: 'productId', in: 'path', required: true, schema: { type: 'string' } }],
+          response: ref('FavoriteList'),
+        }),
+        delete: op({
+          summary: "Retirer des favoris",
+          params: [{ name: 'productId', in: 'path', required: true, schema: { type: 'string' } }],
+          response: ref('FavoriteList'),
+        }),
+      },
+      '/v1/me/lists': {
+        get: op({
+          summary: "Listes d'achats",
+          response: ref('ShoppingListIndex'),
+        }),
+        post: op({
+          summary: "Nouvelle liste (vide, avec produits ou copie d’une commande)",
+          body: 'CreateListBody',
+          response: ref('ShoppingList'),
+          status: '201',
+        }),
+      },
+      '/v1/me/lists/{id}': {
+        get: op({
+          summary: "Liste revalidée au prix et au stock du moment",
+          params: idParam,
+          response: ref('ShoppingList'),
+        }),
+        patch: op({
+          summary: "Renommer une liste",
+          params: idParam,
+          body: 'RenameListBody',
+          response: ref('ShoppingList'),
+        }),
+        delete: op({
+          summary: "Supprimer une liste",
+          params: idParam,
+          response: ref('ShoppingListIndex'),
+        }),
+      },
+      '/v1/me/lists/{id}/items': {
+        post: op({
+          summary: "Ajouter un format (quantité cumulée)",
+          params: idParam,
+          body: 'AddListItemBody',
+          response: ref('ShoppingList'),
+        }),
+      },
+      '/v1/me/lists/{id}/items/{variantId}': {
+        patch: op({
+          summary: "Quantité d'un format de la liste",
+          params: [...idParam, { name: 'variantId', in: 'path', required: true, schema: { type: 'string' } }],
+          body: 'SetListItemBody',
+          response: ref('ShoppingList'),
+        }),
+        delete: op({
+          summary: "Retirer un format de la liste",
+          params: [...idParam, { name: 'variantId', in: 'path', required: true, schema: { type: 'string' } }],
+          response: ref('ShoppingList'),
         }),
       },
       '/v1/admin/dashboard': {

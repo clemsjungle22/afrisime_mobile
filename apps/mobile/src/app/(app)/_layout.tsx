@@ -22,6 +22,9 @@ export default function AppLayout() {
       <Stack.Screen name="order-confirmation/[orderId]" options={{ title: 'Commande confirmée' }} />
       <Stack.Screen name="orders/[orderId]" options={{ title: 'Commande' }} />
       <Stack.Screen name="search" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="favoris" options={{ title: 'Mes favoris' }} />
+      <Stack.Screen name="listes" options={{ title: 'Mes listes d’achats' }} />
+      <Stack.Screen name="listes/[id]" options={{ title: 'Liste' }} />
     </Stack>
   );
 }

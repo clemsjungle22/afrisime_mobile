@@ -20,3 +20,4 @@ export * from './adminHome';
 export * from './adminCustomers';
 export * from './slotConfig';
 export * from './adminSettings';
+export * from './lists';

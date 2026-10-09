@@ -5,6 +5,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Badge, PressableScale, Skeleton, Text } from '@/components/ui';
 import { useCart } from '@/features/cart/store';
+import { FavoriteButton } from '@/features/lists/components/FavoriteButton';
 import { haptics } from '@/lib/haptics';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
@@ -94,6 +95,9 @@ export const ProductCard = memo(function ProductCard({ product, onPress }: Props
           {badge ? <Badge label={badge.label} tone={badge.tone} /> : null}
         </View>
         {availability.purchasable ? <QuickAdd product={product} /> : null}
+        <View style={[styles.favorite, { top: theme.spacing.xs, right: theme.spacing.xs }]}>
+          <FavoriteButton product={product} />
+        </View>
       </View>
       <View style={{ paddingHorizontal: 6, paddingTop: theme.spacing.md, paddingBottom: 6, gap: 3 }}>
         <Text variant="overline" color="textMuted" numberOfLines={1}>
@@ -150,6 +154,9 @@ export function ProductCardSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  favorite: {
+    position: 'absolute',
+  },
   card: {
     flex: 1,
   },

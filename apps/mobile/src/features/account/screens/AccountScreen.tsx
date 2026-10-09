@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { maskPhone } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -8,10 +9,11 @@ import { MOCK_OTP_CODE, RATE_LIMITED_PHONE } from '@/api/mock/authServer';
 import { SEED_USER } from '@/api/mock/db';
 import { useMockScenarios } from '@/api/mock/scenarios';
 import { SceneIllustration } from '@/components/illustrations/SceneIllustration';
-import { Badge, Button, Pattern, Screen, Skeleton, Text } from '@/components/ui';
+import { Badge, Button, Pattern, PressableScale, Screen, Skeleton, Text } from '@/components/ui';
 import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
+import { useFavorites, useLists } from '@/features/lists/hooks';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
 import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
@@ -117,6 +119,8 @@ function SignedIn() {
   const [leaving, setLeaving] = useState(false);
   // Profil relu en revenant sur l'onglet (validation d'un profil pro par l'équipe, par exemple).
   useRefetchOnFocus(me.refetch);
+  const favorites = useFavorites();
+  const lists = useLists();
 
   const user = me.data;
   const type = options.data?.customerTypes.find((t) => t.id === user?.customerTypeId);
@@ -190,6 +194,21 @@ function SignedIn() {
           <Button label="Compléter mon profil" onPress={() => router.push('/profile-setup')} />
         </View>
       ) : null}
+
+      <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
+        <Shortcut
+          icon="heart-outline"
+          label="Mes favoris"
+          detail={favorites.data ? `${favorites.data.items.length} produit${favorites.data.items.length > 1 ? 's' : ''}` : ' '}
+          onPress={() => router.push('/favoris')}
+        />
+        <Shortcut
+          icon="list-outline"
+          label="Mes listes d’achats"
+          detail={lists.data ? `${lists.data.items.length} liste${lists.data.items.length > 1 ? 's' : ''}` : ' '}
+          onPress={() => router.push('/listes')}
+        />
+      </View>
 
       {user ? (
         <View>
@@ -266,5 +285,41 @@ function DemoTools() {
         }}
       />
     </View>
+  );
+}
+
+/** Raccourci vers une rubrique du compte (favoris, listes). */
+function Shortcut({
+  icon,
+  label,
+  detail,
+  onPress,
+}: {
+  icon: 'heart-outline' | 'list-outline';
+  label: string;
+  detail: string;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${detail}`}
+      onPress={onPress}
+      style={{
+        flex: 1,
+        gap: theme.spacing.xs,
+        padding: theme.spacing.lg,
+        borderRadius: theme.radius.lg,
+        backgroundColor: theme.colors.surface,
+        boxShadow: theme.shadows.sm,
+      }}
+    >
+      <Ionicons name={icon} size={24} color={theme.colors.primary} />
+      <Text variant="bodyStrong">{label}</Text>
+      <Text variant="caption" color="textMuted">
+        {detail}
+      </Text>
+    </PressableScale>
   );
 }
