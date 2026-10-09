@@ -15,6 +15,7 @@ import {
   creditDailyAmount,
   debtProgress,
   repaymentError,
+  formatFCFA,
 } from '@afrisime/shared';
 import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { addStoreCredit } from '../customers/storeCredit';
@@ -22,6 +23,7 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
+import { notify } from '../notifications/service';
 import { once } from '../idempotency';
 import { type ProviderPayment, type ProviderStatus, paymentProvider } from '../payments/provider';
 
@@ -424,6 +426,23 @@ export async function applyRepayment(tx: Db, r: RepaymentRow, at: Date) {
       at,
     });
   }
+  const remaining = (
+    await tx
+      .select({ amount: s.creditDebts.amount, paid: s.creditDebts.paid })
+      .from(s.creditDebts)
+      .where(and(eq(s.creditDebts.customerId, r.customerId), eq(s.creditDebts.status, 'open')))
+  ).reduce((n, d) => n + d.amount - d.paid, 0);
+  await notify(
+    tx,
+    r.customerId,
+    {
+      kind: 'credit',
+      title: 'Remboursement reçu',
+      body: `${formatFCFA(r.amount)} ${r.method === 'cash' ? 'versés en agence' : 'reçus'}. ${remaining > 0 ? `Reste à rembourser : ${formatFCFA(remaining)}.` : 'Tout est remboursé !'}`,
+      link: { type: 'credit' },
+    },
+    at,
+  );
   await publish(tx, 'credit.repayment_received', r.customerId, {
     repaymentId: r.id,
     amount: r.amount,

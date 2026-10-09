@@ -18,6 +18,7 @@ import { storeCreditBalance } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
+import { type NewNotification, notify } from '../notifications/service';
 import { type AdminContext, adminAudit } from './auth';
 
 const PAGE = 50;
@@ -293,8 +294,10 @@ async function apply(
   reason: string | null,
   ip: string | null,
   now: Date,
+  notification?: NewNotification,
 ): Promise<AdminCustomerDetail> {
   await db.transaction(async (tx) => {
+    if (notification) await notify(tx as unknown as Db, c.id, notification, now);
     const [updated] = await tx
       .update(s.customers)
       .set({ ...changes, updatedAt: now })
@@ -359,6 +362,12 @@ export async function reviewPro(
       body.reason || null,
       ip,
       now,
+      {
+        kind: 'profile',
+        title: 'Profil pro validé',
+        body: `Votre profil « ${declared?.label ?? 'professionnel'} » est validé : vos tarifs pros s’appliquent dès maintenant.`,
+        link: { type: 'account' },
+      },
     );
   }
   // Refus : profil sans validation (particulier), tarif normal. Le client pourra refaire une demande.
@@ -377,6 +386,14 @@ export async function reviewPro(
     body.reason ?? null,
     ip,
     now,
+    {
+      kind: 'profile',
+      title: 'Profil pro non validé',
+      body: body.reason
+        ? `Votre demande de profil pro n’a pas été acceptée : ${body.reason}`
+        : 'Votre demande de profil pro n’a pas été acceptée. Contactez votre agence pour en savoir plus.',
+      link: { type: 'account' },
+    },
   );
 }
 

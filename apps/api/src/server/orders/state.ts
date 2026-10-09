@@ -6,6 +6,7 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { env } from '../env';
 import { ApiError } from '../http/errors';
+import { notify, orderNotification } from '../notifications/service';
 import { emit } from '../outbox';
 
 /** Une commande payée en ligne et non payée dans ce délai est annulée (stock libéré). */
@@ -40,9 +41,18 @@ export async function transition(
     .update(s.orders)
     .set({ ...extra, status: to, updatedAt: at })
     .where(and(eq(s.orders.id, orderId), inArray(s.orders.status, [...from])))
-    .returning({ id: s.orders.id, customerId: s.orders.customerId, storeCreditUsed: s.orders.storeCreditUsed });
-  if (updated.length === 0) return false;
-  if (to === 'cancelled') await onCancelled(tx, updated[0]!, at);
+    .returning({
+      id: s.orders.id,
+      customerId: s.orders.customerId,
+      storeCreditUsed: s.orders.storeCreditUsed,
+      orderNumber: s.orders.orderNumber,
+      fulfillment: s.orders.fulfillment,
+    });
+  const order = updated[0];
+  if (!order) return false;
+  if (to === 'cancelled') await onCancelled(tx, order, at);
+  const notification = orderNotification(to, order, actor);
+  if (notification) await notify(tx, order.customerId, notification, at);
   await tx.insert(s.orderStatusEvents).values({ orderId, status: to, note, at, actor });
   await emit(tx, 'order.status_changed', orderId, { status: to, at: at.toISOString(), actor });
   return true;

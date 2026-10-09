@@ -37,6 +37,8 @@ export type MockDb = {
   storeCredit: Record<string, MockCreditEntry[]>;
   /** Vente à crédit par utilisateur. */
   credit: Record<string, MockCreditState>;
+  /** Notifications déjà lues par utilisateur (identifiants). */
+  notificationsRead: Record<string, string[]>;
 };
 
 export type MockDebt = {
@@ -152,6 +154,7 @@ function emptyDb(): MockDb {
     carnets: {},
     storeCredit: {},
     credit: {},
+    notificationsRead: {},
   };
 }
 

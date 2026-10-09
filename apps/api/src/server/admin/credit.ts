@@ -11,6 +11,7 @@ import {
   type AdminRole,
   normalize,
   repaymentError,
+  formatFCFA,
 } from '@afrisime/shared';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { decodeCursor, encodeCursor } from '../catalog/service';
@@ -30,6 +31,7 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
+import { notify } from '../notifications/service';
 import { type AdminContext, adminAudit } from './auth';
 import { CUSTOMER_VIEW_ROLES } from './customers';
 import { CASH_ROLES } from './packs';
@@ -279,6 +281,24 @@ export async function grantCredit(
         and(eq(s.creditRequests.customerId, customerId), eq(s.creditRequests.status, 'pending')),
       )
       .returning({ id: s.creditRequests.id });
+    await notify(
+      tx,
+      customerId,
+      before
+        ? {
+            kind: 'credit',
+            title: 'Crédit modifié',
+            body: `Votre plafond est maintenant de ${formatFCFA(body.limit)}, remboursable en ${body.termDays} jours.`,
+            link: { type: 'credit' },
+          }
+        : {
+            kind: 'credit',
+            title: 'Crédit accordé !',
+            body: `Vous pouvez acheter à crédit jusqu’à ${formatFCFA(body.limit)}, remboursable en ${body.termDays} jours, sans frais.`,
+            link: { type: 'credit' },
+          },
+      now,
+    );
     await tx.insert(s.outbox).values({
       eventType: before ? 'credit.updated' : 'credit.granted',
       aggregate: 'credit',
@@ -316,6 +336,12 @@ export async function rejectCreditRequest(
       )
       .returning({ id: s.creditRequests.id });
     if (!rejected) throw invalid('Aucune demande en attente pour cette cliente.');
+    await notify(
+      tx,
+      customerId,
+      { kind: 'credit', title: 'Demande de crédit non acceptée', body: body.reason, link: { type: 'credit' } },
+      now,
+    );
     await adminAudit(tx, {
       actorId: ctx.admin.id,
       action: 'credit.request_rejected',
@@ -349,6 +375,19 @@ export async function suspendCredit(
       .where(eq(s.creditAccounts.customerId, customerId))
       .returning();
     if (!updated) throw invalid('Cette cliente n’a pas de crédit.');
+    await notify(
+      tx,
+      customerId,
+      body.suspended
+        ? {
+            kind: 'credit',
+            title: 'Crédit suspendu',
+            body: `Vous ne pouvez plus acheter à crédit pour le moment${body.reason ? ` : ${body.reason}` : ''}. Vos remboursements restent possibles.`,
+            link: { type: 'credit' },
+          }
+        : { kind: 'credit', title: 'Crédit rétabli', body: 'Vous pouvez de nouveau acheter à crédit.', link: { type: 'credit' } },
+      now,
+    );
     await tx.insert(s.outbox).values({
       eventType: body.suspended ? 'credit.suspended' : 'credit.restored',
       aggregate: 'credit',

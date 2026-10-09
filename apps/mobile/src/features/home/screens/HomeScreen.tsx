@@ -18,6 +18,8 @@ import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { ErrorState, FadeIn, OfflineBanner, Pattern, Skeleton, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
+import { useNotifications } from '@/features/notifications/hooks';
+import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { BannerCarousel } from '@/features/catalog/components/BannerCarousel';
 import { PacksTeaser } from '@/features/carnets/components/PacksTeaser';
 import { useStoreCredit } from '@/features/carnets/hooks';
@@ -137,15 +139,47 @@ function TopBar() {
           accessibilityLabel="AfriSime"
         />
       </View>
-      <Pressable
-        onPress={() => comingSoon('Les notifications')}
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
-        style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <Ionicons name="notifications-outline" size={22} color={palette.white} />
-      </Pressable>
+      <NotificationBell />
     </View>
+  );
+}
+
+/** Cloche : pastille du nombre de notifications non lues. */
+function NotificationBell() {
+  const theme = useTheme();
+  const authenticated = useSession((s) => s.status === 'authenticated');
+  const notifications = useNotifications();
+  useRefetchOnFocus(notifications.refetch);
+  const unread = authenticated ? (notifications.data?.unread ?? 0) : 0;
+  return (
+    <Pressable
+      onPress={() => router.push(authenticated ? '/notifications' : '/login')}
+      accessibilityRole="button"
+      accessibilityLabel={unread > 0 ? `Notifications, ${unread} non lue${unread > 1 ? 's' : ''}` : 'Notifications'}
+      style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Ionicons name={unread > 0 ? 'notifications' : 'notifications-outline'} size={22} color={palette.white} />
+      {unread > 0 ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            minWidth: 18,
+            height: 18,
+            paddingHorizontal: 4,
+            borderRadius: 9,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.accent,
+          }}
+        >
+          <Text variant="caption" style={{ color: theme.colors.onAccent, fontSize: 11, lineHeight: 14, fontWeight: '700' }}>
+            {unread > 9 ? '9+' : unread}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 

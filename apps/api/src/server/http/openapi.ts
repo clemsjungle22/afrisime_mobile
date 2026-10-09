@@ -77,6 +77,8 @@ const components = {
   AdminCarnetDetail: shared.AdminCarnetDetail,
   AdminCashBody: shared.AdminCashBody,
   CreditAccount: shared.CreditAccount,
+  NotificationList: shared.NotificationList,
+  MarkNotificationsReadBody: shared.MarkNotificationsReadBody,
   CreditRequestBody: shared.CreditRequestBody,
   RepayBody: shared.RepayBody,
   AdminCreditList: shared.AdminCreditList,
@@ -1196,6 +1198,12 @@ export function buildOpenApi(serverUrl?: string) {
           body: 'AdminCashBody',
           response: ref('AdminCarnetDetail'),
         }),
+      },
+      '/v1/me/notifications': {
+        get: op({ summary: 'Notifications du client', response: ref('NotificationList') }),
+      },
+      '/v1/me/notifications/read': {
+        post: op({ summary: 'Marquer des notifications comme lues', body: 'MarkNotificationsReadBody', response: ref('NotificationList') }),
       },
       '/v1/me/credit': {
         get: op({ summary: 'Mon crédit : plafond, disponible, dettes et remboursements', response: ref('CreditAccount') }),

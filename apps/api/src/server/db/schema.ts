@@ -565,6 +565,44 @@ export const creditRepayments = pgTable(
   ],
 );
 
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+/** Notifications du client (centre de notifications de l'app, push). */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    kind: text().notNull(),
+    title: text().notNull(),
+    body: text().notNull(),
+    /** Écran à ouvrir : { type, orderId | carnetId }. */
+    link: jsonb(),
+    readAt: timestamp({ withTimezone: true }),
+    /** Envoi push : null tant qu'il n'a pas été tenté. */
+    pushedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('notifications_customer_idx').on(t.customerId, t.createdAt)],
+);
+
+/** Téléphones inscrits aux notifications push (jeton Firebase Cloud Messaging). */
+export const pushTokens = pgTable(
+  'push_tokens',
+  {
+    token: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    platform: text().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('push_tokens_customer_idx').on(t.customerId)],
+);
+
 // ─── Checkout, commandes, paiements ───────────────────────────────────────────
 
 /** Devis signés : une commande n'est acceptée que sur un devis valide et non consommé. */

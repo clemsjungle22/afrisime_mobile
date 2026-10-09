@@ -23,6 +23,7 @@ import { setDb } from '@/server/db/client';
 import * as s from '@/server/db/schema';
 import { seedDatabase } from '@/server/db/seed';
 import { tick } from '@/server/jobs';
+import { listNotifications } from '@/server/notifications/service';
 import { cancelOrder, createOrder } from '@/server/orders/service';
 import { SIGNATURE_HEADER, SIM_CONFIRM_MS, signWebhook } from '@/server/payments/provider';
 import { call } from './call';
@@ -211,6 +212,7 @@ describe('demande et accord', () => {
       canManage: true,
     });
     expect(detail.requests[0]).toMatchObject({ status: 'approved' });
+    expect((await listNotifications(t.db, c.id)).items[0]).toMatchObject({ kind: 'credit', title: 'Crédit accordé !', link: { type: 'credit' } });
     expect(
       (await call(creditRoute, 'GET', '/v1/me/credit', { token: c.token })).body,
     ).toMatchObject({

@@ -23,7 +23,7 @@ describe('migrations', () => {
     const res = await t.client.query<{ n: number }>(
       "select count(*)::int as n from information_schema.tables where table_schema = 'public'",
     );
-    expect(res.rows[0]?.n).toBe(40);
+    expect(res.rows[0]?.n).toBe(42);
   });
 
   it('les énumérations de la base suivent le contrat partagé', () => {

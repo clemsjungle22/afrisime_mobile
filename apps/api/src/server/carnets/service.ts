@@ -24,6 +24,7 @@ import {
   dailyAmountOf,
   catalogValue,
   packItemsView,
+  formatFCFA,
 } from '@afrisime/shared';
 import { and, asc, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { getCatalog } from '../catalog/service';
@@ -35,6 +36,7 @@ import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
 import { once } from '../idempotency';
+import { notify } from '../notifications/service';
 import { createPackOrder, getOrder } from '../orders/service';
 import { type ProviderPayment, type ProviderStatus, paymentProvider } from '../payments/provider';
 
@@ -354,6 +356,22 @@ export async function credit(tx: Db, c: ContributionRow, at: Date) {
     .where(eq(s.carnets.id, c.carnetId))
     .returning();
   if (!carnet) return;
+  const name = (carnet.snapshot as CarnetSnapshot).name;
+  const link = { type: 'carnet' as const, carnetId: carnet.id };
+  const completed = carnet.status === 'active' && carnet.paid >= carnet.price;
+  await notify(
+    tx,
+    carnet.customerId,
+    completed
+      ? { kind: 'carnet', title: 'Carnet soldé !', body: `${name} : tout est payé. Choisissez comment recevoir votre pack.`, link }
+      : {
+          kind: 'carnet',
+          title: 'Cotisation reçue',
+          body: `${formatFCFA(c.amount)} ${c.method === 'cash' ? 'versés en agence' : 'reçus'} sur ${name}. Reste ${formatFCFA(Math.max(0, carnet.price - carnet.paid))}.`,
+          link,
+        },
+    at,
+  );
   await publish(tx, 'carnet.contribution_received', carnet.id, {
     contributionId: c.id,
     amount: c.amount,
@@ -502,6 +520,19 @@ async function closeCarnet(
     .where(and(eq(s.carnets.id, carnetId), eq(s.carnets.status, 'active')))
     .returning();
   if (!closed) return false;
+  if (reason === 'carnet_expired') {
+    await notify(
+      tx,
+      closed.customerId,
+      {
+        kind: 'carnet',
+        title: 'Carnet clos',
+        body: `${(closed.snapshot as CarnetSnapshot).name} : délai dépassé.${closed.paid > 0 ? ` Vos ${formatFCFA(closed.paid)} versés deviennent un avoir.` : ''}`,
+        link: { type: 'carnet', carnetId: closed.id },
+      },
+      at,
+    );
+  }
   await addStoreCredit(tx, {
     customerId: closed.customerId,
     amount: closed.paid,
