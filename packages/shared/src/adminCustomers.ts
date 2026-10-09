@@ -75,6 +75,8 @@ export type AdminCustomerAction = z.infer<typeof AdminCustomerAction>;
 
 export const AdminCustomerDetail = AdminCustomerRow.extend({
   marketingConsent: z.boolean(),
+  /** Solde d'avoir (carnet abandonné…), utilisable à la commande. */
+  storeCreditBalance: Money,
   /** Dernière utilisation de l'app (session la plus récente). */
   lastSeenAt: z.string().datetime().nullable(),
   /** Moyenne des commandes livrées ou retirées (0 sans commande). */

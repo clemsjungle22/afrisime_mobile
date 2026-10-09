@@ -53,6 +53,7 @@ function makeQuote(paymentMethod: Quote['paymentMethod'], fulfillment: Quote['fu
     subtotal: 9500,
     deliveryFee: 500,
     discountTotal: 0,
+    storeCreditApplied: 0,
     total: 10000,
     currency: 'XOF',
     fulfillmentSummary: 'Livraison · Maison — Tokoin',

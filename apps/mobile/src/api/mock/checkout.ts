@@ -14,6 +14,7 @@ import { buildQuote, deliveryOptions, withZone } from './checkoutEngine';
 import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, saveDb } from './db';
 import { registerQuote } from './orderServer';
+import { creditBalance } from './storeCredit';
 import { useMockScenarios } from './scenarios';
 import { mockError, simulate } from './simulate';
 
@@ -22,7 +23,7 @@ const once = <T>(run: () => Promise<T>) => withRetry(run, { canRetry: false });
 let counter = 0;
 const newId = (prefix: string) => `${prefix}_${Date.now().toString(36)}${(counter++).toString(36)}`;
 
-async function userAddresses(userId: string): Promise<Address[]> {
+export async function userAddresses(userId: string): Promise<Address[]> {
   return (await loadDb()).addresses[userId] ?? [];
 }
 
@@ -119,6 +120,7 @@ export const mockCheckoutApi: CheckoutApi = {
               addresses: await userAddresses(user.id),
               now: new Date(),
               newId: () => newId('qte'),
+              storeCreditBalance: creditBalance(await loadDb(), user.id),
             });
             // Le serveur garde le devis signé : seule une commande sur ce devis sera acceptée.
             registerQuote(user.id, quote);

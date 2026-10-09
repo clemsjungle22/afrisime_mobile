@@ -3,13 +3,14 @@ import {
   CheckoutRuleError,
   type DeliveryOptions,
   type Quote,
-  type QuoteRequest,
+  type QuoteRequestInput,
   buildDeliveryOptions,
   buildQuote,
 } from '@afrisime/shared';
 import { eq } from 'drizzle-orm';
 import { validate } from '../cart/service';
 import { listAddresses } from '../customers/addresses';
+import { storeCreditBalance as balanceOf } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
@@ -49,16 +50,23 @@ export async function getDeliveryOptions(
  * de paiement sont contrôlés. Le devis est enregistré : seule une commande passée sur ce devis, avant
  * son expiration, sera acceptée.
  */
-export async function createQuote(db: Db, customer: Customer, request: QuoteRequest, now = new Date()): Promise<Quote> {
+export async function createQuote(
+  db: Db,
+  customer: Customer,
+  input: QuoteRequestInput,
+  now = new Date(),
+): Promise<Quote> {
+  const request = { ...input, useStoreCredit: input.useStoreCredit ?? false };
   const [validated, rules, agencies, address] = await Promise.all([
     validate({ lines: request.lines }, customer.segment),
     loadRules(db),
     loadAgencies(db),
     findAddress(db, customer.id, request.addressId),
   ]);
-  const [zone, isFull] = await Promise.all([
+  const [zone, isFull, storeCreditBalance] = await Promise.all([
     loadZone(db, address?.zoneId ?? null),
     slotOccupancy(db, rules, now),
+    request.useStoreCredit ? balanceOf(db, customer.id) : Promise.resolve(0),
   ]);
 
   let quote: Quote;
@@ -72,6 +80,7 @@ export async function createQuote(db: Db, customer: Customer, request: QuoteRequ
       now,
       quoteId: newId('qte'),
       isFull,
+      storeCreditBalance,
     });
   } catch (error) {
     asApiError(error);

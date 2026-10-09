@@ -14,6 +14,7 @@ import {
 } from '@afrisime/shared';
 import { type SQL, and, asc, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { decodeCursor, encodeCursor } from '../catalog/service';
+import { storeCreditBalance } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
@@ -233,6 +234,7 @@ export async function getAdminCustomer(
   return {
     ...base,
     marketingConsent: c.marketingConsent,
+    storeCreditBalance: await storeCreditBalance(db, id),
     lastSeenAt: iso(seen?.at),
     averageBasket: spentCount > 0 ? Math.round(base.totalSpent / spentCount) : 0,
     addresses: addresses.map(({ address: a, zoneName }) => ({

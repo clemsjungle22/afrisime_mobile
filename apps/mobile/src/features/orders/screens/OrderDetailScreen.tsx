@@ -209,7 +209,10 @@ function OrderContent({ order }: { order: Order }) {
         {order.fulfillment === 'delivery' ? (
           <Row label="Livraison" value={order.deliveryFee === 0 ? 'Offerte' : formatFCFA(order.deliveryFee)} />
         ) : null}
-        {order.discountTotal > 0 ? <Row label="Remises" value={`-${formatFCFA(order.discountTotal)}`} /> : null}
+        {order.discountTotal > 0 ? (
+          <Row label={order.total === order.deliveryFee && order.discountTotal === order.subtotal ? 'Payé par votre carnet' : 'Remises'} value={`-${formatFCFA(order.discountTotal)}`} />
+        ) : null}
+        {order.storeCreditUsed > 0 ? <Row label="Avoir utilisé" value={`-${formatFCFA(order.storeCreditUsed)}`} /> : null}
         <Row label="Total" value={formatFCFA(order.total)} strong />
       </Card>
 

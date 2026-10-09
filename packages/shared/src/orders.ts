@@ -66,6 +66,8 @@ export const Order = OrderSummary.extend({
   subtotal: Money,
   deliveryFee: Money,
   discountTotal: Money,
+  /** Avoir utilisé pour cette commande (rendu si elle est annulée). */
+  storeCreditUsed: Money.default(0),
   currency: z.literal('XOF'),
   addressId: z.string().nullable(),
   agencyId: z.string().nullable(),

@@ -80,8 +80,23 @@ export default async function CarnetPage({ params }: { params: Promise<{ id: str
 
       {c.status === 'completed' ? (
         <Alert tone="success">
-          Carnet soldé le {c.completedAt ? formatDateTime(c.completedAt) : '—'} : contactez le
-          client pour lui remettre son pack.
+          Carnet soldé le {c.completedAt ? formatDateTime(c.completedAt) : '—'} : le client peut
+          commander son pack depuis l’app (retrait ou livraison).
+        </Alert>
+      ) : c.status === 'delivered' && c.orderId ? (
+        <Alert tone="info">
+          Pack commandé par le client :{' '}
+          <Link href={`/commandes/${c.orderId}`} className="font-semibold underline">
+            voir la commande
+          </Link>
+          .
+        </Alert>
+      ) : c.status === 'abandoned' ? (
+        <Alert tone="warning">
+          Carnet clos (abandon ou délai dépassé) :{' '}
+          {c.creditedAmount > 0
+            ? `${formatFCFA(c.creditedAmount)} transformés en avoir pour le client.`
+            : 'rien n’avait été versé.'}
         </Alert>
       ) : null}
 

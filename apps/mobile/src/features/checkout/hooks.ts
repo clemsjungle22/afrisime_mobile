@@ -39,7 +39,11 @@ export function useDeliveryOptions(addressId: string | null, enabled: boolean) {
 }
 
 /** Corps du devis si la sélection est complète, sinon null. */
-export function toQuoteRequest(selection: CheckoutSelection, lines: CartValidateLine[]): QuoteRequest | null {
+export function toQuoteRequest(
+  selection: CheckoutSelection,
+  lines: CartValidateLine[],
+  useStoreCredit = false,
+): QuoteRequest | null {
   const { fulfillment, addressId, agencyId, slotId, paymentMethod } = selection;
   if (!slotId || !paymentMethod || lines.length === 0) return null;
   if (fulfillment === 'delivery' && !addressId) return null;
@@ -51,6 +55,7 @@ export function toQuoteRequest(selection: CheckoutSelection, lines: CartValidate
     slotId,
     paymentMethod,
     useCredit: false,
+    useStoreCredit,
     lines,
   };
 }

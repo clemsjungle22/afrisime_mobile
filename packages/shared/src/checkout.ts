@@ -109,6 +109,8 @@ export const QuoteRequest = z
     slotId: z.string(),
     paymentMethod: PaymentMethodId,
     useCredit: z.boolean(),
+    /** Déduire l'avoir du client (carnet abandonné…) du total, dans la limite de son solde. */
+    useStoreCredit: z.boolean().default(false),
     /**
      * Lignes affichées à l'utilisateur, avec les prix vus. Le serveur les revalide (RB-002) :
      * tout écart renvoie CART_CHANGED avec le détail, jamais un total différent en silence.
@@ -119,6 +121,8 @@ export const QuoteRequest = z
     message: 'Adresse ou agence requise selon le mode de réception',
   });
 export type QuoteRequest = z.infer<typeof QuoteRequest>;
+/** Demande telle qu'envoyée (champs avec valeur par défaut facultatifs). */
+export type QuoteRequestInput = z.input<typeof QuoteRequest>;
 
 export const Quote = z.object({
   quoteId: z.string(),
@@ -133,6 +137,8 @@ export const Quote = z.object({
   subtotal: Money,
   deliveryFee: Money,
   discountTotal: Money,
+  /** Avoir déduit du total. */
+  storeCreditApplied: Money.default(0),
   total: Money,
   currency: z.literal('XOF'),
   /** Texte de réception affichable (« Livraison à Maison — Bè Kpota »). */

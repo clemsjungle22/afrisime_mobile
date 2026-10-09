@@ -12,6 +12,7 @@ import {
   type ReorderResponse,
 } from '@afrisime/shared';
 import { loadDb, saveDb, type MockDb, type MockPayment } from './db';
+import { addCredit, creditBalance } from './storeCredit';
 import { mockError } from './simulate';
 
 /**
@@ -87,7 +88,13 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
     throw mockError('QUOTE_EXPIRED', 'Les prix garantis ont expiré. Vérifiez votre commande.', 409);
   }
   const q = entry.quote;
-  const online = MOBILE_MONEY.has(q.paymentMethod);
+  const credit = q.storeCreditApplied ?? 0;
+  if (credit > 0 && creditBalance(db, userId) < credit) {
+    throw mockError('QUOTE_EXPIRED', 'Votre avoir a changé. Vérifiez votre commande.', 409);
+  }
+  // Entièrement réglée (avoir, pack payé par carnet) : rien à payer, confirmée tout de suite.
+  const settled = q.total === 0;
+  const online = MOBILE_MONEY.has(q.paymentMethod) && !settled;
   const orderCounter = db.orderCounter + 1;
   const year = new Date(now).getUTCFullYear();
 
@@ -106,24 +113,35 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
     subtotal: q.subtotal,
     deliveryFee: q.deliveryFee,
     discountTotal: q.discountTotal,
+    storeCreditUsed: credit,
     currency: 'XOF',
     addressId: q.addressId,
     agencyId: q.agencyId,
     pickupCode: q.fulfillment === 'pickup' ? pickupCode() : null,
-    payment: { method: q.paymentMethod, status: online ? 'initiated' : 'pending', paymentId: null, paidAt: null },
+    payment: {
+      method: q.paymentMethod,
+      status: settled ? 'succeeded' : online ? 'initiated' : 'pending',
+      paymentId: null,
+      paidAt: settled ? new Date(now).toISOString() : null,
+    },
     history: online
       ? [event('pending_payment', now, 'En attente du paiement')]
       : [
           event(
             'confirmed',
             now,
-            q.paymentMethod === 'cash_on_delivery' ? 'Paiement à la livraison' : 'Paiement au retrait en agence',
+            settled
+              ? 'Réglée'
+              : q.paymentMethod === 'cash_on_delivery'
+                ? 'Paiement à la livraison'
+                : 'Paiement au retrait en agence',
           ),
         ],
     cancellable: true,
     paymentDeadline: online ? new Date(now + PAYMENT_DEADLINE_MS).toISOString() : null,
   };
   quotes.delete(body.quoteId);
+  if (credit > 0) addCredit(db, userId, { amount: -credit, reason: 'order', orderId: order.id, at: now });
   await saveDb({
     ...db,
     orderCounter,
@@ -218,6 +236,16 @@ export async function cancelOrder(userId: string, orderId: string, now = Date.no
     cancellable: false,
     payable: false,
   };
+  if ((stored.storeCreditUsed ?? 0) > 0) {
+    addCredit(db, userId, { amount: stored.storeCreditUsed, reason: 'order_cancelled', orderId, at: now });
+  }
+  // Pack remis par cette commande : il redevient « soldé, à remettre ».
+  for (const c of db.carnets[userId] ?? []) {
+    if (c.orderId === orderId && c.status === 'delivered') {
+      c.status = 'completed';
+      c.orderId = null;
+    }
+  }
   await saveOrder(db, userId, cancelled);
   return cancelled;
 }

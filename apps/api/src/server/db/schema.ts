@@ -401,6 +401,10 @@ export const carnets = pgTable(
     startedAt: timestamp({ withTimezone: true }).notNull(),
     dueAt: timestamp({ withTimezone: true }).notNull(),
     completedAt: timestamp({ withTimezone: true }),
+    /** Commande créée à la remise du pack. */
+    orderId: text(),
+    /** Montant transformé en avoir (abandon ou délai dépassé). */
+    creditedAmount: integer().notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -434,6 +438,31 @@ export const carnetContributions = pgTable(
   (t) => [
     index('carnet_contributions_carnet_idx').on(t.carnetId),
     uniqueIndex('carnet_contributions_provider_ref_uidx').on(t.provider, t.providerReference),
+  ],
+);
+
+/**
+ * Avoir des clients : registre en ajout seul (+ crédit, − utilisation). Le solde est la somme.
+ * Une commande ne peut être débitée ou remboursée qu'une fois par motif.
+ */
+export const storeCreditEntries = pgTable(
+  'store_credit_entries',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    amount: integer().notNull(),
+    reason: text().notNull(),
+    carnetId: text(),
+    orderId: text(),
+    note: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('store_credit_customer_idx').on(t.customerId),
+    uniqueIndex('store_credit_order_reason_uidx').on(t.orderId, t.reason),
+    uniqueIndex('store_credit_carnet_reason_uidx').on(t.carnetId, t.reason),
   ],
 );
 
@@ -478,6 +507,8 @@ export const orders = pgTable(
     subtotal: integer().notNull(),
     deliveryFee: integer().notNull(),
     discountTotal: integer().notNull().default(0),
+    /** Avoir du client déduit du total (rendu si la commande est annulée). */
+    storeCreditUsed: integer().notNull().default(0),
     total: integer().notNull(),
     currency: text().notNull().default('XOF'),
     pickupCode: text(),

@@ -1,7 +1,17 @@
-import { Carnet, CarnetList, ContributeBody, PackList, SubscribeBody } from '@afrisime/shared';
+import {
+  Carnet,
+  CarnetList,
+  ContributeBody,
+  Order,
+  PackList,
+  RedeemBody,
+  StoreCredit,
+  SubscribeBody,
+} from '@afrisime/shared';
 import { request } from '@/api/client';
 import { apiConfig } from '@/api/config';
 import { mockCarnetsApi } from '@/api/mock/carnets';
+import { getMockStoreCredit } from '@/api/mock/storeCredit';
 
 /** Packs Famille et carnets de cotisation. Le statut d'une cotisation vient toujours du serveur. */
 export type CarnetsApi = {
@@ -12,6 +22,10 @@ export type CarnetsApi = {
   subscribe(packId: string, idempotencyKey: string): Promise<Carnet>;
   /** Idempotency-Key obligatoire : jamais deux débits (RB-003). */
   contribute(carnetId: string, body: ContributeBody, idempotencyKey: string): Promise<Carnet>;
+  /** Abandon : les sommes versées deviennent un avoir. */
+  abandon(carnetId: string): Promise<Carnet>;
+  /** Recevoir le pack soldé (Idempotency-Key obligatoire : une seule commande). */
+  redeem(carnetId: string, body: RedeemBody, idempotencyKey: string): Promise<Order>;
 };
 
 const httpCarnetsApi: CarnetsApi = {
@@ -40,6 +54,22 @@ const httpCarnetsApi: CarnetsApi = {
       idempotencyKey,
     });
   },
+  abandon(carnetId) {
+    return request(`/v1/me/carnets/${encodeURIComponent(carnetId)}/abandon`, { method: 'POST', schema: Carnet });
+  },
+  redeem(carnetId, body, idempotencyKey) {
+    return request(`/v1/me/carnets/${encodeURIComponent(carnetId)}/redeem`, {
+      method: 'POST',
+      body: RedeemBody.parse(body),
+      schema: Order,
+      idempotencyKey,
+    });
+  },
 };
 
 export const carnetsApi: CarnetsApi = apiConfig.mock ? mockCarnetsApi : httpCarnetsApi;
+
+/** Avoir du client (carnet abandonné…), utilisable à la commande. */
+export function getStoreCredit(signal?: AbortSignal): Promise<StoreCredit> {
+  return apiConfig.mock ? getMockStoreCredit(signal) : request('/v1/me/store-credit', { schema: StoreCredit, signal });
+}

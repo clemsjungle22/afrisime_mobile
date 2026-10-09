@@ -244,6 +244,8 @@ export type QuoteContext = {
   now: Date;
   quoteId: string;
   isFull?: IsSlotFull;
+  /** Solde d'avoir du client (utilisé si la demande le prévoit). */
+  storeCreditBalance?: number;
 };
 
 /** Devis final : panier revalidé, frais, créneau et moyen de paiement. Le total fait foi. */
@@ -288,7 +290,12 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
     throw new CheckoutRuleError('SLOT_UNAVAILABLE', "Ce créneau n'est plus disponible. Choisissez-en un autre.", 409);
   }
 
-  const total = validated.subtotal + fee - validated.discountTotal;
+  const beforeCredit = validated.subtotal + fee - validated.discountTotal;
+  // Avoir : déduit dans la limite du solde ; le reste se paie normalement.
+  const storeCreditApplied = request.useStoreCredit
+    ? Math.max(0, Math.min(ctx.storeCreditBalance ?? 0, beforeCredit))
+    : 0;
+  const total = beforeCredit - storeCreditApplied;
   checkPayment(request.paymentMethod, request.fulfillment, zone, address !== null, total, rules);
 
   return {
@@ -303,6 +310,7 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
     subtotal: validated.subtotal,
     deliveryFee: fee,
     discountTotal: validated.discountTotal,
+    storeCreditApplied,
     total,
     currency: 'XOF',
     fulfillmentSummary: summary,

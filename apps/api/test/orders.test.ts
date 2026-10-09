@@ -1,5 +1,5 @@
 import { DELIVERY_RULES, SEED_ADDRESS, mockOnboardingOptions, mockZones } from '@afrisime/fixtures';
-import { type CartValidateLine, type QuoteRequest, buildDeliveryOptions } from '@afrisime/shared';
+import { type CartValidateLine, type QuoteRequestInput, buildDeliveryOptions } from '@afrisime/shared';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { POST as cancelRoute } from '@/app/v1/orders/[id]/cancel/route';
@@ -86,11 +86,11 @@ async function firstSlot(customerId: string, addressId: string | null, kind: 'de
 
 async function quoteFor(
   c: Awaited<ReturnType<typeof newCustomer>>,
-  overrides: Partial<QuoteRequest> = {},
+  overrides: Partial<QuoteRequestInput> = {},
   now = NOW,
 ) {
   const fulfillment = overrides.fulfillment ?? 'delivery';
-  const request: QuoteRequest = {
+  const request: QuoteRequestInput = {
     fulfillment,
     addressId: fulfillment === 'delivery' ? c.address.id : null,
     agencyId: fulfillment === 'pickup' ? 'agc_lome_centre' : null,

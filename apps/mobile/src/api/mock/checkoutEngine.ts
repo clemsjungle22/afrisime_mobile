@@ -61,6 +61,8 @@ type QuoteContext = {
   addresses: Address[];
   now: Date;
   newId: () => string;
+  /** Solde d'avoir du client. */
+  storeCreditBalance?: number;
 };
 
 /** Devis final : revalidation du panier, frais, créneau et moyen de paiement. Le total fait foi. */
@@ -80,6 +82,7 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
       now: ctx.now,
       quoteId: ctx.newId(),
       isFull: demoFull,
+      storeCreditBalance: ctx.storeCreditBalance,
     });
   } catch (error) {
     rethrow(error);

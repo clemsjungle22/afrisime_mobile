@@ -1,9 +1,16 @@
-import { mockProducts, packSeeds } from '@afrisime/fixtures';
+import { DELIVERY_RULES, mockOnboardingOptions, mockProducts, mockStock, mockZones, packSeeds } from '@afrisime/fixtures';
 import {
   Carnet,
   CarnetList,
   type Contribution,
+  CARNET_DEADLINE_FACTOR,
   MAX_ACTIVE_CARNETS,
+  Order,
+  type Quote,
+  type RedeemBody,
+  deliverySlots,
+  pickupSlots,
+  validateCart,
   PackList,
   carnetProgress,
   catalogValue,
@@ -14,8 +21,10 @@ import {
 import type { CarnetsApi } from '@/features/carnets/api';
 import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
-import { type MockCarnet, type MockContribution, loadDb, saveDb } from './db';
-import { PAYMENT_CONFIRM_MS, PAYMENT_FAIL_MS } from './orderServer';
+import { type MockCarnet, type MockContribution, type MockDb, loadDb, saveDb } from './db';
+import { userAddresses } from './checkout';
+import { PAYMENT_CONFIRM_MS, PAYMENT_FAIL_MS, createOrder, getOrder, registerQuote } from './orderServer';
+import { addCredit } from './storeCredit';
 import { mockError, simulate } from './simulate';
 
 /** Packs et carnets du mode démo : mêmes règles et mêmes délais de paiement simulé que le serveur. */
@@ -110,6 +119,9 @@ function toCarnet(c: MockCarnet, now: number): Carnet {
     startedAt: c.startedAt,
     dueAt: c.dueAt,
     completedAt: c.completedAt,
+    deadlineAt: new Date(Date.parse(c.startedAt) + c.durationDays * CARNET_DEADLINE_FACTOR * DAY_MS).toISOString(),
+    orderId: c.orderId ?? null,
+    creditedAmount: c.creditedAmount ?? 0,
     expectedToDate: progress.expectedToDate,
     daysLate: progress.daysLate,
     pendingContribution: contributions.find((x) => x.status === 'pending') ?? null,
@@ -117,14 +129,33 @@ function toCarnet(c: MockCarnet, now: number): Carnet {
   };
 }
 
-/** Carnets du client connecté, cotisations en attente réglées ; `change` peut les modifier. */
-async function withCarnets<T>(token: string | null, run: (carnets: MockCarnet[], now: number) => T) {
+/** Clôt un carnet en cours : les sommes versées deviennent un avoir. */
+function close(db: MockDb, userId: string, c: MockCarnet, reason: 'carnet_abandoned' | 'carnet_expired', now: number) {
+  c.status = 'abandoned';
+  c.creditedAmount = c.paid;
+  addCredit(db, userId, {
+    amount: c.paid,
+    reason,
+    carnetId: c.id,
+    label: `${c.name} : ${reason === 'carnet_abandoned' ? 'carnet abandonné' : 'délai dépassé'}`,
+    at: now,
+  });
+}
+
+/** Carnets du client connecté, cotisations en attente réglées, délais dépassés clos ; `run` peut les modifier. */
+async function withCarnets<T>(token: string | null, run: (carnets: MockCarnet[], now: number, db: MockDb, userId: string) => T) {
   const user = await requireUser(token);
   const db = await loadDb();
   const carnets = db.carnets[user.id] ?? [];
   const now = Date.now();
   carnets.forEach((c) => settle(c, now));
-  const result = run(carnets, now);
+  for (const c of carnets) {
+    const deadline = Date.parse(c.startedAt) + c.durationDays * CARNET_DEADLINE_FACTOR * DAY_MS;
+    if (c.status === 'active' && now > deadline && !c.contributions.some((x) => x.status === 'pending')) {
+      close(db, user.id, c, 'carnet_expired', now);
+    }
+  }
+  const result = run(carnets, now, db, user.id);
   await saveDb({ ...db, carnets: { ...db.carnets, [user.id]: carnets } });
   return result;
 }
@@ -231,4 +262,103 @@ export const mockCarnetsApi: CarnetsApi = {
       ),
     );
   },
+  abandon(carnetId) {
+    return withRetry(
+      () =>
+        withAuth((token) =>
+          simulate(Carnet, () =>
+            withCarnets(token, (carnets, now, db, userId) => {
+              const c = carnets.find((x) => x.id === carnetId);
+              if (!c) throw mockError('NOT_FOUND', 'Carnet introuvable.', 404);
+              if (c.contributions.some((x) => x.status === 'pending')) {
+                throw mockError('VALIDATION_ERROR', 'Une cotisation est en attente de confirmation : réessayez dans un instant.', 422);
+              }
+              if (c.status !== 'active') throw mockError('VALIDATION_ERROR', 'Ce carnet n’est plus en cours.', 422);
+              close(db, userId, c, 'carnet_abandoned', now);
+              return toCarnet(c, now);
+            }),
+          ),
+        ),
+      { canRetry: false },
+    );
+  },
+  redeem(carnetId, body, key) {
+    return read(() => withAuth((token) => simulate(Order, () => redeemMock(token, carnetId, body, key))));
+  },
 };
+
+/** Remise du pack soldé : commande déjà payée (frais de livraison au livreur), comme le serveur. */
+async function redeemMock(token: string | null, carnetId: string, body: RedeemBody, key: string) {
+  const user = await requireUser(token);
+  const db = await loadDb();
+  const carnet = (db.carnets[user.id] ?? []).find((c) => c.id === carnetId);
+  if (!carnet) throw mockError('NOT_FOUND', 'Carnet introuvable.', 404);
+  const done = replies.get(key);
+  if (done) return getOrder(user.id, done);
+  if (carnet.status !== 'completed') {
+    throw mockError('VALIDATION_ERROR', carnet.status === 'delivered' ? 'Ce pack a déjà été commandé.' : 'Ce carnet n’est pas encore soldé.', 422);
+  }
+  const now = new Date();
+  let fee = 0;
+  let summary: string;
+  let slots;
+  if (body.fulfillment === 'delivery') {
+    const address = (await userAddresses(user.id)).find((a) => a.id === body.addressId);
+    const zone = address?.zoneId ? mockZones.find((z) => z.id === address.zoneId) : undefined;
+    if (!address || !zone) throw mockError('ZONE_NOT_SERVED', 'Nous ne livrons pas encore ce quartier. Choisissez le retrait en agence.', 422);
+    slots = deliverySlots(zone.id, now, DELIVERY_RULES);
+    summary = `Livraison · ${address.label} — ${address.district}`;
+    fee = carnet.price >= DELIVERY_RULES.freeAbove ? 0 : zone.fee;
+  } else {
+    const agency = mockOnboardingOptions.agencies.find((a) => a.id === body.agencyId);
+    if (!agency) throw mockError('VALIDATION_ERROR', 'Agence introuvable.', 422);
+    slots = pickupSlots(agency.id, now, DELIVERY_RULES);
+    summary = `Retrait · Agence ${agency.name}`;
+  }
+  const slot = slots.find((x) => x.id === body.slotId);
+  if (!slot || !slot.available) throw mockError('SLOT_UNAVAILABLE', "Ce créneau n'est plus disponible. Choisissez-en un autre.", 409);
+
+  const validated = validateCart(
+    { lines: carnet.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity, expectedUnitPrice: null, expectedAvailability: 'available' as const })) },
+    { products: mockProducts, stock: mockStock },
+  );
+  if (validated.changes.some((c) => c.type === 'removed') || validated.lines.some((l) => l.quantity < l.requestedQuantity)) {
+    throw mockError('OUT_OF_STOCK', 'Un produit de votre pack est momentanément indisponible. Contactez votre agence AfriSime : l’équipe trouve une solution avec vous.', 409);
+  }
+  const values = validated.lines.map((l) => (l.unitPrice ?? 0) * l.quantity);
+  const totalValue = values.reduce((n, v) => n + v, 0);
+  let allocated = 0;
+  const lines = validated.lines.map((l, i) => {
+    const share = i === validated.lines.length - 1 ? carnet.price - allocated : totalValue > 0 ? Math.round((carnet.price * values[i]!) / totalValue) : 0;
+    allocated += share;
+    return { ...l, unitPrice: Math.round(share / l.quantity), lineTotal: share, status: 'ok' as const };
+  });
+  const quote: Quote = {
+    quoteId: `qte_pack_${Date.now().toString(36)}`,
+    expiresAt: new Date(now.getTime() + 60_000).toISOString(),
+    fulfillment: body.fulfillment,
+    addressId: body.fulfillment === 'delivery' ? body.addressId : null,
+    agencyId: body.fulfillment === 'pickup' ? body.agencyId : null,
+    slot,
+    paymentMethod: body.fulfillment === 'delivery' ? 'cash_on_delivery' : 'pay_at_agency',
+    lines,
+    subtotal: carnet.price,
+    deliveryFee: fee,
+    discountTotal: carnet.price,
+    storeCreditApplied: 0,
+    total: fee,
+    currency: 'XOF',
+    fulfillmentSummary: summary,
+  };
+  registerQuote(user.id, quote);
+  const order = await createOrder(user.id, { quoteId: quote.quoteId }, key);
+  const fresh = await loadDb();
+  const stored = (fresh.carnets[user.id] ?? []).find((c) => c.id === carnetId);
+  if (stored) {
+    stored.status = 'delivered';
+    stored.orderId = order.id;
+  }
+  await saveDb({ ...fresh });
+  replies.set(key, order.id);
+  return order;
+}

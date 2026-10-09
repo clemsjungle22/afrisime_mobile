@@ -268,6 +268,8 @@ export async function getAdminCarnet(
       recordedBy: c.recordedBy ? (names.get(c.recordedBy) ?? 'Équipe AfriSime') : null,
       note: c.note,
     })),
+    orderId: row.carnet.orderId,
+    creditedAmount: row.carnet.creditedAmount,
     canRecordCash: base.status === 'active' && CASH_ROLES.includes(role),
   };
 }

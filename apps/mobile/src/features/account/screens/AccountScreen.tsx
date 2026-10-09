@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { maskPhone } from '@afrisime/shared';
+import { formatFCFA, maskPhone } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +13,7 @@ import { Badge, Button, Pattern, PressableScale, Screen, Skeleton, Text } from '
 import { useMe, useOnboardingOptions } from '@/features/auth/hooks';
 import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
-import { useCarnets } from '@/features/carnets/hooks';
+import { useCarnets, useStoreCredit } from '@/features/carnets/hooks';
 import { useFavorites, useLists } from '@/features/lists/hooks';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
@@ -123,6 +123,7 @@ function SignedIn() {
   const favorites = useFavorites();
   const lists = useLists();
   const carnets = useCarnets();
+  const storeCredit = useStoreCredit();
 
   const user = me.data;
   const type = options.data?.customerTypes.find((t) => t.id === user?.customerTypeId);
@@ -224,6 +225,9 @@ function SignedIn() {
           <Row label="Tarifs appliqués" value={user.segmentLabel} />
           <Row label="Agence" value={agency?.name ?? '—'} />
           <Row label="Offres et promotions" value={user.consents.marketing ? 'Acceptées' : 'Refusées'} />
+          {(storeCredit.data?.balance ?? 0) > 0 ? (
+            <Row label="Mon avoir" value={`${formatFCFA(storeCredit.data!.balance)} · utilisable à la commande`} />
+          ) : null}
         </View>
       ) : me.isError ? (
         <Text color="textMuted">Profil indisponible hors connexion.</Text>

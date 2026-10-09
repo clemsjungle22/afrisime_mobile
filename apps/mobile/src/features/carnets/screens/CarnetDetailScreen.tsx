@@ -9,9 +9,9 @@ import {
   formatNationalInput,
   toE164,
 } from '@afrisime/shared';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { isApiError } from '@/api/errors';
 import { Badge, BottomSheet, Button, Chip, ErrorState, PaymentLogo, RadioGroup, Skeleton, Text, TextField } from '@/components/ui';
 import { PulseIcon } from '@/components/ui/PulseIcon';
@@ -24,7 +24,7 @@ import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { ProgressBar } from '../components/ProgressBar';
-import { useCarnet, useContribute } from '../hooks';
+import { useAbandon, useCarnet, useContribute } from '../hooks';
 import { STATUS_TONES } from './CarnetsScreen';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Africa/Lome' });
@@ -78,7 +78,15 @@ export function CarnetDetailScreen() {
             </Text>
           ) : c.status === 'completed' ? (
             <Text color="success" variant="bodyStrong">
-              Carnet soldé ! L’équipe AfriSime vous contacte pour vous remettre votre pack.
+              Carnet soldé ! Choisissez comment recevoir votre pack.
+            </Text>
+          ) : c.status === 'delivered' ? (
+            <Text color="textMuted">Votre pack a été commandé : suivez-le dans vos commandes.</Text>
+          ) : c.status === 'abandoned' ? (
+            <Text color="textMuted">
+              {c.creditedAmount > 0
+                ? `Carnet clos : ${formatFCFA(c.creditedAmount)} transformés en avoir, à utiliser lors d’une prochaine commande.`
+                : 'Carnet clos.'}
             </Text>
           ) : null}
         </View>
@@ -107,6 +115,12 @@ export function CarnetDetailScreen() {
           <Button label="Cotiser" size="lg" fullWidth onPress={() => setContributing(true)} icon={<Ionicons name="add-circle-outline" size={22} color={theme.colors.onPrimary} />} />
         ) : null}
         {c.status === 'active' ? <AgencyNote /> : null}
+        {c.status === 'completed' ? (
+          <Button label="Recevoir mon pack" size="lg" fullWidth onPress={() => router.push({ pathname: '/recevoir-pack/[id]', params: { id: c.id } })} icon={<Ionicons name="gift-outline" size={22} color={theme.colors.onPrimary} />} />
+        ) : null}
+        {c.status === 'delivered' && c.orderId ? (
+          <Button label="Voir la commande" variant="secondary" fullWidth onPress={() => router.push({ pathname: '/orders/[orderId]', params: { orderId: c.orderId! } })} />
+        ) : null}
 
         <View style={{ gap: theme.spacing.sm }}>
           <Text variant="subtitle">Historique</Text>
@@ -151,12 +165,39 @@ export function CarnetDetailScreen() {
           ))}
           <Text variant="caption" color="textMuted">
             Ouvert le {formatSlotDay(c.startedAt)} · contenu et prix garantis.
+            {c.status === 'active' ? ` Sans paiement complet au ${dateFmt.format(new Date(c.deadlineAt))}, le carnet sera clos et vos versements transformés en avoir.` : ''}
           </Text>
         </View>
+        {c.status === 'active' && !c.pendingContribution ? <AbandonButton carnet={c} /> : null}
       </ScrollView>
       <ContributeSheet carnet={c} visible={contributing} onClose={() => setContributing(false)} />
     </View>
   );
+}
+
+/** Abandon (confirmé) : les sommes versées deviennent un avoir. */
+function AbandonButton({ carnet: c }: { carnet: Carnet }) {
+  const abandon = useAbandon(c.id);
+  const confirm = () =>
+    Alert.alert(
+      'Abandonner ce carnet ?',
+      c.paid > 0
+        ? `Les ${formatFCFA(c.paid)} déjà versés deviendront un avoir, à utiliser lors d’une prochaine commande. Ils ne sont pas remboursés en argent.`
+        : 'Rien n’a encore été versé sur ce carnet.',
+      [
+        { text: 'Garder mon carnet', style: 'cancel' },
+        {
+          text: 'Abandonner',
+          style: 'destructive',
+          onPress: () =>
+            abandon.mutate(undefined, {
+              onSuccess: () => showSnackbar({ message: c.paid > 0 ? `Carnet abandonné : ${formatFCFA(c.paid)} d’avoir.` : 'Carnet abandonné.' }),
+              onError: (e) => showSnackbar({ message: isApiError(e) && !e.isNetwork ? e.message : 'Impossible pour le moment. Réessayez.' }),
+            }),
+        },
+      ],
+    );
+  return <Button label="Abandonner ce carnet" variant="ghost" loading={abandon.isPending} onPress={confirm} />;
 }
 
 /** Rappel : on peut aussi cotiser en espèces dans une agence. */

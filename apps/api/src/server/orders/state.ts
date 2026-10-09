@@ -1,5 +1,6 @@
 import type { OrderStatus } from '@afrisime/shared';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { addStoreCredit } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { env } from '../env';
@@ -38,11 +39,36 @@ export async function transition(
     .update(s.orders)
     .set({ ...extra, status: to, updatedAt: at })
     .where(and(eq(s.orders.id, orderId), inArray(s.orders.status, [...from])))
-    .returning({ id: s.orders.id });
+    .returning({ id: s.orders.id, customerId: s.orders.customerId, storeCreditUsed: s.orders.storeCreditUsed });
   if (updated.length === 0) return false;
+  if (to === 'cancelled') await onCancelled(tx, updated[0]!, at);
   await tx.insert(s.orderStatusEvents).values({ orderId, status: to, note, at, actor });
   await emit(tx, 'order.status_changed', orderId, { status: to, at: at.toISOString(), actor });
   return true;
+}
+
+/**
+ * Commande annulée : l'avoir utilisé est rendu ; un pack remis par cette commande redevient
+ * « soldé, à remettre » (le client pourra le recevoir à nouveau).
+ */
+async function onCancelled(
+  tx: Db,
+  order: { id: string; customerId: string; storeCreditUsed: number },
+  at: Date,
+) {
+  if (order.storeCreditUsed > 0) {
+    await addStoreCredit(tx, {
+      customerId: order.customerId,
+      amount: order.storeCreditUsed,
+      reason: 'order_cancelled',
+      orderId: order.id,
+      at,
+    });
+  }
+  await tx
+    .update(s.carnets)
+    .set({ status: 'completed', orderId: null, updatedAt: at })
+    .where(and(eq(s.carnets.orderId, order.id), eq(s.carnets.status, 'delivered')));
 }
 
 /**

@@ -103,6 +103,12 @@ export const Carnet = z.object({
   /** Échéance prévue (début + durée). */
   dueAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),
+  /** Délai maximum : au-delà, le carnet est clos et les sommes versées deviennent un avoir. */
+  deadlineAt: z.string().datetime(),
+  /** Commande créée à la remise du pack. */
+  orderId: z.string().nullable(),
+  /** Montant transformé en avoir (abandon ou délai dépassé). */
+  creditedAmount: Money,
   /** Montant qui devrait être versé aujourd'hui pour être à jour. */
   expectedToDate: Money,
   /** Jours de cotisation de retard (0 : à jour). */
@@ -120,6 +126,48 @@ export type CarnetList = z.infer<typeof CarnetList>;
 /** POST /v1/me/carnets (Idempotency-Key obligatoire). */
 export const SubscribeBody = z.object({ packId: z.string() });
 export type SubscribeBody = z.infer<typeof SubscribeBody>;
+
+/** Délai maximum d'un carnet : deux fois sa durée. */
+export const CARNET_DEADLINE_FACTOR = 2;
+
+/** POST /v1/me/carnets/{id}/redeem (Idempotency-Key obligatoire) : recevoir le pack soldé. */
+export const RedeemBody = z
+  .object({
+    fulfillment: z.enum(['delivery', 'pickup']),
+    addressId: z.string().nullable(),
+    agencyId: z.string().nullable(),
+    slotId: z.string(),
+  })
+  .refine((b) => (b.fulfillment === 'delivery' ? b.addressId !== null : b.agencyId !== null), {
+    message: 'Adresse ou agence requise selon le mode de réception',
+  });
+export type RedeemBody = z.infer<typeof RedeemBody>;
+
+/** Avoir du client : solde et mouvements (le plus récent d'abord). */
+export const StoreCreditReason = z.enum(['carnet_abandoned', 'carnet_expired', 'order', 'order_cancelled', 'adjustment']);
+export type StoreCreditReason = z.infer<typeof StoreCreditReason>;
+
+export const STORE_CREDIT_REASON_LABELS: Record<StoreCreditReason, string> = {
+  carnet_abandoned: 'Carnet abandonné',
+  carnet_expired: 'Carnet clos (délai dépassé)',
+  order: 'Utilisé pour une commande',
+  order_cancelled: 'Commande annulée : avoir rendu',
+  adjustment: 'Ajustement par l’équipe',
+};
+
+export const StoreCredit = z.object({
+  balance: Money,
+  entries: z.array(
+    z.object({
+      id: z.string(),
+      amount: z.number().int(),
+      reason: StoreCreditReason,
+      label: z.string(),
+      at: z.string().datetime(),
+    }),
+  ),
+});
+export type StoreCredit = z.infer<typeof StoreCredit>;
 
 /** POST /v1/me/carnets/{id}/contributions (Idempotency-Key obligatoire). */
 export const ContributeBody = z.object({

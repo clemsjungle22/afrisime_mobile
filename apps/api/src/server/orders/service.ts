@@ -12,6 +12,7 @@ import {
 import { randomInt } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { validate } from '../cart/service';
+import { addStoreCredit, lockStoreCredit, storeCreditBalance } from '../customers/storeCredit';
 import { loadRules, slotOccupancy } from '../checkout/rules';
 import { decodeCursor, encodeCursor } from '../catalog/service';
 import type { Db } from '../db/client';
@@ -61,6 +62,7 @@ async function toOrder(db: Db, row: typeof s.orders.$inferSelect): Promise<Order
     subtotal: row.subtotal,
     deliveryFee: row.deliveryFee,
     discountTotal: row.discountTotal,
+    storeCreditUsed: row.storeCreditUsed,
     currency: 'XOF',
     addressId: row.addressId,
     agencyId: row.agencyId,
@@ -184,6 +186,15 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
         }
       }
 
+      // Avoir : revérifié sous verrou (deux commandes ne dépensent jamais le même avoir).
+      const credit = q.storeCreditApplied ?? 0;
+      if (credit > 0) {
+        await lockStoreCredit(tx, customer.id);
+        if ((await storeCreditBalance(tx, customer.id)) < credit) {
+          throw quoteExpired('Votre avoir a changé. Vérifiez votre commande.');
+        }
+      }
+
       const lines = q.lines.filter((l) => l.quantity > 0);
       const modes = await tx
         .select({ id: s.productVariants.id, saleMode: s.productVariants.saleMode })
@@ -192,7 +203,9 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
       const standard = new Set(modes.filter((m) => m.saleMode === 'standard').map((m) => m.id));
 
       const id = newId('ord');
-      const online = ONLINE_PAYMENT_METHODS.has(q.paymentMethod);
+      // Entièrement réglée par l'avoir : rien à payer, confirmée tout de suite.
+      const settled = q.total === 0;
+      const online = ONLINE_PAYMENT_METHODS.has(q.paymentMethod) && !settled;
       const status: OrderStatus = online ? 'pending_payment' : 'confirmed';
       await tx.insert(s.orders).values({
         id,
@@ -205,11 +218,13 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
         fulfillmentSummary: q.fulfillmentSummary,
         slot: q.slot,
         paymentMethod: q.paymentMethod,
-        paymentStatus: online ? 'initiated' : 'pending',
+        paymentStatus: settled ? 'succeeded' : online ? 'initiated' : 'pending',
+        paidAt: settled ? now : null,
         itemCount: lines.reduce((n, l) => n + l.quantity, 0),
         subtotal: q.subtotal,
         deliveryFee: q.deliveryFee,
         discountTotal: q.discountTotal,
+        storeCreditUsed: credit,
         total: q.total,
         pickupCode: q.fulfillment === 'pickup' ? pickupCode() : null,
         paymentDeadline: online ? new Date(now.getTime() + PAYMENT_DEADLINE_MS) : null,
@@ -233,7 +248,12 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
           sortOrder: i,
         })),
       );
-      const note = online
+      if (credit > 0) {
+        await addStoreCredit(tx, { customerId: customer.id, amount: -credit, reason: 'order', orderId: id, at: now });
+      }
+      const note = settled
+        ? 'Réglée avec votre avoir'
+        : online
         ? 'En attente du paiement'
         : q.paymentMethod === 'cash_on_delivery'
           ? 'Paiement à la livraison'
@@ -251,6 +271,103 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
     },
     (id) => getOrder(db, customer.id, id, now),
   );
+}
+
+// ─── Commande d'un Pack Famille soldé ────────────────────────────────────────
+
+/**
+ * Commande de remise d'un pack déjà payé par le carnet (dans la transaction de l'appelant) :
+ * produits au prix du pack (déduit en « payé par carnet »), seuls les frais de livraison restent dus,
+ * en espèces au livreur. Stock réservé comme pour toute commande.
+ */
+export async function createPackOrder(
+  tx: Db,
+  input: {
+    customerId: string;
+    packName: string;
+    lines: ValidatedCartLine[];
+    fulfillment: 'delivery' | 'pickup';
+    addressId: string | null;
+    agencyId: string | null;
+    summary: string;
+    slot: Slot;
+    deliveryFee: number;
+    now: Date;
+  },
+): Promise<string> {
+  const { now } = input;
+  const subtotal = input.lines.reduce((n, l) => n + l.lineTotal, 0);
+  const total = input.deliveryFee;
+  const paymentMethod = input.fulfillment === 'delivery' ? 'cash_on_delivery' : 'pay_at_agency';
+  const quoteId = newId('qte');
+  await tx.insert(s.quotes).values({
+    id: quoteId,
+    customerId: input.customerId,
+    payload: { pack: input.packName, lines: input.lines, subtotal, deliveryFee: input.deliveryFee, total },
+    total,
+    expiresAt: now,
+    consumedAt: now,
+    createdAt: now,
+  });
+  const id = newId('ord');
+  await tx.insert(s.orders).values({
+    id,
+    orderNumber: await nextOrderNumber(tx, now),
+    customerId: input.customerId,
+    status: 'confirmed',
+    fulfillment: input.fulfillment,
+    addressId: input.addressId,
+    agencyId: input.agencyId,
+    fulfillmentSummary: input.summary,
+    slot: input.slot,
+    paymentMethod,
+    paymentStatus: total === 0 ? 'succeeded' : 'pending',
+    paidAt: total === 0 ? now : null,
+    itemCount: input.lines.reduce((n, l) => n + l.quantity, 0),
+    subtotal,
+    deliveryFee: input.deliveryFee,
+    discountTotal: subtotal,
+    total,
+    pickupCode: input.fulfillment === 'pickup' ? pickupCode() : null,
+    paymentDeadline: null,
+    quoteId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await tx.insert(s.orderLines).values(
+    input.lines.map((l, i) => ({
+      orderId: id,
+      variantId: l.variantId,
+      productSlug: l.productSlug,
+      productName: l.productName,
+      brand: l.brand,
+      variantLabel: l.variantLabel,
+      color: l.color,
+      unitPrice: l.unitPrice ?? 0,
+      quantity: l.quantity,
+      lineTotal: l.lineTotal,
+      snapshot: l,
+      sortOrder: i,
+    })),
+  );
+  const note =
+    total > 0
+      ? `${input.packName} réglé par votre carnet · frais de livraison à régler au livreur`
+      : `${input.packName} réglé par votre carnet`;
+  await tx.insert(s.orderStatusEvents).values({ orderId: id, status: 'confirmed', note, at: now, actor: 'customer' });
+  const modes = await tx
+    .select({ id: s.productVariants.id, saleMode: s.productVariants.saleMode })
+    .from(s.productVariants)
+    .where(inArray(s.productVariants.id, input.lines.map((l) => l.variantId)));
+  const standard = new Set(modes.filter((m) => m.saleMode === 'standard').map((m) => m.id));
+  await reserveStock(
+    tx,
+    id,
+    input.lines.filter((l) => standard.has(l.variantId)).map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+    input.agencyId,
+  );
+  await emit(tx, 'order.created', id, { customerId: input.customerId, total, paymentMethod, pack: input.packName });
+  return id;
 }
 
 // ─── Annulation, recommande ──────────────────────────────────────────────────

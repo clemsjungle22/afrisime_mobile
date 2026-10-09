@@ -7,11 +7,18 @@ import {
   type ContributionMethod,
   type ContributionStatus,
   MAX_ACTIVE_CARNETS,
+  CARNET_DEADLINE_FACTOR,
+  type Order,
   type Pack,
   type PackList,
   type PackItemView,
   type PaymentAction,
   type ProductDetail,
+  type RedeemBody,
+  type Slot,
+  deliverySlots,
+  pickupSlots,
+  validateCart,
   carnetProgress,
   contributionError,
   dailyAmountOf,
@@ -20,11 +27,15 @@ import {
 } from '@afrisime/shared';
 import { and, asc, count, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { getCatalog } from '../catalog/service';
+import { loadAgencies, loadRules, loadZone, slotOccupancy } from '../checkout/rules';
+import { listAddresses } from '../customers/addresses';
+import { addStoreCredit } from '../customers/storeCredit';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
 import { once } from '../idempotency';
+import { createPackOrder, getOrder } from '../orders/service';
 import { type ProviderPayment, type ProviderStatus, paymentProvider } from '../payments/provider';
 
 /**
@@ -94,6 +105,10 @@ export function toContribution(c: ContributionRow, agencyName: string | null): C
   };
 }
 
+/** Délai maximum : début + durée × CARNET_DEADLINE_FACTOR. */
+export const deadlineOf = (row: Pick<CarnetRow, 'startedAt' | 'durationDays'>) =>
+  new Date(row.startedAt.getTime() + row.durationDays * CARNET_DEADLINE_FACTOR * DAY_MS);
+
 export function toCarnet(row: CarnetRow, contributions: Contribution[], now: Date): Carnet {
   const snapshot = row.snapshot as CarnetSnapshot;
   const status = row.status as CarnetStatus;
@@ -122,6 +137,9 @@ export function toCarnet(row: CarnetRow, contributions: Contribution[], now: Dat
     startedAt: row.startedAt.toISOString(),
     dueAt: row.dueAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
+    deadlineAt: deadlineOf(row).toISOString(),
+    orderId: row.orderId,
+    creditedAmount: row.creditedAmount,
     expectedToDate: progress.expectedToDate,
     daysLate: progress.daysLate,
     pendingContribution: contributions.find((c) => c.status === 'pending') ?? null,
@@ -204,6 +222,7 @@ export async function listCarnets(
       .where(eq(s.carnets.customerId, customer.id))
   ).map((r) => r.id);
   await refreshPending(db, ids, now);
+  await closeOverdueCarnets(db, now, customer.id);
   const rows = await db
     .select()
     .from(s.carnets)
@@ -216,6 +235,7 @@ export async function listCarnets(
 export async function getCarnet(db: Db, customer: Customer, carnetId: string, now = new Date()) {
   await ownCarnet(db, customer.id, carnetId);
   await refreshPending(db, [carnetId], now);
+  await closeOverdueCarnets(db, now, customer.id);
   const [carnet] = await present(db, [await ownCarnet(db, customer.id, carnetId)], now);
   return carnet!;
 }
@@ -230,6 +250,8 @@ export async function subscribe(
   key: string,
   now = new Date(),
 ): Promise<Carnet> {
+  // Catalogue lu AVANT la transaction (jamais de seconde connexion pendant qu'elle est ouverte).
+  const catalog = await getCatalog('retail');
   return once(
     db,
     { customerId: customer.id, key, route: 'POST /v1/me/carnets', body: { packId } },
@@ -248,7 +270,6 @@ export async function subscribe(
           `${MAX_ACTIVE_CARNETS} carnets en cours au maximum : terminez-en un avant d’en ouvrir un autre.`,
         );
 
-      const catalog = await getCatalog('retail');
       const snapshot: CarnetSnapshot = {
         name: pack.name,
         imageUrl: pack.imageUrl,
@@ -458,5 +479,234 @@ export async function contribute(
       return carnetId;
     },
     (id) => getCarnet(db, customer, id, now),
+  );
+}
+
+// ─── Fin du carnet : abandon, délai dépassé, remise ──────────────────────────
+
+/**
+ * Clôt un carnet en cours (abandon ou délai dépassé) : les sommes versées deviennent un avoir.
+ * Sans effet si le carnet n'est plus en cours (rejouable).
+ */
+async function closeCarnet(
+  tx: Db,
+  carnetId: string,
+  reason: 'carnet_abandoned' | 'carnet_expired',
+  at: Date,
+): Promise<boolean> {
+  const [closed] = await tx
+    .update(s.carnets)
+    .set({ status: 'abandoned', creditedAmount: sql`${s.carnets.paid}`, updatedAt: at })
+    .where(and(eq(s.carnets.id, carnetId), eq(s.carnets.status, 'active')))
+    .returning();
+  if (!closed) return false;
+  await addStoreCredit(tx, {
+    customerId: closed.customerId,
+    amount: closed.paid,
+    reason,
+    carnetId: closed.id,
+    note: `${(closed.snapshot as CarnetSnapshot).name} : ${reason === 'carnet_abandoned' ? 'carnet abandonné' : 'délai dépassé'}`,
+    at,
+  });
+  await publish(
+    tx,
+    reason === 'carnet_abandoned' ? 'carnet.abandoned' : 'carnet.expired',
+    closed.id,
+    {
+      credited: closed.paid,
+    },
+  );
+  return true;
+}
+
+/** Carnets en cours dont le délai maximum est dépassé : clos, versements transformés en avoir. */
+export async function closeOverdueCarnets(db: Db, now: Date, customerId?: string): Promise<number> {
+  const overdue = await db
+    .select({ id: s.carnets.id })
+    .from(s.carnets)
+    .where(
+      and(
+        eq(s.carnets.status, 'active'),
+        customerId ? eq(s.carnets.customerId, customerId) : undefined,
+        sql`${s.carnets.startedAt} + (${s.carnets.durationDays} * ${CARNET_DEADLINE_FACTOR}) * interval '1 day' < ${now}`,
+      ),
+    );
+  let closed = 0;
+  for (const c of overdue) {
+    await refreshPending(db, [c.id], now);
+    if (
+      await db.transaction((txn) => closeCarnet(txn as unknown as Db, c.id, 'carnet_expired', now))
+    )
+      closed++;
+  }
+  return closed;
+}
+
+/** Abandon par le client : les sommes versées deviennent un avoir. */
+export async function abandonCarnet(
+  db: Db,
+  customer: Customer,
+  carnetId: string,
+  now = new Date(),
+) {
+  await ownCarnet(db, customer.id, carnetId);
+  await refreshPending(db, [carnetId], now);
+  const [pending] = await db
+    .select({ id: s.carnetContributions.id })
+    .from(s.carnetContributions)
+    .where(
+      and(
+        eq(s.carnetContributions.carnetId, carnetId),
+        eq(s.carnetContributions.status, 'pending'),
+      ),
+    );
+  if (pending)
+    throw invalid('Une cotisation est en attente de confirmation : réessayez dans un instant.');
+  const done = await db.transaction((txn) =>
+    closeCarnet(txn as unknown as Db, carnetId, 'carnet_abandoned', now),
+  );
+  if (!done) throw invalid('Ce carnet n’est plus en cours.');
+  return getCarnet(db, customer, carnetId, now);
+}
+
+/**
+ * Recevoir le pack soldé : commande déjà payée (contenu figé, au prix du pack), retrait en agence ou
+ * livraison (frais de zone payés au livreur), créneau au choix. Une seule commande par carnet.
+ */
+export async function redeemCarnet(
+  db: Db,
+  customer: Customer,
+  carnetId: string,
+  body: RedeemBody,
+  key: string,
+  now = new Date(),
+): Promise<Order> {
+  await ownCarnet(db, customer.id, carnetId);
+  const catalog = await getCatalog('retail');
+  return once(
+    db,
+    {
+      customerId: customer.id,
+      key,
+      route: 'POST /v1/me/carnets/redeem',
+      body: { carnetId, ...body },
+    },
+    async (tx) => {
+      const [carnet] = await tx
+        .select()
+        .from(s.carnets)
+        .where(and(eq(s.carnets.id, carnetId), eq(s.carnets.customerId, customer.id)));
+      if (!carnet) throw notFound();
+      if (carnet.status !== 'completed') {
+        throw invalid(
+          carnet.status === 'delivered'
+            ? 'Ce pack a déjà été commandé.'
+            : 'Ce carnet n’est pas encore soldé.',
+        );
+      }
+
+      const rules = await loadRules(tx);
+      const isFull = await slotOccupancy(tx, rules, now);
+      let slots: Slot[];
+      let summary: string;
+      let fee = 0;
+      if (body.fulfillment === 'delivery') {
+        const address = (await listAddresses(tx, customer.id)).find((a) => a.id === body.addressId);
+        if (!address) throw invalid('Adresse introuvable.');
+        const zone = await loadZone(tx, address.zoneId);
+        if (!zone)
+          throw new ApiError(
+            'ZONE_NOT_SERVED',
+            'Nous ne livrons pas encore ce quartier. Choisissez le retrait en agence.',
+            undefined,
+            422,
+          );
+        slots = deliverySlots(zone.id, now, rules, isFull);
+        summary = `Livraison · ${address.label} — ${address.district}`;
+        fee = carnet.price >= rules.freeAbove ? 0 : zone.fee;
+      } else {
+        const agency = (await loadAgencies(tx)).find((a) => a.id === body.agencyId);
+        if (!agency) throw invalid('Agence introuvable.');
+        slots = pickupSlots(agency.id, now, rules, isFull);
+        summary = `Retrait · Agence ${agency.name}`;
+      }
+      const slot = slots.find((x) => x.id === body.slotId);
+      if (!slot || !slot.available) {
+        throw new ApiError(
+          'SLOT_UNAVAILABLE',
+          "Ce créneau n'est plus disponible. Choisissez-en un autre.",
+          undefined,
+          409,
+        );
+      }
+
+      // Produits du pack au stock du moment (le contenu, lui, est figé depuis la souscription).
+      const snapshot = carnet.snapshot as CarnetSnapshot;
+      const validated = validateCart(
+        {
+          lines: snapshot.items.map((i) => ({
+            variantId: i.variantId,
+            quantity: i.quantity,
+            expectedUnitPrice: null,
+            expectedAvailability: 'available' as const,
+          })),
+        },
+        { products: catalog.products, stock: catalog.stockLimits },
+      );
+      const missing = [
+        ...validated.changes.filter((c) => c.type === 'removed').map((c) => c.productName),
+        ...validated.lines
+          .filter((l) => l.quantity < l.requestedQuantity)
+          .map((l) => l.productName),
+      ];
+      if (missing.length > 0) {
+        throw new ApiError(
+          'OUT_OF_STOCK',
+          'Un produit de votre pack est momentanément indisponible. Contactez votre agence AfriSime : l’équipe trouve une solution avec vous.',
+          { products: missing },
+          409,
+        );
+      }
+
+      // Prix du pack réparti sur les produits (au prorata de leur valeur du jour) ; total = prix du pack.
+      const values = validated.lines.map((l) => (l.unitPrice ?? 0) * l.quantity);
+      const totalValue = values.reduce((n, v) => n + v, 0);
+      let allocated = 0;
+      const lines = validated.lines.map((l, i) => {
+        const last = i === validated.lines.length - 1;
+        const share = last
+          ? carnet.price - allocated
+          : totalValue > 0
+            ? Math.round((carnet.price * values[i]!) / totalValue)
+            : 0;
+        allocated += share;
+        return {
+          ...l,
+          unitPrice: Math.round(share / l.quantity),
+          lineTotal: share,
+          status: 'ok' as const,
+        };
+      });
+
+      const orderId = await createPackOrder(tx, {
+        customerId: customer.id,
+        packName: snapshot.name,
+        lines,
+        fulfillment: body.fulfillment,
+        addressId: body.fulfillment === 'delivery' ? body.addressId : null,
+        agencyId: body.fulfillment === 'pickup' ? body.agencyId : null,
+        summary,
+        slot,
+        deliveryFee: fee,
+        now,
+      });
+      await tx
+        .update(s.carnets)
+        .set({ status: 'delivered', orderId, updatedAt: now })
+        .where(eq(s.carnets.id, carnet.id));
+      await publish(tx, 'carnet.redeemed', carnet.id, { orderId, fulfillment: body.fulfillment });
+      return orderId;
+    },
+    (orderId) => getOrder(db, customer.id, orderId, now),
   );
 }

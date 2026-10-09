@@ -64,6 +64,13 @@
       "when": 1791535521310,
       "tag": "0008_packs_carnets",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791542097738,
+      "tag": "0009_store_credit",
+      "breakpoints": true
     }
   ]
 }

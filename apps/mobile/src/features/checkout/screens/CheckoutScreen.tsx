@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isApiError } from '@/api/errors';
-import { BottomSheet, Button, ErrorState, OfflineBanner, PaymentLogo, RadioGroup, Segmented, Skeleton, Text } from '@/components/ui';
+import { BottomSheet, Button, Checkbox, ErrorState, OfflineBanner, PaymentLogo, RadioGroup, Segmented, Skeleton, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
+import { useStoreCredit } from '@/features/carnets/hooks';
 import { toValidateRequest, useCart } from '@/features/cart/store';
 import { formatCountdown } from '@/lib/dates';
 import { usePlaceOrder } from '@/features/orders/hooks';
@@ -66,7 +67,12 @@ function CheckoutContent() {
   });
 
   const lines = useMemo(() => toValidateRequest(cartLines).lines, [cartLines]);
-  const body = useMemo(() => toQuoteRequest(selection, lines), [selection, lines]);
+  // Avoir (carnet abandonné…) : utilisé par défaut s'il y en a un.
+  const storeCredit = useStoreCredit();
+  const creditBalance = storeCredit.data?.balance ?? 0;
+  const [useCreditChoice, setUseCreditChoice] = useState(true);
+  const applyCredit = creditBalance > 0 && useCreditChoice;
+  const body = useMemo(() => toQuoteRequest(selection, lines, applyCredit), [selection, lines, applyCredit]);
   const quote = useQuote(missing ? null : body);
   const currentQuote = quote.data && !quote.isPlaceholderData ? quote.data : undefined;
 
@@ -245,6 +251,18 @@ function CheckoutContent() {
             <Skeleton height={120} />
           )}
         </CheckoutSection>
+
+        {creditBalance > 0 ? (
+          <Checkbox
+            checked={useCreditChoice}
+            onChange={setUseCreditChoice}
+            accessibilityLabel={`Utiliser mon avoir de ${formatFCFA(creditBalance)}`}
+          >
+            <Text>
+              Utiliser mon avoir <Text variant="bodyStrong">({formatFCFA(creditBalance)} disponibles)</Text>
+            </Text>
+          </Checkbox>
+        ) : null}
 
         <CheckoutSection step={5} title="Récapitulatif">
           {missing ? (

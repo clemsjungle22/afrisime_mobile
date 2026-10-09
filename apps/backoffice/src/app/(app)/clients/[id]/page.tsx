@@ -169,6 +169,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
               <Row label="Offres et promotions">
                 {c.marketingConsent ? 'Accepte de les recevoir' : 'Refuse'}
               </Row>
+              <Row label="Avoir">
+                {c.storeCreditBalance > 0 ? formatFCFA(c.storeCreditBalance) : '—'}
+              </Row>
             </dl>
           </Card>
 

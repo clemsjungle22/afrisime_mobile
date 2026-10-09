@@ -54,6 +54,7 @@ function quoteFor(body: QuoteRequest): Quote {
     subtotal: 9500,
     deliveryFee: 500,
     discountTotal: 0,
+    storeCreditApplied: 0,
     total: 10000,
     currency: 'XOF',
     fulfillmentSummary: 'Livraison · Maison — Tokoin',

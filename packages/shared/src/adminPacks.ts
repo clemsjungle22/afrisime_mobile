@@ -112,6 +112,10 @@ export const AdminCarnetDetail = AdminCarnetRow.extend({
       note: z.string().nullable(),
     }),
   ),
+  /** Commande de remise du pack. */
+  orderId: z.string().nullable(),
+  /** Montant transformé en avoir (abandon, délai dépassé). */
+  creditedAmount: Money,
   /** Encaisser une cotisation en espèces est possible (carnet en cours, rôle autorisé). */
   canRecordCash: z.boolean(),
 });

@@ -1,14 +1,15 @@
-import type { Carnet, ContributeBody } from '@afrisime/shared';
+import type { Carnet, ContributeBody, RedeemBody } from '@afrisime/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { newIdempotencyKey } from '@/api/client';
 import { useSession } from '@/features/auth/session';
-import { carnetsApi } from './api';
+import { carnetsApi, getStoreCredit } from './api';
 
 export const carnetsKeys = {
   packs: ['packs'] as const,
   carnets: ['carnets'] as const,
   carnet: (id: string) => ['carnets', 'detail', id] as const,
+  storeCredit: ['store-credit'] as const,
 };
 
 /** Cotisation Mobile Money en attente : relue souvent jusqu'à la réponse de l'opérateur. */
@@ -85,6 +86,47 @@ export function useContribute(carnetId: string) {
     onSuccess: (carnet) => {
       key.current = null;
       store(carnet);
+    },
+  });
+}
+
+/** Avoir du client connecté. */
+export function useStoreCredit() {
+  const authenticated = useSession((s) => s.status === 'authenticated');
+  return useQuery({
+    queryKey: carnetsKeys.storeCredit,
+    queryFn: ({ signal }) => getStoreCredit(signal),
+    enabled: authenticated,
+    staleTime: 30_000,
+  });
+}
+
+/** Abandonner un carnet : l'avoir est mis à jour aussitôt. */
+export function useAbandon(carnetId: string) {
+  const store = useStore();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => carnetsApi.abandon(carnetId),
+    onSuccess: (carnet) => {
+      store(carnet);
+      void client.invalidateQueries({ queryKey: carnetsKeys.storeCredit });
+    },
+  });
+}
+
+/** Recevoir le pack : une clé par intention, gardée jusqu'à la réussite (jamais deux commandes). */
+export function useRedeem(carnetId: string) {
+  const client = useQueryClient();
+  const key = useRef<string | null>(null);
+  return useMutation({
+    mutationFn: (body: RedeemBody) => {
+      key.current ??= newIdempotencyKey();
+      return carnetsApi.redeem(carnetId, body, key.current);
+    },
+    onSuccess: () => {
+      key.current = null;
+      void client.invalidateQueries({ queryKey: carnetsKeys.carnets });
+      void client.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 }

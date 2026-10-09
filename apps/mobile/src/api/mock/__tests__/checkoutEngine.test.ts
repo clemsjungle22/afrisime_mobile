@@ -29,6 +29,7 @@ function firstSlot(kind: 'delivery' | 'pickup', address: Address | null = SEED_A
 
 function quote(partial: Partial<QuoteRequest>) {
   const request: QuoteRequest = {
+    useStoreCredit: false,
     fulfillment: 'delivery',
     addressId: SEED_ADDRESS.id,
     agencyId: null,

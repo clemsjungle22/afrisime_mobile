@@ -67,6 +67,8 @@ const components = {
   Carnet: shared.Carnet,
   CarnetList: shared.CarnetList,
   SubscribeBody: shared.SubscribeBody,
+  RedeemBody: shared.RedeemBody,
+  StoreCredit: shared.StoreCredit,
   ContributeBody: shared.ContributeBody,
   AdminPack: shared.AdminPack,
   AdminPackInput: shared.AdminPackInput,
@@ -1096,6 +1098,26 @@ export function buildOpenApi(serverUrl?: string) {
           params: idParam,
           response: ref('Carnet'),
         }),
+      },
+      '/v1/me/carnets/{id}/abandon': {
+        post: op({
+          summary: 'Abandonner un carnet : versements transformés en avoir',
+          params: idParam,
+          response: ref('Carnet'),
+        }),
+      },
+      '/v1/me/carnets/{id}/redeem': {
+        post: op({
+          summary: 'Recevoir le pack soldé (commande déjà payée)',
+          params: idParam,
+          body: 'RedeemBody',
+          response: ref('Order'),
+          status: '201',
+          idempotent: true,
+        }),
+      },
+      '/v1/me/store-credit': {
+        get: op({ summary: 'Avoir du client : solde et mouvements', response: ref('StoreCredit') }),
       },
       '/v1/me/carnets/{id}/contributions': {
         post: op({
