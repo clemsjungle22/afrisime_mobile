@@ -168,10 +168,13 @@ export default async function CreditDetailPage({ params }: { params: Promise<{ i
                     </Badge>
                   </div>
                   <p className="text-xs text-muted tabular-nums">
-                    {formatFCFA(d.paid)} remboursés sur {formatFCFA(d.amount)} ·{' '}
-                    {formatFCFA(d.dailyAmount)} / jour · achat le{' '}
-                    {dateFmt.format(new Date(d.startedAt))} · échéance le{' '}
-                    {dateFmt.format(new Date(d.dueAt))}
+                    {formatFCFA(d.paid)} remboursés sur {formatFCFA(d.amount)} · achat le{' '}
+                    {dateFmt.format(new Date(d.startedAt))}
+                    {d.status === 'open'
+                      ? ` · ${formatFCFA(d.dailyAmount)} / jour · échéance le ${dateFmt.format(new Date(d.dueAt))}`
+                      : d.status === 'cancelled' && d.paid > 0
+                        ? ' · commande annulée, remboursements rendus en avoir'
+                        : ''}
                   </p>
                 </li>
               ))}
