@@ -62,7 +62,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "presentation": "node scripts/presentation.mjs"
   },
   "private": true,
   "jest": {
