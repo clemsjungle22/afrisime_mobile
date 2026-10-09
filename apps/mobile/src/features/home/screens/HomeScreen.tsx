@@ -5,6 +5,7 @@ import {
   type HomeCategory,
   type HomeSection,
   type ProductSummary,
+  formatFCFA,
 } from '@afrisime/shared';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,7 @@ import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
 import { BannerCarousel } from '@/features/catalog/components/BannerCarousel';
 import { PacksTeaser } from '@/features/carnets/components/PacksTeaser';
+import { useStoreCredit } from '@/features/carnets/hooks';
 import { CategoryTile } from '@/features/catalog/components/CategoryTile';
 import { mediaUri } from '@/lib/media';
 import { FlashCountdown } from '@/features/catalog/components/FlashCountdown';
@@ -156,6 +158,7 @@ function Greeting() {
   const me = useMe();
   const addresses = useAddresses(authenticated);
   const selectedId = useCheckout((s) => s.addressId);
+  const creditBalance = useStoreCredit().data?.balance ?? 0;
   const address =
     addresses.data?.find((a) => a.id === selectedId) ??
     addresses.data?.find((a) => a.isDefault) ??
@@ -192,6 +195,23 @@ function Greeting() {
         ) : null}
         <Ionicons name="chevron-down" size={14} color={palette.brand200} />
       </Pressable>
+      {creditBalance > 0 ? (
+        <Pressable
+          onPress={() => router.push('/avoir')}
+          accessibilityRole="button"
+          accessibilityLabel={`Mon avoir : ${formatFCFA(creditBalance)}, utilisable à la prochaine commande`}
+          style={({ pressed }) => [
+            styles.location,
+            { marginTop: 8, borderRadius: theme.radius.pill, backgroundColor: palette.accent500, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="wallet" size={16} color={palette.brand950} />
+          <Text variant="caption" style={{ color: palette.brand950, fontWeight: '700' }} numberOfLines={1}>
+            Mon avoir : {formatFCFA(creditBalance)} à utiliser
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color={palette.brand950} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }

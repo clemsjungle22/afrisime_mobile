@@ -3,7 +3,7 @@ import { formatFCFA, maskPhone } from '@afrisime/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { apiConfig } from '@/api/config';
 import { MOCK_OTP_CODE, RATE_LIMITED_PHONE } from '@/api/mock/authServer';
 import { SEED_USER } from '@/api/mock/db';
@@ -87,10 +87,24 @@ function Guest() {
   );
 }
 
-function Row({ label, value, badge }: { label: string; value: string; badge?: string | null }) {
+function Row({
+  label,
+  value,
+  badge,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  badge?: string | null;
+  /** Ligne cliquable (ouvre le détail). */
+  onPress?: () => void;
+}) {
   const theme = useTheme();
   return (
-    <View
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
       style={{
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -108,7 +122,7 @@ function Row({ label, value, badge }: { label: string; value: string; badge?: st
         </Text>
         {badge ? <Badge label={badge} tone="info" /> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -226,7 +240,7 @@ function SignedIn() {
           <Row label="Agence" value={agency?.name ?? '—'} />
           <Row label="Offres et promotions" value={user.consents.marketing ? 'Acceptées' : 'Refusées'} />
           {(storeCredit.data?.balance ?? 0) > 0 ? (
-            <Row label="Mon avoir" value={`${formatFCFA(storeCredit.data!.balance)} · utilisable à la commande`} />
+            <Row label="Mon avoir" value={`${formatFCFA(storeCredit.data!.balance)} · voir le détail`} onPress={() => router.push('/avoir')} />
           ) : null}
         </View>
       ) : me.isError ? (
