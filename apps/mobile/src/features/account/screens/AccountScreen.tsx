@@ -15,6 +15,7 @@ import { signOut, useSession } from '@/features/auth/session';
 import { useCart } from '@/features/cart/store';
 import { useCarnets, useStoreCredit } from '@/features/carnets/hooks';
 import { useCreditAccount } from '@/features/credit/hooks';
+import { useKyc } from '@/features/kyc/hooks';
 import { useFavorites, useLists } from '@/features/lists/hooks';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 import { showSnackbar } from '@/stores/snackbar';
@@ -139,6 +140,7 @@ function SignedIn() {
   const lists = useLists();
   const carnets = useCarnets();
   const credit = useCreditAccount();
+  const kyc = useKyc();
   const storeCredit = useStoreCredit();
 
   const user = me.data;
@@ -243,6 +245,21 @@ function SignedIn() {
           <Row label="Offres et promotions" value={user.consents.marketing ? 'Acceptées' : 'Refusées'} />
           {(storeCredit.data?.balance ?? 0) > 0 ? (
             <Row label="Mon avoir" value={`${formatFCFA(storeCredit.data!.balance)} · voir le détail`} onPress={() => router.push('/avoir')} />
+          ) : null}
+          {kyc.data && (kyc.data.status !== 'none' || (kyc.data.threshold > 0 && kyc.data.spent30d > 0)) ? (
+            <Row
+              label="Mon identité"
+              value={
+                kyc.data.status === 'verified'
+                  ? 'Vérifiée'
+                  : kyc.data.status === 'pending'
+                    ? 'En cours de vérification'
+                    : kyc.data.status === 'rejected'
+                      ? 'À renvoyer · voir le détail'
+                      : `${formatFCFA(kyc.data.remainingBeforeKyc ?? 0)} d’achats avant vérification`
+              }
+              onPress={() => router.push('/identite')}
+            />
           ) : null}
           {credit.data && (credit.data.status !== 'none' || type?.requiresReview) ? (
             <Row

@@ -10,6 +10,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { validate } from '../cart/service';
 import { checkoutCredit } from '../credit/service';
+import { assertKycAllows } from '../kyc/service';
 import { listAddresses } from '../customers/addresses';
 import { storeCreditBalance as balanceOf } from '../customers/storeCredit';
 import type { Db } from '../db/client';
@@ -88,6 +89,8 @@ export async function createQuote(
   } catch (error) {
     asApiError(error);
   }
+  // Identité : prévenu dès le devis si la commande ferait dépasser le seuil sans vérification.
+  await assertKycAllows(db, customer.id, quote.total, rules.kycThreshold ?? 0, now);
 
   await db.insert(s.quotes).values({
     id: quote.quoteId,

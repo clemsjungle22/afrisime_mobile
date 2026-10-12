@@ -177,6 +177,8 @@ function RulesCard({ rules }: { rules: AdminDeliverySettings['rules'] }) {
           minOrder: toInt(fd.get('minOrder')),
           cashOnDeliveryMax: toInt(fd.get('cashOnDeliveryMax')),
           leadTimeMinutes: toInt(fd.get('leadTimeMinutes')),
+          mobileMoneyBonus: toInt(fd.get('mobileMoneyBonus')),
+          kycThreshold: toInt(fd.get('kycThreshold')),
         }),
       () => setSaved(true),
     );
@@ -226,6 +228,26 @@ function RulesCard({ rules }: { rules: AdminDeliverySettings['rules'] }) {
             required
             hint="Temps de préparation : un créneau qui commence plus tôt n’est pas proposé."
             defaultValue={rules.leadTimeMinutes}
+          />
+          <TextInput
+            name="mobileMoneyBonus"
+            label="Bonus paiement Mobile Money"
+            type="number"
+            min={0}
+            suffix="FCFA"
+            required
+            hint="Déduit des frais de livraison quand le client paie par Mixx ou Flooz (0 : aucun bonus)."
+            defaultValue={rules.mobileMoneyBonus}
+          />
+          <TextInput
+            name="kycThreshold"
+            label="Seuil de vérification d’identité"
+            type="number"
+            min={0}
+            suffix="FCFA"
+            required
+            hint="Achats sur 30 jours au-delà desquels le client doit envoyer sa pièce d’identité (0 : jamais)."
+            defaultValue={rules.kycThreshold}
           />
         </div>
         <div className="flex justify-end">

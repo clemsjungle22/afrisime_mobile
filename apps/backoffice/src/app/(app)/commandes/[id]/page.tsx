@@ -135,6 +135,10 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     freeLabel={o.fulfillment === 'delivery' ? 'Offerte' : 'Gratuit'}
                   />
                   {o.discountTotal > 0 ? <Total label="Remise" value={-o.discountTotal} /> : null}
+                  {o.deliveryBonus > 0 ? (
+                    <Total label="Bonus Mobile Money (livraison)" value={-o.deliveryBonus} />
+                  ) : null}
+                  {o.storeCreditUsed > 0 ? <Total label="Avoir utilisé" value={-o.storeCreditUsed} /> : null}
                   <Total label="Total" value={o.total} strong />
                 </tfoot>
               </table>

@@ -307,6 +307,7 @@ function toDetail(seed: ProductSeed, index: number): ProductDetail {
     imageUrl: null,
     badges: seed.badges ?? [],
     ...summarizeVariants(variants),
+    priceRange: null,
     color: category.color,
     description: seed.description,
     categoryId: category.slug,

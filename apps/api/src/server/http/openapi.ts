@@ -80,6 +80,8 @@ const components = {
   NotificationList: shared.NotificationList,
   MarkNotificationsReadBody: shared.MarkNotificationsReadBody,
   PushTokenBody: shared.PushTokenBody,
+  KycState: shared.KycState,
+  AdminKycReviewBody: shared.AdminKycReviewBody,
   CreditRequestBody: shared.CreditRequestBody,
   RepayBody: shared.RepayBody,
   AdminCreditList: shared.AdminCreditList,
@@ -427,15 +429,6 @@ export function buildOpenApi(serverUrl?: string) {
           params: idParam,
           response: ref('Order'),
           errors: { '404': 'Introuvable (NOT_FOUND)' },
-        }),
-      },
-      '/v1/orders/{id}/cancel': {
-        post: op({
-          summary: 'Annuler (remboursement si déjà payée)',
-          params: idParam,
-          body: 'CancelOrderBody',
-          response: ref('Order'),
-          errors: { '409': 'Déjà en préparation (ORDER_NOT_CANCELLABLE)' },
         }),
       },
       '/v1/orders/{id}/reorder': {
@@ -1209,6 +1202,22 @@ export function buildOpenApi(serverUrl?: string) {
       '/v1/me/push-tokens': {
         post: op({ summary: 'Inscrire le téléphone aux notifications push', body: 'PushTokenBody', response: { type: 'object' } }),
         delete: op({ summary: 'Désinscrire le téléphone (déconnexion)', body: 'PushTokenBody', response: { type: 'object' } }),
+      },
+      '/v1/me/kyc': {
+        get: op({ summary: 'Vérification d’identité : état, seuil et achats sur 30 jours', response: ref('KycState') }),
+        post: op({
+          summary: 'Envoyer le dossier d’identité (multipart : docType, docNumber, front, back, selfie)',
+          response: ref('KycState'),
+          status: '201',
+        }),
+      },
+      '/v1/admin/customers/{id}/kyc': {
+        post: op({
+          summary: 'Back-office : valider ou refuser le dossier d’identité',
+          params: idParam,
+          body: 'AdminKycReviewBody',
+          response: ref('AdminCustomerDetail'),
+        }),
       },
       '/v1/me/credit': {
         get: op({ summary: 'Mon crédit : plafond, disponible, dettes et remboursements', response: ref('CreditAccount') }),

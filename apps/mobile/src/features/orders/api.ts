@@ -1,5 +1,4 @@
 import {
-  CancelOrderBody,
   CreateOrderBody,
   CreatePaymentBody,
   Order,
@@ -21,7 +20,6 @@ export type OrdersApi = {
   getPayment(paymentId: string, signal?: AbortSignal): Promise<PaymentIntent>;
   listOrders(filter: OrderFilter, cursor?: string, signal?: AbortSignal): Promise<OrderList>;
   getOrder(orderId: string, signal?: AbortSignal): Promise<Order>;
-  cancelOrder(orderId: string, reason?: string | null): Promise<Order>;
   reorder(orderId: string): Promise<ReorderResponse>;
 };
 
@@ -50,15 +48,6 @@ const httpOrdersApi: OrdersApi = {
   },
   getOrder(orderId, signal) {
     return request(`/v1/orders/${encodeURIComponent(orderId)}`, { schema: Order, signal });
-  },
-  cancelOrder(orderId, reason = null) {
-    // Annuler deux fois produit le même état : réessayable.
-    return request(`/v1/orders/${encodeURIComponent(orderId)}/cancel`, {
-      method: 'POST',
-      body: CancelOrderBody.parse({ reason }),
-      schema: Order,
-      safe: true,
-    });
   },
   reorder(orderId) {
     return request(`/v1/orders/${encodeURIComponent(orderId)}/reorder`, {

@@ -13,6 +13,7 @@ import { randomInt } from 'node:crypto';
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { validate } from '../cart/service';
 import { createDebt } from '../credit/service';
+import { assertKycAllows } from '../kyc/service';
 import { addStoreCredit, lockStoreCredit, storeCreditBalance } from '../customers/storeCredit';
 import { loadRules, slotOccupancy } from '../checkout/rules';
 import { decodeCursor, encodeCursor } from '../catalog/service';
@@ -20,12 +21,10 @@ import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
 import { newId } from '../ids';
-import { log } from '../log';
 import { once } from '../idempotency';
 import { emit } from '../outbox';
-import { paymentProvider } from '../payments/provider';
 import { refreshPayment } from '../payments/service';
-import { AWAITING_PAYMENT, CANCELLABLE, IN_PROGRESS, PAYMENT_DEADLINE_MS, closeReservations, refreshOrder, reserveStock, transition } from './state';
+import { AWAITING_PAYMENT, IN_PROGRESS, PAYMENT_DEADLINE_MS, refreshOrder, reserveStock } from './state';
 
 type Customer = { id: string; segment: string };
 const PAGE = 20;
@@ -63,6 +62,7 @@ async function toOrder(db: Db, row: typeof s.orders.$inferSelect): Promise<Order
     subtotal: row.subtotal,
     deliveryFee: row.deliveryFee,
     discountTotal: row.discountTotal,
+    deliveryBonus: row.deliveryBonus,
     storeCreditUsed: row.storeCreditUsed,
     currency: 'XOF',
     addressId: row.addressId,
@@ -75,7 +75,8 @@ async function toOrder(db: Db, row: typeof s.orders.$inferSelect): Promise<Order
       paidAt: row.paidAt?.toISOString() ?? null,
     },
     history: events.map((e) => ({ status: e.status, at: e.at.toISOString(), note: e.note })),
-    cancellable: CANCELLABLE.has(row.status),
+    // Le client n'annule plus lui-même : il passe par son agence (annulation par l'équipe).
+    cancellable: false,
     paymentDeadline: AWAITING_PAYMENT.includes(row.status) ? (row.paymentDeadline?.toISOString() ?? null) : null,
   };
 }
@@ -187,6 +188,9 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
         }
       }
 
+      // Identité : achats au-delà du seuil sur 30 jours sans vérification refusés.
+      await assertKycAllows(tx, customer.id, q.total, rules.kycThreshold ?? 0, now);
+
       // Avoir : revérifié sous verrou (deux commandes ne dépensent jamais le même avoir).
       const credit = q.storeCreditApplied ?? 0;
       if (credit > 0) {
@@ -225,6 +229,7 @@ export async function createOrder(db: Db, customer: Customer, quoteId: string, k
         subtotal: q.subtotal,
         deliveryFee: q.deliveryFee,
         discountTotal: q.discountTotal,
+        deliveryBonus: q.deliveryBonus ?? 0,
         storeCreditUsed: credit,
         total: q.total,
         pickupCode: q.fulfillment === 'pickup' ? pickupCode() : null,
@@ -378,51 +383,6 @@ export async function createPackOrder(
 }
 
 // ─── Annulation, recommande ──────────────────────────────────────────────────
-
-export async function cancelOrder(db: Db, customerId: string, orderId: string, reason: string | null, now = new Date()): Promise<Order> {
-  await getOrder(db, customerId, orderId, now); // applique d'abord délai et avancement
-  const row = await ownOrder(db, customerId, orderId);
-  if (!CANCELLABLE.has(row.status)) {
-    throw new ApiError('ORDER_NOT_CANCELLABLE', 'Cette commande est déjà en préparation : elle ne peut plus être annulée.');
-  }
-  const paid = row.paymentStatus === 'succeeded';
-
-  await db.transaction(async (txn) => {
-    const tx = txn as unknown as Db;
-    const note = reason ? `Annulée à votre demande : ${reason}` : 'Annulée à votre demande';
-    const done = await transition(tx, orderId, [...CANCELLABLE], 'cancelled', note, now, {}, 'customer');
-    if (!done) throw new ApiError('ORDER_NOT_CANCELLABLE', 'Cette commande ne peut plus être annulée.');
-    await closeReservations(tx, orderId, 'release', now);
-    await emit(tx, 'order.cancelled', orderId, { reason: 'customer' });
-    if (paid) {
-      await transition(tx, orderId, ['cancelled'], 'refunded', 'Remboursement Mobile Money sous 48 h', now, { paymentStatus: 'refunded' });
-      if (row.currentPaymentId) {
-        await tx.update(s.payments).set({ status: 'refunded', updatedAt: now }).where(eq(s.payments.id, row.currentPaymentId));
-      }
-      await emit(tx, 'order.refunded', orderId, { amount: row.total });
-    }
-  });
-  // Remboursement demandé au prestataire APRÈS l'enregistrement de l'annulation :
-  // en cas d'échec, la commande reste « remboursée » côté client et l'incident est signalé au back-office.
-  if (paid && row.currentPaymentId) {
-    const [payment] = await db.select().from(s.payments).where(eq(s.payments.id, row.currentPaymentId));
-    if (payment && (payment.method === 'mixx' || payment.method === 'flooz')) {
-      await paymentProvider(payment.provider)
-        .refund({
-          id: payment.id,
-          method: payment.method,
-          amount: payment.amount,
-          phone: payment.phone ?? '',
-          createdAt: payment.createdAt,
-          expiresAt: payment.expiresAt,
-          providerReference: payment.providerReference,
-          providerData: payment.providerData,
-        })
-        .catch((error: unknown) => log.error('remboursement en échec : à traiter manuellement', { orderId, error }));
-    }
-  }
-  return getOrder(db, customerId, orderId, now);
-}
 
 /** Articles d'une ancienne commande, revalidés au prix et au stock du jour. */
 export async function reorder(db: Db, customer: Customer, orderId: string): Promise<ReorderResponse> {

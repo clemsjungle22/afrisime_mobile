@@ -28,6 +28,7 @@ function makeProduct(availability: Availability, overrides: Partial<ProductSumma
     priceFrom: price,
     priceTo: price,
     discountPercent: null,
+    priceRange: null,
     color: '#b7862b',
     variantsCount: 1,
     defaultVariant: {

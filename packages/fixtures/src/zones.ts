@@ -46,6 +46,10 @@ export const DELIVERY_RULES = {
   leadTimeMs: 60 * 60_000,
   /** Durée de validité d'un devis. */
   quoteTtlMs: 15 * 60_000,
+  /** Bonus déduit des frais de livraison pour un paiement Mobile Money (FCFA). */
+  mobileMoneyBonus: 500,
+  /** Achats sur 30 jours au-delà desquels l'identité doit être vérifiée (FCFA). */
+  kycThreshold: 500_000,
 } as const;
 
 const normalize = (s: string) =>

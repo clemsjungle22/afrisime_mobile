@@ -47,6 +47,7 @@ export function QuoteSummary({ quote, refreshing }: Props) {
         <Row label="Retrait en agence" value="Gratuit" />
       )}
       {quote.discountTotal > 0 ? <Row label="Remises" value={`-${formatFCFA(quote.discountTotal)}`} /> : null}
+      {quote.deliveryBonus > 0 ? <Row label="Bonus Mobile Money (livraison)" value={`-${formatFCFA(quote.deliveryBonus)}`} /> : null}
       {quote.storeCreditApplied > 0 ? <Row label="Avoir" value={`-${formatFCFA(quote.storeCreditApplied)}`} /> : null}
       <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.xs }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>

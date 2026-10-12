@@ -1,7 +1,7 @@
 import type { Quote } from '@afrisime/shared';
 import { loadDb, resetMockDb } from '../db';
 import { mockNotificationList } from '../notifications';
-import { cancelOrder, createOrder, registerQuote, resetOrderServer } from '../orderServer';
+import { createOrder, registerQuote, resetOrderServer } from '../orderServer';
 
 const USER = 'usr_kossi';
 const T0 = Date.parse('2026-10-07T10:00:00.000Z');
@@ -20,6 +20,7 @@ function quote(id: string): Quote {
     subtotal: 9500,
     deliveryFee: 0,
     discountTotal: 0,
+    deliveryBonus: 0,
     storeCreditApplied: 0,
     total: 9500,
     currency: 'XOF',
@@ -43,11 +44,5 @@ describe('notifications du mode démo', () => {
     expect(later.unread).toBe(2);
     expect(later.items[0]).toMatchObject({ title: 'Commande prête', link: { type: 'order', orderId: order.id } });
     expect(later.items[1]).toMatchObject({ title: 'Commande en préparation' });
-  });
-
-  it('sa propre annulation ne crée pas de notification', async () => {
-    const order = await createOrder(USER, { quoteId: quote('q2').quoteId }, 'k2', T0);
-    await cancelOrder(USER, order.id, T0 + MIN);
-    expect(mockNotificationList(await loadDb(), USER, T0 + 20 * MIN).items).toHaveLength(0);
   });
 });

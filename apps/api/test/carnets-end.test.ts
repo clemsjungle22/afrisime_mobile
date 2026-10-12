@@ -18,7 +18,8 @@ import { storeCreditBalance } from '@/server/customers/storeCredit';
 import { setDb } from '@/server/db/client';
 import * as s from '@/server/db/schema';
 import { seedDatabase } from '@/server/db/seed';
-import { cancelOrder, createOrder } from '@/server/orders/service';
+import { createOrder } from '@/server/orders/service';
+import { cancelAsTeam } from './cancel';
 import { call } from './call';
 import { createTestDb } from './pglite';
 
@@ -156,15 +157,16 @@ describe('avoir à la commande', () => {
     };
 
     const without = await createQuote(t.db, c, request);
-    expect(without).toMatchObject({ storeCreditApplied: 0, total: 9500 + 500 });
+    // Mobile Money : 500 F de bonus sur la livraison, puis l'avoir.
+    expect(without).toMatchObject({ storeCreditApplied: 0, deliveryBonus: 500, total: 9500 });
     const quote = await createQuote(t.db, c, { ...request, useStoreCredit: true });
-    expect(quote).toMatchObject({ storeCreditApplied: 2600, total: 10_000 - 2600 });
+    expect(quote).toMatchObject({ storeCreditApplied: 2600, total: 9500 - 2600 });
 
     const order = await createOrder(t.db, c, quote.quoteId, key());
-    expect(order).toMatchObject({ storeCreditUsed: 2600, total: 7400, status: 'pending_payment' });
+    expect(order).toMatchObject({ storeCreditUsed: 2600, deliveryBonus: 500, total: 6900, status: 'pending_payment' });
     expect(await storeCreditBalance(t.db, c.id)).toBe(0);
 
-    await cancelOrder(t.db, c.id, order.id, null);
+    await cancelAsTeam(t.db, order.id);
     expect(await storeCreditBalance(t.db, c.id)).toBe(2600);
   });
 
@@ -185,11 +187,11 @@ describe('avoir à la commande', () => {
     const order = await createOrder(t.db, c, quote.quoteId, key());
     expect(order).toMatchObject({
       total: 0,
-      storeCreditUsed: 10_000,
+      storeCreditUsed: 9_500,
       status: 'confirmed',
       payment: { status: 'succeeded' },
     });
-    expect(await storeCreditBalance(t.db, c.id)).toBe(5000);
+    expect(await storeCreditBalance(t.db, c.id)).toBe(5500);
   });
 });
 
@@ -237,7 +239,7 @@ describe('remise du pack soldé', () => {
       orderId: res.body.id,
     });
 
-    await cancelOrder(t.db, c.id, res.body.id, null);
+    await cancelAsTeam(t.db, res.body.id);
     expect(await getCarnet(t.db, c, carnet.id)).toMatchObject({
       status: 'completed',
       orderId: null,

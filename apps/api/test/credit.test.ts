@@ -24,7 +24,8 @@ import * as s from '@/server/db/schema';
 import { seedDatabase } from '@/server/db/seed';
 import { tick } from '@/server/jobs';
 import { listNotifications } from '@/server/notifications/service';
-import { cancelOrder, createOrder } from '@/server/orders/service';
+import { createOrder } from '@/server/orders/service';
+import { cancelAsTeam } from './cancel';
 import { SIGNATURE_HEADER, SIM_CONFIRM_MS, signWebhook } from '@/server/payments/provider';
 import { call } from './call';
 import { createTestDb } from './pglite';
@@ -346,7 +347,7 @@ describe('achat à crédit', () => {
       params: { id: c.id },
       body: { amount: 1_000, agencyId: 'agc_lome_centre' },
     });
-    const cancelled = await cancelOrder(t.db, c.id, order.id, null);
+    const cancelled = await cancelAsTeam(t.db, order.id);
     expect(cancelled.status).toBe('cancelled');
     const account = await getCreditAccount(t.db, c);
     expect(account).toMatchObject({ used: 0, available: 50_000 });

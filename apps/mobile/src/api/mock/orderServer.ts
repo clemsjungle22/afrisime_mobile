@@ -12,7 +12,8 @@ import {
   type ReorderResponse,
 } from '@afrisime/shared';
 import { loadDb, saveDb, type MockDb, type MockPayment } from './db';
-import { cancelMockDebt, createMockDebt } from './credit';
+import { createMockDebt } from './credit';
+import { assertMockKycAllows } from './kyc';
 import { addCredit, creditBalance } from './storeCredit';
 import { mockError } from './simulate';
 
@@ -32,7 +33,6 @@ const STEP_SHIPPING_MS = 5 * 60_000;
 const STEP_DONE_MS = 10 * 60_000;
 
 const MOBILE_MONEY = new Set(['mixx', 'flooz']);
-const CANCELLABLE: ReadonlySet<OrderStatus> = new Set(['pending_payment', 'payment_failed', 'confirmed']);
 
 /** Devis émis (en mémoire : un devis expire en 15 min, inutile de le persister). */
 const quotes = new Map<string, { userId: string; quote: Quote }>();
@@ -89,6 +89,7 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
     throw mockError('QUOTE_EXPIRED', 'Les prix garantis ont expiré. Vérifiez votre commande.', 409);
   }
   const q = entry.quote;
+  assertMockKycAllows(db, userId, q.total, now);
   const credit = q.storeCreditApplied ?? 0;
   if (credit > 0 && creditBalance(db, userId) < credit) {
     throw mockError('QUOTE_EXPIRED', 'Votre avoir a changé. Vérifiez votre commande.', 409);
@@ -114,6 +115,7 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
     subtotal: q.subtotal,
     deliveryFee: q.deliveryFee,
     discountTotal: q.discountTotal,
+    deliveryBonus: q.deliveryBonus ?? 0,
     storeCreditUsed: credit,
     currency: 'XOF',
     addressId: q.addressId,
@@ -140,7 +142,8 @@ export async function createOrder(userId: string, body: CreateOrderBody, key: st
                 : 'Paiement au retrait en agence',
           ),
         ],
-    cancellable: true,
+    // Le client n'annule plus lui-même : il passe par son agence.
+    cancellable: false,
     paymentDeadline: online ? new Date(now + PAYMENT_DEADLINE_MS).toISOString() : null,
   };
   // À crédit : plafond et retard revérifiés, puis la dette est créée.
@@ -188,7 +191,7 @@ export function materialize(stored: Order, now: number): Order {
     }
   }
 
-  order.cancellable = CANCELLABLE.has(order.status);
+  order.cancellable = false;
   order.payable =
     (order.status === 'pending_payment' || order.status === 'payment_failed') && MOBILE_MONEY.has(order.payment.method);
   return order;
@@ -220,40 +223,6 @@ export async function listOrders(userId: string, filter: 'active' | 'history', n
   return (db.orders[userId] ?? [])
     .map((o) => materialize(o, now))
     .filter((o) => (filter === 'history' ? FINAL_ORDER_STATUSES.has(o.status) : !FINAL_ORDER_STATUSES.has(o.status)));
-}
-
-export async function cancelOrder(userId: string, orderId: string, now = Date.now()): Promise<Order> {
-  const { db, order: stored } = await findOrder(userId, orderId);
-  const current = materialize(stored, now);
-  if (!current.cancellable) {
-    throw mockError('ORDER_NOT_CANCELLABLE', 'Cette commande est déjà en préparation : elle ne peut plus être annulée.', 409);
-  }
-  const paid = current.payment.status === 'succeeded';
-  const cancelled: Order = {
-    ...current,
-    status: paid ? 'refunded' : 'cancelled',
-    history: [
-      ...current.history,
-      event('cancelled', now, 'Annulée à votre demande'),
-      ...(paid ? [event('refunded', now, 'Remboursement Mobile Money sous 48 h')] : []),
-    ],
-    payment: { ...current.payment, status: paid ? 'refunded' : current.payment.status },
-    cancellable: false,
-    payable: false,
-  };
-  if ((stored.storeCreditUsed ?? 0) > 0) {
-    addCredit(db, userId, { amount: stored.storeCreditUsed, reason: 'order_cancelled', orderId, at: now });
-  }
-  cancelMockDebt(db, userId, orderId, now);
-  // Pack remis par cette commande : il redevient « soldé, à remettre ».
-  for (const c of db.carnets[userId] ?? []) {
-    if (c.orderId === orderId && c.status === 'delivered') {
-      c.status = 'completed';
-      c.orderId = null;
-    }
-  }
-  await saveOrder(db, userId, cancelled);
-  return cancelled;
 }
 
 export async function reorder(

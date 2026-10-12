@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Chip, EmptyState, Screen, Text } from '@/components/ui';
-import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
+import { CART_NEXT_SPACE, FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { useTheme } from '@/theme';
 import { FilteredProducts } from '../components/FilteredProducts';
 import { SearchEntry } from '../components/SearchEntry';
@@ -58,7 +58,7 @@ export function ShopScreen() {
         filters={filters}
         onChange={setFilters}
         hide={['category']}
-        bottomSpace={FLOATING_TAB_BAR_SPACE}
+        bottomSpace={FLOATING_TAB_BAR_SPACE + CART_NEXT_SPACE}
         header={() =>
           currentCategory?.description ? (
             <Text

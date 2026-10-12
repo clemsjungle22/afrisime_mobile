@@ -100,6 +100,9 @@ export const products = pgTable(
       .default(sql`'{}'::text[]`),
     sortOrder: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),
+    /** Fourchette de prix affichée sur la fiche, saisie par l'équipe (les deux ou aucune). */
+    priceMin: integer(),
+    priceMax: integer(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -252,6 +255,8 @@ export const customers = pgTable('customers', {
   marketingConsent: boolean().notNull().default(false),
   termsVersion: text(),
   status: text().notNull().default('active'),
+  /** Vérification d'identité : none | pending | verified | rejected. */
+  kycStatus: text().notNull().default('none'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -467,6 +472,30 @@ export const storeCreditEntries = pgTable(
   ],
 );
 
+// ─── Vérification d'identité (KYC) ──────────────────────────────────────────
+
+/** Dossiers d'identité envoyés par les clients (le plus récent fait foi). Photos hors du dossier public. */
+export const kycSubmissions = pgTable(
+  'kyc_submissions',
+  {
+    id: text().primaryKey(),
+    customerId: text()
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+    docType: text().notNull(),
+    docNumber: text().notNull(),
+    /** Clés de stockage des photos : { front, back?, selfie }. */
+    photos: jsonb().notNull(),
+    /** pending | verified | rejected */
+    status: text().notNull().default('pending'),
+    reason: text(),
+    reviewedBy: text().references(() => adminUsers.id),
+    reviewedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('kyc_submissions_customer_idx').on(t.customerId, t.createdAt)],
+);
+
 // ─── Vente à crédit ───────────────────────────────────────────────────────────
 
 /** Crédit accordé par l'équipe à une cliente pro : plafond et durée de remboursement. */
@@ -644,6 +673,8 @@ export const orders = pgTable(
     subtotal: integer().notNull(),
     deliveryFee: integer().notNull(),
     discountTotal: integer().notNull().default(0),
+    /** Bonus Mobile Money déduit des frais de livraison. */
+    deliveryBonus: integer().notNull().default(0),
     /** Avoir du client déduit du total (rendu si la commande est annulée). */
     storeCreditUsed: integer().notNull().default(0),
     total: integer().notNull(),

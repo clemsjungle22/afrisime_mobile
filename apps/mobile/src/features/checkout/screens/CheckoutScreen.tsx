@@ -274,6 +274,8 @@ function CheckoutContent() {
               </Text>
               {quoteError.code === 'MIN_ORDER_NOT_MET' ? (
                 <Button label="Compléter mon panier" variant="secondary" onPress={() => router.navigate('/boutique')} />
+              ) : quoteError.code === 'KYC_REQUIRED' ? (
+                <Button label="Vérifier mon identité" variant="secondary" onPress={() => router.push('/identite')} />
               ) : quoteError.code === 'ZONE_NOT_SERVED' ? (
                 <Button label="Passer au retrait en agence" variant="secondary" onPress={() => prefs.setFulfillment('pickup')} />
               ) : (

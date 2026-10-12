@@ -137,6 +137,8 @@ export const Quote = z.object({
   subtotal: Money,
   deliveryFee: Money,
   discountTotal: Money,
+  /** Bonus Mobile Money déduit des frais de livraison. */
+  deliveryBonus: Money.default(0),
   /** Avoir déduit du total. */
   storeCreditApplied: Money.default(0),
   total: Money,

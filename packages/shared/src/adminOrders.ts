@@ -119,6 +119,10 @@ export const AdminOrderDetail = AdminOrderRow.extend({
   subtotal: Money,
   deliveryFee: Money,
   discountTotal: Money,
+  /** Bonus Mobile Money déduit des frais de livraison. */
+  deliveryBonus: Money.default(0),
+  /** Avoir du client déduit du total. */
+  storeCreditUsed: Money.default(0),
   customer: AdminCustomerRef.extend({ email: z.string().nullable(), segmentLabel: z.string() }),
   address: z
     .object({

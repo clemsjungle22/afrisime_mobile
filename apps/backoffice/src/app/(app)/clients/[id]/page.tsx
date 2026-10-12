@@ -11,6 +11,7 @@ import { CUSTOMER_VIEW_ROLES } from '@/lib/customers';
 import { STATUS_TONES, formatPhone } from '@/lib/orders';
 import { ORDER_STATUS_LABELS, formatDateTime, formatFCFA } from '@/lib/utils';
 import { CustomerActions } from './customer-actions';
+import { KycCard } from './kyc-card';
 
 export const metadata: Metadata = { title: 'Client' };
 
@@ -67,6 +68,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       ) : null}
 
       <CustomerActions customer={c} />
+      {c.kyc.status !== 'none' || (c.kyc.threshold > 0 && c.kyc.spent30d > c.kyc.threshold) ? <KycCard kyc={c.kyc} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Commandes" value={String(c.orderCount)} />

@@ -10,11 +10,13 @@ import {
   type AdminReviewProBody,
   type AdminRole,
   type CustomerStatus,
+  type KycStatus,
   type PriceSegment,
 } from '@afrisime/shared';
 import { type SQL, and, asc, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { decodeCursor, encodeCursor } from '../catalog/service';
 import { storeCreditBalance } from '../customers/storeCredit';
+import { adminKycOf } from '../kyc/service';
 import type { Db } from '../db/client';
 import * as s from '../db/schema';
 import { ApiError } from '../http/errors';
@@ -40,6 +42,14 @@ const HISTORY_LABELS: Record<string, string> = {
   'customer.pricing_changed': 'Profil ou tarif changé',
   'customer.blocked': 'Compte bloqué',
   'customer.unblocked': 'Compte débloqué',
+  'customer.kyc_approved': 'Identité vérifiée',
+  'customer.kyc_rejected': 'Identité refusée',
+  'credit.granted': 'Crédit accordé',
+  'credit.updated': 'Crédit modifié',
+  'credit.request_rejected': 'Demande de crédit refusée',
+  'credit.suspended': 'Crédit suspendu',
+  'credit.restored': 'Crédit rétabli',
+  'credit.cash_recorded': 'Remboursement de crédit encaissé en espèces',
 };
 
 type CustomerRow = typeof s.customers.$inferSelect;
@@ -54,6 +64,7 @@ const statusOf = (v: string): CustomerStatus => (v === 'active' ? 'active' : 'bl
 
 const FILTERS: Record<Exclude<AdminCustomerFilter, 'all'>, SQL> = {
   pending_pro: eq(s.customers.customerTypePending, true),
+  kyc_pending: eq(s.customers.kycStatus, 'pending'),
   pro: eq(s.customers.segment, 'pro'),
   retail: eq(s.customers.segment, 'retail'),
   blocked: sql`${s.customers.status} <> 'active'`,
@@ -132,6 +143,7 @@ function toRow(r: Joined): AdminCustomerRow {
       : null,
     typePending: c.customerTypePending,
     segment: segmentOf(c.segment),
+    kycStatus: (['none', 'pending', 'verified', 'rejected'].includes(c.kycStatus) ? c.kycStatus : 'none') as KycStatus,
     agencyName: r.agencyName,
     status: statusOf(c.status),
     orderCount: Number(r.orderCount ?? 0),
@@ -185,6 +197,7 @@ function allowedActions(c: CustomerRow, role: AdminRole): AdminCustomerAction[] 
   const active = c.status === 'active';
   if (CUSTOMER_REVIEW_ROLES.includes(role) && active) {
     if (c.customerTypePending) actions.push('review_pro');
+    if (c.kycStatus === 'pending') actions.push('review_kyc');
     actions.push('change_pricing');
   }
   if (CUSTOMER_BLOCK_ROLES.includes(role)) actions.push(active ? 'block' : 'unblock');
@@ -236,6 +249,7 @@ export async function getAdminCustomer(
     ...base,
     marketingConsent: c.marketingConsent,
     storeCreditBalance: await storeCreditBalance(db, id),
+    kyc: await adminKycOf(db, id),
     lastSeenAt: iso(seen?.at),
     averageBasket: spentCount > 0 ? Math.round(base.totalSpent / spentCount) : 0,
     addresses: addresses.map(({ address: a, zoneName }) => ({

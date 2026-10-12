@@ -15,7 +15,7 @@ import { showSnackbar } from '@/stores/snackbar';
 import { useTheme } from '@/theme';
 import { OrderProgress } from '../components/OrderProgress';
 import { StatusTimeline } from '../components/StatusTimeline';
-import { useCancelOrder, useOrder, useReorder } from '../hooks';
+import { useOrder, useReorder } from '../hooks';
 import { orderStatusInfo, paymentMethodLabels } from '../status';
 import { useRefetchOnFocus } from '@/lib/useRefetchOnFocus';
 
@@ -84,38 +84,12 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
 
 function OrderContent({ order }: { order: Order }) {
   const theme = useTheme();
-  const cancel = useCancelOrder(order.id);
   const reorder = useReorder(order.id);
   const [saveAsList, setSaveAsList] = useState(false);
   const status = orderStatusInfo[order.status];
   // Rafraîchi chaque minute : le délai de paiement affiché reste juste sans rendu impur.
   const now = useNow(60_000, order.paymentDeadline !== null);
   const deadline = order.paymentDeadline ? Date.parse(order.paymentDeadline) - now : 0;
-
-  const confirmCancel = () =>
-    Alert.alert(
-      'Annuler la commande ?',
-      order.payment.status === 'succeeded'
-        ? 'Le montant payé vous sera remboursé sur votre compte Mobile Money.'
-        : order.payment.method === 'credit'
-          ? 'Cet achat sera retiré de votre crédit ; ce que vous avez déjà remboursé deviendra un avoir.'
-          : 'Cette action est définitive.',
-      [
-        { text: 'Garder ma commande', style: 'cancel' },
-        {
-          text: 'Annuler la commande',
-          style: 'destructive',
-          onPress: () =>
-            cancel.mutate(undefined, {
-              onSuccess: () => showSnackbar({ message: 'Commande annulée.' }),
-              onError: (e) =>
-                showSnackbar({
-                  message: isApiError(e) && !e.isNetwork ? e.message : 'Annulation impossible pour le moment. Réessayez.',
-                }),
-            }),
-        },
-      ],
-    );
 
   const onReorder = () =>
     reorder.mutate(undefined, {
@@ -214,6 +188,7 @@ function OrderContent({ order }: { order: Order }) {
         {order.discountTotal > 0 ? (
           <Row label={order.total === order.deliveryFee && order.discountTotal === order.subtotal ? 'Payé par votre carnet' : 'Remises'} value={`-${formatFCFA(order.discountTotal)}`} />
         ) : null}
+        {order.deliveryBonus > 0 ? <Row label="Bonus Mobile Money (livraison)" value={`-${formatFCFA(order.deliveryBonus)}`} /> : null}
         {order.storeCreditUsed > 0 ? <Row label="Avoir utilisé" value={`-${formatFCFA(order.storeCreditUsed)}`} /> : null}
         <Row label="Total" value={formatFCFA(order.total)} strong />
       </Card>
@@ -245,8 +220,10 @@ function OrderContent({ order }: { order: Order }) {
         <Button label="Commander à nouveau" variant="secondary" loading={reorder.isPending} onPress={onReorder} />
         <Button label="Enregistrer comme liste d’achats" variant="ghost" onPress={() => setSaveAsList(true)} />
         <Button label="Reçu / facture" variant="ghost" onPress={() => comingSoon('Le reçu PDF')} />
-        {order.cancellable ? (
-          <Button label="Annuler la commande" variant="ghost" loading={cancel.isPending} onPress={confirmCancel} />
+        {['pending_payment', 'payment_failed', 'confirmed', 'preparing'].includes(order.status) ? (
+          <Text variant="caption" color="textMuted" align="center">
+            Besoin d’annuler ou de modifier cette commande ? Contactez votre agence AfriSime.
+          </Text>
         ) : null}
       </View>
       <SaveOrderAsListSheet

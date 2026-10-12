@@ -31,7 +31,17 @@ export type CheckoutRules = {
   quoteTtlMs: number;
   /** Plages horaires, jours fermés, capacité (défaut : DEFAULT_SLOT_CONFIG). */
   slots?: SlotConfig;
+  /** Bonus déduit des frais de livraison quand on paie par Mobile Money (0 ou absent : aucun). */
+  mobileMoneyBonus?: number;
+  /** Achats sur 30 jours au-delà desquels l'identité doit être vérifiée (0 ou absent : aucun contrôle). */
+  kycThreshold?: number;
 };
+
+/** Bonus Mobile Money d'une commande : seulement en livraison, jamais plus que les frais. */
+export function mobileMoneyBonusOf(method: PaymentMethodId, fulfillment: Fulfillment, fee: number, rules: CheckoutRules): number {
+  if (!ONLINE_PAYMENT_METHODS.has(method) || fulfillment !== 'delivery') return 0;
+  return Math.max(0, Math.min(rules.mobileMoneyBonus ?? 0, fee));
+}
 
 export type CheckoutZone = { id: string; name: string; fee: number; cashOnDelivery: boolean };
 export type CheckoutAgency = { id: string; name: string; address: string; openingHours: string | null };
@@ -128,6 +138,10 @@ export function paymentMethods(
   credit: CheckoutCredit = null,
 ): PaymentMethodOption[] {
   const codAllowed = zone?.cashOnDelivery ?? false;
+  const bonus = rules.mobileMoneyBonus ?? 0;
+  const momoText = bonus > 0
+    ? `Confirmez sur votre téléphone. ${formatFCFA(bonus)} offerts sur la livraison.`
+    : 'Confirmez le paiement sur votre téléphone.';
   const creditOption: PaymentMethodOption[] = credit
     ? [
         {
@@ -144,7 +158,7 @@ export function paymentMethods(
     {
       id: 'mixx',
       label: PAYMENT_LABELS.mixx,
-      description: 'Confirmez le paiement sur votre téléphone.',
+      description: momoText,
       fulfillments: ['delivery', 'pickup'],
       available: true,
       unavailableReason: null,
@@ -152,7 +166,7 @@ export function paymentMethods(
     {
       id: 'flooz',
       label: PAYMENT_LABELS.flooz,
-      description: 'Confirmez le paiement sur votre téléphone.',
+      description: momoText,
       fulfillments: ['delivery', 'pickup'],
       available: true,
       unavailableReason: null,
@@ -328,7 +342,8 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
     throw new CheckoutRuleError('SLOT_UNAVAILABLE', "Ce créneau n'est plus disponible. Choisissez-en un autre.", 409);
   }
 
-  const beforeCredit = validated.subtotal + fee - validated.discountTotal;
+  const deliveryBonus = mobileMoneyBonusOf(request.paymentMethod, request.fulfillment, fee, rules);
+  const beforeCredit = validated.subtotal + fee - validated.discountTotal - deliveryBonus;
   // Avoir : déduit dans la limite du solde ; le reste se paie normalement.
   const storeCreditApplied = request.useStoreCredit
     ? Math.max(0, Math.min(ctx.storeCreditBalance ?? 0, beforeCredit))
@@ -348,6 +363,7 @@ export function buildQuote(request: QuoteRequest, ctx: QuoteContext): Quote {
     subtotal: validated.subtotal,
     deliveryFee: fee,
     discountTotal: validated.discountTotal,
+    deliveryBonus,
     storeCreditApplied,
     total,
     currency: 'XOF',

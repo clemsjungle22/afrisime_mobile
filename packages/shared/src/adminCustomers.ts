@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Fulfillment } from './checkout';
+import { AdminKyc, KycStatus } from './kyc';
 import { Money } from './money';
 import { OrderStatus } from './orders';
 
@@ -20,12 +21,13 @@ export const PRICE_SEGMENT_LABELS: Record<PriceSegment, string> = {
 };
 
 /** Filtres de la liste (onglets). */
-export const AdminCustomerFilter = z.enum(['all', 'pending_pro', 'pro', 'retail', 'blocked']);
+export const AdminCustomerFilter = z.enum(['all', 'pending_pro', 'kyc_pending', 'pro', 'retail', 'blocked']);
 export type AdminCustomerFilter = z.infer<typeof AdminCustomerFilter>;
 
 export const ADMIN_CUSTOMER_FILTER_LABELS: Record<AdminCustomerFilter, string> = {
   all: 'Tous',
   pending_pro: 'Pros à valider',
+  kyc_pending: 'Identités à vérifier',
   pro: 'Tarif pro',
   retail: 'Tarif particulier',
   blocked: 'Bloqués',
@@ -51,6 +53,8 @@ export const AdminCustomerRow = z.object({
   typePending: z.boolean(),
   /** Tarif appliqué. */
   segment: PriceSegment,
+  /** Vérification d'identité (KYC). */
+  kycStatus: KycStatus.default('none'),
   agencyName: z.string().nullable(),
   status: CustomerStatus,
   orderCount: z.number().int().nonnegative(),
@@ -70,7 +74,7 @@ export const AdminCustomerList = z.object({
 export type AdminCustomerList = z.infer<typeof AdminCustomerList>;
 
 /** Actions proposées par le serveur selon le compte et le rôle. */
-export const AdminCustomerAction = z.enum(['review_pro', 'change_pricing', 'block', 'unblock']);
+export const AdminCustomerAction = z.enum(['review_pro', 'review_kyc', 'change_pricing', 'block', 'unblock']);
 export type AdminCustomerAction = z.infer<typeof AdminCustomerAction>;
 
 export const AdminCustomerDetail = AdminCustomerRow.extend({
@@ -118,6 +122,8 @@ export const AdminCustomerDetail = AdminCustomerRow.extend({
   /** Profils possibles (pour changer le profil ou le tarif). */
   customerTypes: z.array(z.object({ id: z.string(), label: z.string(), segment: PriceSegment })),
   allowedActions: z.array(AdminCustomerAction),
+  /** Vérification d'identité (KYC). */
+  kyc: AdminKyc,
 });
 export type AdminCustomerDetail = z.infer<typeof AdminCustomerDetail>;
 

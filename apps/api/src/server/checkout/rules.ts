@@ -17,6 +17,8 @@ const DEFAULTS = {
   'payment.cod_max': 100_000,
   'checkout.lead_time_min': 60,
   'checkout.quote_ttl_min': 15,
+  'payment.momo_bonus': 500,
+  'kyc.threshold_30d': 500_000,
 } as const;
 
 /** Plages horaires, jours fermés et capacité des créneaux (app_settings). */
@@ -38,6 +40,8 @@ export async function loadRules(db: Db): Promise<CheckoutRules> {
     cashOnDeliveryMax: value('payment.cod_max'),
     leadTimeMs: value('checkout.lead_time_min') * 60_000,
     quoteTtlMs: value('checkout.quote_ttl_min') * 60_000,
+    mobileMoneyBonus: value('payment.momo_bonus'),
+    kycThreshold: value('kyc.threshold_30d'),
     slots: slotConfigOf(rows.find((r) => r.key === SLOTS_KEY)?.value),
   };
 }

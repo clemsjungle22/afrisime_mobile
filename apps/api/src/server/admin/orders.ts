@@ -356,6 +356,8 @@ export async function getAdminOrder(
     subtotal: o.subtotal,
     deliveryFee: o.deliveryFee,
     discountTotal: o.discountTotal,
+    deliveryBonus: o.deliveryBonus,
+    storeCreditUsed: o.storeCreditUsed,
     address: address
       ? {
           label: address.label,

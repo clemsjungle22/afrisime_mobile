@@ -40,13 +40,16 @@ const optionalNumber = z.preprocess(
 
 // ─── Champs produit ──────────────────────────────────────────────────────────
 
+/** Valeurs saisies (avant validation : la fourchette de prix peut être absente). */
+type ProductValues = z.input<typeof AdminProductInput>;
+
 function ProductFields({
   register,
   errors,
   categories,
 }: {
-  register: UseFormRegister<AdminProductInput>;
-  errors: FieldErrors<AdminProductInput>;
+  register: UseFormRegister<ProductValues>;
+  errors: FieldErrors<ProductValues>;
   categories: AdminCategory[];
 }) {
   return (
@@ -90,6 +93,23 @@ function ProductFields({
           « Promo », « Rupture » et « Sur commande » s’affichent automatiquement.
         </p>
       </fieldset>
+      <TextInput
+        label="Prix le plus bas affiché"
+        type="number"
+        min={1}
+        suffix="FCFA"
+        hint="Fourchette montrée sur la fiche du produit (laisser vide : aucune)."
+        {...register('priceMin', { setValueAs: (v) => (v === '' || v === null ? null : Number(v)) })}
+        error={errors.priceMin?.message}
+      />
+      <TextInput
+        label="Prix le plus haut affiché"
+        type="number"
+        min={1}
+        suffix="FCFA"
+        {...register('priceMax', { setValueAs: (v) => (v === '' || v === null ? null : Number(v)) })}
+        error={errors.priceMax?.message}
+      />
       <TextArea
         label="Description"
         {...register('description')}
@@ -215,6 +235,8 @@ export function ProductCreateForm({
         description: '',
         badges: [],
         isActive: true,
+        priceMin: null,
+        priceMax: null,
       },
       variant: {
         label: '',
@@ -266,8 +288,8 @@ export function ProductCreateForm({
       <section className="rounded-2xl border border-line bg-white p-5">
         <h2 className="mb-4 text-base font-bold">Produit</h2>
         <ProductFields
-          register={prefixRegister<AdminProductInput>(register, 'product')}
-          errors={(errors.product ?? {}) as FieldErrors<AdminProductInput>}
+          register={prefixRegister<ProductValues>(register, 'product')}
+          errors={(errors.product ?? {}) as FieldErrors<ProductValues>}
           categories={categories}
         />
         <div className="mt-5 border-t border-line pt-5">
@@ -375,7 +397,7 @@ export function ProductEditForm({
   const router = useRouter();
   const { error, setError } = useServerError();
   const [saved, setSaved] = useState(false);
-  const { register, handleSubmit, formState } = useForm<AdminProductInput>({
+  const { register, handleSubmit, formState } = useForm<ProductValues, unknown, AdminProductInput>({
     resolver: zodResolver(AdminProductInput),
     defaultValues: {
       name: product.name,
@@ -385,6 +407,8 @@ export function ProductEditForm({
       description: product.description,
       badges: product.badges,
       isActive: product.isActive,
+      priceMin: product.priceMin,
+      priceMax: product.priceMax,
     },
   });
   const submit = handleSubmit(async (values) => {

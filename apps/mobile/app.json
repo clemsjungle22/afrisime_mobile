@@ -44,6 +44,13 @@
           "color": "#0f3d2e",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AfriSime utilise vos photos pour vérifier votre identité, si vous le demandez.",
+          "cameraPermission": "AfriSime utilise l’appareil photo pour photographier votre pièce d’identité et votre visage."
+        }
       ]
     ],
     "experiments": {

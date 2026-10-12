@@ -6,7 +6,6 @@ import {
   PAYMENT_CONFIRM_MS,
   PAYMENT_DEADLINE_MS,
   PAYMENT_TTL_MS,
-  cancelOrder,
   createOrder,
   createPayment,
   getOrder,
@@ -53,6 +52,7 @@ function makeQuote(paymentMethod: Quote['paymentMethod'], fulfillment: Quote['fu
     subtotal: 9500,
     deliveryFee: 500,
     discountTotal: 0,
+    deliveryBonus: 0,
     storeCreditApplied: 0,
     total: 10000,
     currency: 'XOF',
@@ -196,22 +196,6 @@ describe('cycle de vie', () => {
   it('non payée à temps → annulée automatiquement', async () => {
     const order = await createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0);
     expect(await getOrder(USER, order.id, T0 + PAYMENT_DEADLINE_MS + 1)).toMatchObject({ status: 'cancelled', payable: false });
-  });
-
-  it('annulation : possible si confirmée, refusée en préparation (RB-009)', async () => {
-    const a = await createOrder(USER, { quoteId: makeQuote('cash_on_delivery').quoteId }, 'k1', T0);
-    expect(await cancelOrder(USER, a.id, T0 + 1000)).toMatchObject({ status: 'cancelled', cancellable: false });
-
-    const b = await createOrder(USER, { quoteId: makeQuote('cash_on_delivery').quoteId }, 'k2', T0);
-    expect(await rejection(cancelOrder(USER, b.id, T0 + 3 * 60_000))).toMatchObject({ code: 'ORDER_NOT_CANCELLABLE' });
-  });
-
-  it('annulation d’une commande payée → remboursement', async () => {
-    const order = await createOrder(USER, { quoteId: makeQuote('mixx').quoteId }, 'k', T0);
-    const intent = await createPayment(USER, { orderId: order.id, method: 'mixx', phone: '+22890123456' }, 'p', T0);
-    await getPayment(USER, intent.id, T0 + PAYMENT_CONFIRM_MS);
-    const cancelled = await cancelOrder(USER, order.id, T0 + PAYMENT_CONFIRM_MS + 1000);
-    expect(cancelled).toMatchObject({ status: 'refunded', payment: { status: 'refunded' } });
   });
 
   it('commander à nouveau : lignes revalidées aux prix actuels', async () => {

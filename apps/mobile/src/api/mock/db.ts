@@ -2,6 +2,7 @@ import { SEED_ADDRESS, SEED_USER } from '@afrisime/fixtures';
 import type {
   Address,
   CarnetStatus,
+  KycDocType,
   CartLine,
   ContributionStatus,
   Order,
@@ -39,6 +40,14 @@ export type MockDb = {
   credit: Record<string, MockCreditState>;
   /** Notifications déjà lues par utilisateur (identifiants). */
   notificationsRead: Record<string, string[]>;
+  /** Vérification d'identité par utilisateur. */
+  kyc: Record<string, MockKyc>;
+};
+
+export type MockKyc = {
+  status: 'pending' | 'verified' | 'rejected';
+  docType: KycDocType;
+  submittedAt: string;
 };
 
 export type MockDebt = {
@@ -155,6 +164,7 @@ function emptyDb(): MockDb {
     storeCredit: {},
     credit: {},
     notificationsRead: {},
+    kyc: {},
   };
 }
 

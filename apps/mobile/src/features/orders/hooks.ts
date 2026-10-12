@@ -93,20 +93,6 @@ export function usePlaceOrder() {
   return { place, isPending: mutation.isPending, error: mutation.error, reset: mutation.reset };
 }
 
-export function useCancelOrder(orderId: string) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: () => ordersApi.cancelOrder(orderId),
-    onSuccess: (order) => {
-      client.setQueryData(ordersKeys.detail(order.id), order);
-      void client.invalidateQueries({ queryKey: [...ordersKeys.all, 'list'] });
-      // Annulée : sa dette de crédit est effacée, l'avoir éventuel rendu.
-      void client.invalidateQueries({ queryKey: creditKeys.account });
-      void client.invalidateQueries({ queryKey: carnetsKeys.storeCredit });
-    },
-  });
-}
-
 export function useReorder(orderId: string) {
   const addValidated = useCart((s) => s.addValidated);
   return useMutation({

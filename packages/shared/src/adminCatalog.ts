@@ -133,7 +133,18 @@ export const AdminProductInput = z.object({
   description: z.string().trim().max(1000),
   badges: z.array(EditorialBadge).max(3),
   isActive: z.boolean(),
-});
+  /** Fourchette de prix affichée sur la fiche (les deux, ou aucune). */
+  priceMin: Money.positive().nullable().default(null),
+  priceMax: Money.positive().nullable().default(null),
+})
+  .refine((v) => (v.priceMin === null) === (v.priceMax === null), {
+    message: 'Indiquez le prix le plus bas ET le plus haut (ou aucun des deux)',
+    path: ['priceMax'],
+  })
+  .refine((v) => v.priceMin === null || v.priceMax === null || v.priceMin <= v.priceMax, {
+    message: 'Le prix le plus haut doit être supérieur ou égal au plus bas',
+    path: ['priceMax'],
+  });
 export type AdminProductInput = z.infer<typeof AdminProductInput>;
 
 /** Format créé avec son prix public et son stock de départ. */
@@ -305,6 +316,8 @@ export const AdminProductDetail = z.object({
   description: z.string(),
   badges: z.array(EditorialBadge),
   isActive: z.boolean(),
+  priceMin: Money.nullable(),
+  priceMax: Money.nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   variants: z.array(AdminVariant),

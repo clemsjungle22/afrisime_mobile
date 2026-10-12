@@ -14,7 +14,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
+import { CART_NEXT_SPACE, FLOATING_TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { ErrorState, FadeIn, OfflineBanner, Pattern, Skeleton, Text } from '@/components/ui';
 import { useMe } from '@/features/auth/hooks';
 import { useSession } from '@/features/auth/session';
@@ -83,7 +83,7 @@ export function HomeScreen() {
       <ScrollView
         // L'élément 1 (barre de recherche) s'accroche sous l'en-tête : le contenu défile DESSOUS.
         stickyHeaderIndices={[1]}
-        contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE + theme.spacing.lg }}
+        contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_SPACE + CART_NEXT_SPACE + theme.spacing.lg }}
         refreshControl={
           <RefreshControl
             refreshing={home.isRefetching}

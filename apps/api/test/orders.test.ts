@@ -2,7 +2,6 @@ import { DELIVERY_RULES, SEED_ADDRESS, mockOnboardingOptions, mockZones } from '
 import { type CartValidateLine, type QuoteRequestInput, buildDeliveryOptions } from '@afrisime/shared';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { POST as cancelRoute } from '@/app/v1/orders/[id]/cancel/route';
 import { GET as orderRoute } from '@/app/v1/orders/[id]/route';
 import { POST as createOrderRoute } from '@/app/v1/orders/route';
 import { POST as createPaymentRoute } from '@/app/v1/payments/route';
@@ -16,7 +15,8 @@ import * as s from '@/server/db/schema';
 import { seedDatabase } from '@/server/db/seed';
 import { resetEnvCache } from '@/server/env';
 import { tick } from '@/server/jobs';
-import { cancelOrder, createOrder, getOrder, listOrders, reorder } from '@/server/orders/service';
+import { createOrder, getOrder, listOrders, reorder } from '@/server/orders/service';
+import { cancelAsTeam } from './cancel';
 import { PAYMENT_DEADLINE_MS } from '@/server/orders/state';
 import { signWebhook, SIGNATURE_HEADER } from '@/server/payments/provider';
 import { createPayment, getPayment, handleWebhook } from '@/server/payments/service';
@@ -125,7 +125,9 @@ describe('options de livraison et devis', () => {
 
   it('devis : frais de zone, livraison offerte au-delà du seuil', async () => {
     const c = await newCustomer();
-    expect(await quoteFor(c)).toMatchObject({ subtotal: 9500, deliveryFee: 500, total: 10000, fulfillmentSummary: 'Livraison · Maison — Tokoin' });
+    // Payé par Mobile Money : bonus de 500 F déduit des frais de livraison (jamais plus que les frais).
+    expect(await quoteFor(c)).toMatchObject({ subtotal: 9500, deliveryFee: 500, deliveryBonus: 500, total: 9500, fulfillmentSummary: 'Livraison · Maison — Tokoin' });
+    expect(await quoteFor(c, { paymentMethod: 'cash_on_delivery' })).toMatchObject({ deliveryFee: 500, deliveryBonus: 0, total: 10000 });
     const big = await quoteFor(c, { lines: [line(RIZ_5KG, 11, 4750)] });
     expect(big).toMatchObject({ subtotal: 52250, deliveryFee: 0, total: 52250 });
   });
@@ -156,7 +158,7 @@ describe('commande', () => {
     expect(order).toMatchObject({
       status: 'pending_payment',
       payable: true,
-      cancellable: true,
+      cancellable: false,
       itemCount: 2,
       total: q.total,
       payment: { method: 'mixx', status: 'initiated' },
@@ -226,15 +228,13 @@ describe('commande', () => {
     expect(await sellable('var_mais-grain-blanc_1')).toBe(0);
   });
 
-  it("impossible de voir ou d'annuler la commande d'un autre client (404)", async () => {
+  it("impossible de voir la commande d'un autre client (404)", async () => {
     const c = await newCustomer();
     const other = await newCustomer();
     const q = await quoteFor(c);
     const order = await createOrder(t.db, c.customer, q.quoteId, 'cle-isole-00001', NOW);
     const params = { id: order.id };
     expect((await call(orderRoute, 'GET', `/v1/orders/${order.id}`, { token: other.token, params })).status).toBe(404);
-    const cancel = await call(cancelRoute, 'POST', `/v1/orders/${order.id}/cancel`, { token: other.token, params, body: { reason: null } });
-    expect(cancel.status).toBe(404);
   });
 });
 
@@ -291,7 +291,7 @@ describe('paiement Mobile Money (simulé)', () => {
   it('paiement reçu après l’annulation : remboursé automatiquement', async () => {
     const { c, order } = await pendingOrder('cle-paie-tard01');
     const intent = await createPayment(t.db, c.customer.id, { orderId: order.id, method: 'mixx', phone: '+22890000009' }, 'cle-pay-tard-001', NOW);
-    await cancelOrder(t.db, c.customer.id, order.id, null, at(1000));
+    await cancelAsTeam(t.db, order.id, at(1000));
     expect((await getPayment(t.db, c.customer.id, intent.id, at(6000))).status).toBe('refunded');
     expect((await getOrder(t.db, c.customer.id, order.id, at(6000))).status).toBe('refunded');
   });
@@ -330,26 +330,25 @@ describe('paiement Mobile Money (simulé)', () => {
 });
 
 describe('annulation, suivi, recommande', () => {
-  it('annuler une commande payée : remboursée, stock libéré', async () => {
+  it('commande payée annulée par l’équipe : remboursée, stock libéré', async () => {
     const c = await newCustomer();
     const before = await sellable(RIZ_50KG);
     const q = await quoteFor(c, { lines: [line(RIZ_50KG, 1, 43500)] });
     const order = await createOrder(t.db, c.customer, q.quoteId, 'cle-annule-0001', NOW);
     const p = await createPayment(t.db, c.customer.id, { orderId: order.id, method: 'mixx', phone: '+22890000009' }, 'cle-annule-pay01', NOW);
     await getPayment(t.db, c.customer.id, p.id, at(6000));
-    const cancelled = await cancelOrder(t.db, c.customer.id, order.id, 'Erreur de quantité', at(7000));
+    await cancelAsTeam(t.db, order.id, at(7000));
+    const cancelled = await getOrder(t.db, c.customer.id, order.id, at(7000));
     expect(cancelled).toMatchObject({ status: 'refunded', cancellable: false, payment: { status: 'refunded' } });
     expect(cancelled.history.map((h) => h.status).slice(-2)).toEqual(['cancelled', 'refunded']);
     expect(await sellable(RIZ_50KG)).toBe(before);
   });
 
-  it('en préparation : annulation refusée', async () => {
-    process.env.ORDER_SIMULATION = 'true';
-    resetEnvCache();
+  it('le client ne peut jamais annuler lui-même (il passe par son agence)', async () => {
     const c = await newCustomer();
     const q = await quoteFor(c, { paymentMethod: 'cash_on_delivery' });
     const order = await createOrder(t.db, c.customer, q.quoteId, 'cle-prepa-00001', NOW);
-    await expect(cancelOrder(t.db, c.customer.id, order.id, null, at(3 * 60_000))).rejects.toMatchObject({ code: 'ORDER_NOT_CANCELLABLE' });
+    expect(order).toMatchObject({ status: 'confirmed', cancellable: false });
   });
 
   it('simulation (développement) : préparée, en route, livrée ; payée à la livraison ; stock consommé', async () => {
@@ -381,7 +380,7 @@ describe('annulation, suivi, recommande', () => {
     const kept = await createOrder(t.db, c.customer, q1.quoteId, 'cle-liste-00001', NOW);
     const q2 = await quoteFor(c, { paymentMethod: 'cash_on_delivery' });
     const gone = await createOrder(t.db, c.customer, q2.quoteId, 'cle-liste-00002', NOW);
-    await cancelOrder(t.db, c.customer.id, gone.id, null, NOW);
+    await cancelAsTeam(t.db, gone.id, NOW);
     const active = await listOrders(t.db, c.customer.id, 'active', undefined, NOW);
     const history = await listOrders(t.db, c.customer.id, 'history', undefined, NOW);
     expect(active.items.map((o) => o.id)).toEqual([kept.id]);

@@ -193,6 +193,7 @@ export async function loadCatalog(
       imageUrl: p.imageUrl,
       badges: badgesOf(p.badges, variants),
       ...summarizeVariants(variants),
+      priceRange: p.priceMin !== null && p.priceMax !== null ? { min: p.priceMin, max: p.priceMax } : null,
       color: category.color,
       description: p.description,
       categoryId: category.slug,

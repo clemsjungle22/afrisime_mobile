@@ -32,6 +32,7 @@ export default function AppLayout() {
       <Stack.Screen name="avoir" options={{ title: 'Mon avoir' }} />
       <Stack.Screen name="credit" options={{ title: 'Mon crédit' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
+      <Stack.Screen name="identite" options={{ title: 'Mon identité' }} />
       <Stack.Screen name="recevoir-pack/[id]" options={{ title: 'Recevoir mon pack' }} />
     </Stack>
   );

@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui';
+import { CartNextButton } from '@/features/cart/components/CartNextButton';
 import { useCartCount } from '@/features/cart/store';
 import { haptics } from '@/lib/haptics';
 import { palette, useTheme } from '@/theme';
@@ -32,6 +33,10 @@ const ICONS: Record<string, [IconName, IconName]> = {
 
 /** Hauteur réservée en bas des écrans d'onglets (barre flottante + marge). */
 export const FLOATING_TAB_BAR_SPACE = 96;
+/** Place en plus sur les écrans d'achat, où le bouton « Suivant » s'affiche au-dessus de la barre. */
+export const CART_NEXT_SPACE = 64;
+/** Onglets d'achat : le bouton « Suivant » y reste visible tant que le panier n'est pas vide. */
+const SHOPPING_TABS = new Set(['index', 'boutique']);
 
 const BAR_PADDING = 6;
 /** Ressort de la pastille : vif, avec un léger dépassement (sensation « organique »). */
@@ -135,6 +140,11 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      {SHOPPING_TABS.has(state.routes[state.index]?.name ?? '') ? (
+        <View style={{ marginBottom: 8 }}>
+          <CartNextButton compact />
+        </View>
+      ) : null}
       <View
         onLayout={(e: LayoutChangeEvent) => setBarWidth(e.nativeEvent.layout.width)}
         style={[

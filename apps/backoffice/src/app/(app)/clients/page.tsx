@@ -80,7 +80,7 @@ export default async function CustomersPage({
                   'min-w-6 rounded-full px-1.5 py-px text-center text-xs tabular-nums',
                   active
                     ? 'bg-white/15'
-                    : n > 0 && filter === 'pending_pro'
+                    : n > 0 && (filter === 'pending_pro' || filter === 'kyc_pending')
                       ? 'bg-accent-100 text-accent-600'
                       : 'bg-brand-50',
                 )}
@@ -134,6 +134,8 @@ export default async function CustomersPage({
               ? 'Aucun client ne correspond à cette recherche.'
               : query.filter === 'pending_pro'
                 ? 'Aucun profil pro à valider. Tout est à jour.'
+                : query.filter === 'kyc_pending'
+                  ? 'Aucune identité à vérifier. Tout est à jour.'
                 : 'Aucun client ici.'}
           </p>
         ) : (
@@ -186,6 +188,8 @@ export default async function CustomersPage({
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-ink">{c.customerType?.label ?? 'Non renseigné'}</span>
                         {c.typePending ? <Badge tone="accent">À valider</Badge> : null}
+                        {c.kycStatus === 'pending' ? <Badge tone="accent">Identité à vérifier</Badge> : null}
+                        {c.kycStatus === 'verified' ? <Badge tone="success">Identité vérifiée</Badge> : null}
                         {c.status === 'blocked' ? <Badge tone="danger">Bloqué</Badge> : null}
                       </div>
                       <p

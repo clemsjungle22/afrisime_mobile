@@ -5,14 +5,14 @@ import {
   PRICE_SEGMENT_LABELS,
   type PriceSegment,
 } from '@afrisime/shared';
-import { BadgeCheck, Ban, LockOpen, Tags, X } from 'lucide-react';
+import { BadgeCheck, Ban, IdCard, LockOpen, Tags, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, type ReactNode, useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectInput, TextArea } from '@/components/ui/form';
-import { type Result, blockAction, pricingAction, reviewProAction } from './actions';
+import { type Result, blockAction, kycAction, pricingAction, reviewProAction } from './actions';
 
 /** Boutons de la fiche client, selon ce que le serveur autorise pour ce compte et ce rôle. */
 export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail }) {
@@ -50,6 +50,37 @@ export function CustomerActions({ customer: c }: { customer: AdminCustomerDetail
             reasonLabel="Motif du refus"
             reasonHint="Gardé dans l’historique du compte (non montré au client)."
             onSubmit={(reason) => reviewProAction(c.id, { decision: 'reject', reason })}
+          />
+        </>
+      ) : null}
+      {can('review_kyc') ? (
+        <>
+          <ConfirmDialog
+            version={version}
+            title="Valider l’identité ?"
+            description="Vérifiez que la pièce est lisible, valide, et que le selfie correspond. Le client pourra commander sans plafond."
+            trigger={
+              <>
+                <IdCard className="size-4" aria-hidden /> Valider l’identité
+              </>
+            }
+            submitLabel="Valider"
+            onSubmit={() => kycAction(c.id, { decision: 'approve' })}
+          />
+          <ConfirmDialog
+            version={version}
+            title="Refuser le dossier d’identité ?"
+            description="Le client est prévenu dans l’app et peut envoyer un nouveau dossier."
+            variant="secondary"
+            trigger={
+              <>
+                <X className="size-4" aria-hidden /> Refuser l’identité
+              </>
+            }
+            submitLabel="Refuser le dossier"
+            reasonLabel="Motif (montré au client)"
+            reasonHint="Exemple : photo floue, pièce expirée, selfie illisible."
+            onSubmit={(reason) => kycAction(c.id, { decision: 'reject', reason })}
           />
         </>
       ) : null}

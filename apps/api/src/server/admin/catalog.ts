@@ -357,6 +357,8 @@ export async function getProduct(
     description: p.description,
     badges: p.badges.filter((b): b is EditorialBadge => EditorialBadgeSchema.safeParse(b).success),
     isActive: p.isActive,
+    priceMin: p.priceMin,
+    priceMax: p.priceMax,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     variants: variants.map((v) => toAdminVariant(v, prices, levels, agencies, now)),

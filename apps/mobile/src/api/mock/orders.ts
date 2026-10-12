@@ -64,11 +64,6 @@ export const mockOrdersApi: OrdersApi = {
       signal,
     );
   },
-  cancelOrder(orderId) {
-    return read(() =>
-      withAuth((token) => simulate(Order, async () => server.cancelOrder((await requireUser(token)).id, orderId))),
-    );
-  },
   reorder(orderId) {
     return read(() =>
       withAuth((token) =>

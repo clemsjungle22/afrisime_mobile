@@ -27,6 +27,8 @@ export const ApiErrorCode = z.enum([
   'UNAUTHENTICATED',
   // Compte client suspendu par l'équipe : connexion refusée.
   'ACCOUNT_SUSPENDED',
+  // Achats au-delà du seuil sans identité vérifiée (KYC).
+  'KYC_REQUIRED',
   'FORBIDDEN',
   'NOT_FOUND',
   'RATE_LIMITED',

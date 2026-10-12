@@ -235,7 +235,27 @@ function ProductContent({ product }: { product: ProductDetail }) {
                 </>
               ) : null}
             </View>
-            {range && product.variantsCount > 1 ? (
+            {product.priceRange ? (
+              <View
+                accessibilityLabel={`Prix de ${formatFCFA(product.priceRange.min)} à ${formatFCFA(product.priceRange.max)}`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.sm,
+                  alignSelf: 'flex-start',
+                  paddingVertical: theme.spacing.xs,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.colors.primarySoft,
+                }}
+              >
+                <Ionicons name="pricetags-outline" size={16} color={theme.colors.primary} />
+                <Text variant="caption" color="onPrimarySoft">
+                  Prix : de <Text variant="bodyStrong" color="onPrimarySoft">{formatFCFA(product.priceRange.min)}</Text> à{' '}
+                  <Text variant="bodyStrong" color="onPrimarySoft">{formatFCFA(product.priceRange.max)}</Text>
+                </Text>
+              </View>
+            ) : range && product.variantsCount > 1 ? (
               <Text variant="caption" color="textMuted">
                 {product.variantsCount} formats · de {range}
               </Text>

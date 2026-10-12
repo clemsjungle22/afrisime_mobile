@@ -346,6 +346,7 @@ async function redeemMock(token: string | null, carnetId: string, body: RedeemBo
     subtotal: carnet.price,
     deliveryFee: fee,
     discountTotal: carnet.price,
+    deliveryBonus: 0,
     storeCreditApplied: 0,
     total: fee,
     currency: 'XOF',

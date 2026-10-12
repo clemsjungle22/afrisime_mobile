@@ -12,6 +12,7 @@ import { withAuth, withRetry } from '../client';
 import { requireUser } from './authServer';
 import { buildQuote, deliveryOptions, withZone } from './checkoutEngine';
 import { mockCheckoutCredit } from './credit';
+import { assertMockKycAllows } from './kyc';
 import { mockProducts, mockStock } from '@afrisime/fixtures';
 import { loadDb, saveDb } from './db';
 import { registerQuote } from './orderServer';
@@ -124,6 +125,8 @@ export const mockCheckoutApi: CheckoutApi = {
               storeCreditBalance: creditBalance(await loadDb(), user.id),
               credit: mockCheckoutCredit(await loadDb(), user.id),
             });
+            // Identité : prévenu dès le devis si la commande ferait dépasser le seuil sans vérification.
+            assertMockKycAllows(await loadDb(), user.id, quote.total);
             // Le serveur garde le devis signé : seule une commande sur ce devis sera acceptée.
             registerQuote(user.id, quote);
             return quote;

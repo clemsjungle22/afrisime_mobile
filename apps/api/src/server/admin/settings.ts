@@ -77,6 +77,8 @@ const RULE_KEYS = {
   minOrder: 'delivery.min_order',
   cashOnDeliveryMax: 'payment.cod_max',
   leadTimeMinutes: 'checkout.lead_time_min',
+  mobileMoneyBonus: 'payment.momo_bonus',
+  kycThreshold: 'kyc.threshold_30d',
 } as const satisfies Record<keyof AdminCheckoutRules, string>;
 
 const RULE_DESCRIPTIONS: Record<keyof AdminCheckoutRules, string> = {
@@ -84,6 +86,8 @@ const RULE_DESCRIPTIONS: Record<keyof AdminCheckoutRules, string> = {
   minOrder: 'Sous-total minimum pour être livré (FCFA)',
   cashOnDeliveryMax: 'Plafond du paiement à la livraison (FCFA)',
   leadTimeMinutes: 'Délai minimum avant le début d’un créneau (minutes)',
+  mobileMoneyBonus: 'Bonus déduit des frais de livraison pour un paiement Mobile Money (FCFA)',
+  kycThreshold: 'Achats sur 30 jours au-delà desquels l’identité doit être vérifiée (FCFA, 0 = jamais)',
 };
 
 export async function getDeliverySettings(db: Db): Promise<AdminDeliverySettings> {
@@ -114,6 +118,8 @@ export async function getDeliverySettings(db: Db): Promise<AdminDeliverySettings
       minOrder: rules.minOrderAmount,
       cashOnDeliveryMax: rules.cashOnDeliveryMax,
       leadTimeMinutes: Math.round(rules.leadTimeMs / 60_000),
+      mobileMoneyBonus: rules.mobileMoneyBonus ?? 0,
+      kycThreshold: rules.kycThreshold ?? 0,
     },
   };
 }

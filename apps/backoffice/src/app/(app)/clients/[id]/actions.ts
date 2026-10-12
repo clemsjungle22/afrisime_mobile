@@ -2,6 +2,7 @@
 
 import {
   AdminCustomerDetail,
+  type AdminKycReviewBody,
   type AdminPricingBody,
   type AdminReviewProBody,
 } from '@afrisime/shared';
@@ -35,6 +36,10 @@ async function run(id: string, path: string, body: object): Promise<Result> {
 
 export async function reviewProAction(id: string, body: AdminReviewProBody) {
   return run(id, 'review', body);
+}
+
+export async function kycAction(id: string, body: AdminKycReviewBody) {
+  return run(id, 'kyc', body);
 }
 
 export async function pricingAction(id: string, body: AdminPricingBody) {

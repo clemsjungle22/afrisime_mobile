@@ -11,8 +11,6 @@ import { emit } from '../outbox';
 
 /** Une commande payée en ligne et non payée dans ce délai est annulée (stock libéré). */
 export const PAYMENT_DEADLINE_MS = 30 * 60_000;
-/** Statuts dans lesquels le client peut encore annuler (RB-009). */
-export const CANCELLABLE: ReadonlySet<OrderStatus> = new Set(['pending_payment', 'payment_failed', 'confirmed']);
 export const AWAITING_PAYMENT: OrderStatus[] = ['pending_payment', 'payment_failed'];
 export const IN_PROGRESS: OrderStatus[] = ['confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery'];
 

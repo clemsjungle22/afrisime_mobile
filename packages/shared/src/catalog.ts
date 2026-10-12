@@ -55,6 +55,8 @@ export const ProductSummary = z.object({
   priceFrom: Money.nullable(),
   priceTo: Money.nullable(),
   discountPercent: z.number().int().min(0).max(100).nullable(),
+  /** Fourchette de prix affichée, saisie par l'équipe (null : pas de fourchette). */
+  priceRange: z.object({ min: Money, max: Money }).nullable().default(null),
   defaultVariant: Variant,
   variantsCount: z.number().int().positive(),
   /** Couleur du rayon, utilisée pour la vignette quand il n'y a pas de photo. */

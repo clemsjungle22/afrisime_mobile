@@ -66,6 +66,8 @@ export const Order = OrderSummary.extend({
   subtotal: Money,
   deliveryFee: Money,
   discountTotal: Money,
+  /** Bonus Mobile Money déduit des frais de livraison. */
+  deliveryBonus: Money.default(0),
   /** Avoir utilisé pour cette commande (rendu si elle est annulée). */
   storeCreditUsed: Money.default(0),
   currency: z.literal('XOF'),

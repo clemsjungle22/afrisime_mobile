@@ -162,20 +162,22 @@ describe('livraison', () => {
 
   it('règles : minimum de commande et livraison offerte appliqués au checkout', async () => {
     const res = await send(rulesRoute, 'PUT', '/v1/admin/settings/delivery/rules', {
-      body: { freeAbove: 30_000, minOrder: 5_000, cashOnDeliveryMax: 80_000, leadTimeMinutes: 120 },
+      body: { freeAbove: 30_000, minOrder: 5_000, cashOnDeliveryMax: 80_000, leadTimeMinutes: 120, mobileMoneyBonus: 300, kycThreshold: 200_000 },
     });
     expect(res.body.rules).toEqual({
       freeAbove: 30_000,
       minOrder: 5_000,
       cashOnDeliveryMax: 80_000,
       leadTimeMinutes: 120,
+      mobileMoneyBonus: 300,
+      kycThreshold: 200_000,
     });
     const { customer, address } = await customerIn('Tokoin');
     const options = await getDeliveryOptions(t.db, customer, address.id);
     expect(options.delivery).toMatchObject({ freeAbove: 30_000, minOrderAmount: 5_000 });
     // Montant négatif refusé.
     const bad = await send(rulesRoute, 'PUT', '/v1/admin/settings/delivery/rules', {
-      body: { freeAbove: -1, minOrder: 0, cashOnDeliveryMax: 0, leadTimeMinutes: 0 },
+      body: { freeAbove: -1, minOrder: 0, cashOnDeliveryMax: 0, leadTimeMinutes: 0, mobileMoneyBonus: 0, kycThreshold: 0 },
     });
     expect(bad.status).toBe(400);
   });

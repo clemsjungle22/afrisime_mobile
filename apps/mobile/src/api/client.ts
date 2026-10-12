@@ -221,3 +221,32 @@ export function request<S extends z.ZodType>(
     { canRetry, signal: options.signal },
   );
 }
+
+/**
+ * Envoi d'un formulaire multipart (photos) : authentifié, sans nouvel essai automatique (envoi lourd,
+ * relancé par l'utilisateur). Pas d'en-tête Content-Type : le téléphone y ajoute la frontière du formulaire.
+ */
+export function uploadForm<S extends z.ZodType>(path: string, form: FormData, schema: S, timeoutMs = 120_000): Promise<z.infer<S>> {
+  return withAuth(async (token) => {
+    const url = buildUrl(path);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (apiConfig.baseUrl.includes('ngrok')) headers['ngrok-skip-browser-warning'] = 'true';
+    let response: Response;
+    try {
+      response = await fetch(url, { method: 'POST', headers, body: form, signal: controller.signal });
+    } catch {
+      throw new ApiError({ code: controller.signal.aborted ? 'TIMEOUT' : 'NETWORK_ERROR', message: networkErrorMessage });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!response.ok) throw await toApiError(response);
+    const result = schema.safeParse(await response.json().catch(() => undefined));
+    if (!result.success) {
+      throw new ApiError({ code: 'INVALID_RESPONSE', message: 'Réponse inattendue du serveur.', status: response.status });
+    }
+    return result.data;
+  });
+}

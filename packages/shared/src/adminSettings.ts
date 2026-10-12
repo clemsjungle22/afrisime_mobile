@@ -60,6 +60,10 @@ export const AdminCheckoutRules = z.object({
     .int()
     .min(0)
     .max(7 * 24 * 60),
+  /** Bonus déduit des frais de livraison quand le client paie par Mobile Money (0 : aucun). */
+  mobileMoneyBonus: z.number().int().min(0).max(1_000_000),
+  /** Achats sur 30 jours au-delà desquels l'identité doit être vérifiée (0 : pas de contrôle). */
+  kycThreshold: z.number().int().min(0).max(1_000_000_000),
 });
 export type AdminCheckoutRules = z.infer<typeof AdminCheckoutRules>;
 

@@ -91,9 +91,11 @@ describe('options de livraison', () => {
 });
 
 describe('devis', () => {
-  it('total = sous-total + frais, conforme au contrat, entier', () => {
+  it('total = sous-total + frais − bonus Mobile Money, conforme au contrat, entier', () => {
     const q = QuoteSchema.parse(quote({}));
-    expect(q).toMatchObject({ subtotal: 9500, deliveryFee: 500, total: 10000, quoteId: 'qte_1' });
+    expect(q).toMatchObject({ subtotal: 9500, deliveryFee: 500, deliveryBonus: 500, total: 9500, quoteId: 'qte_1' });
+    // Paiement à la livraison : pas de bonus.
+    expect(quote({ paymentMethod: 'cash_on_delivery' })).toMatchObject({ deliveryBonus: 0, total: 10000 });
     expect(Date.parse(q.expiresAt) - NOW.getTime()).toBe(DELIVERY_RULES.quoteTtlMs);
   });
 

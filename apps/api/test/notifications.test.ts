@@ -12,7 +12,8 @@ import { setDb } from '@/server/db/client';
 import * as s from '@/server/db/schema';
 import { seedDatabase } from '@/server/db/seed';
 import { listNotifications } from '@/server/notifications/service';
-import { cancelOrder, createOrder } from '@/server/orders/service';
+import { createOrder } from '@/server/orders/service';
+import { cancelAsTeam } from './cancel';
 import { transition } from '@/server/orders/state';
 import { SIM_CONFIRM_MS } from '@/server/payments/provider';
 import { call } from './call';
@@ -66,7 +67,7 @@ async function order(c: Awaited<ReturnType<typeof customer>>) {
 }
 
 describe('notifications', () => {
-  it('étapes de commande : une notification par étape, lien vers la commande ; rien pour sa propre annulation', async () => {
+  it('étapes de commande : une notification par étape, lien vers la commande ; annulation par l’équipe signalée', async () => {
     const c = await customer();
     const o = await order(c);
     await t.db.transaction(async (tx) => {
@@ -103,8 +104,11 @@ describe('notifications', () => {
     expect(res.body.items[1]).toMatchObject({ title: 'Commande en préparation' });
 
     const other = await order(c);
-    await cancelOrder(t.db, c.id, other.id, null);
-    expect((await listNotifications(t.db, c.id)).items).toHaveLength(2);
+    await cancelAsTeam(t.db, other.id);
+    expect((await listNotifications(t.db, c.id)).items[0]).toMatchObject({
+      title: 'Commande annulée',
+      link: { type: 'order', orderId: other.id },
+    });
   });
 
   it('marquer lues : une seule ou toutes ; chacun ne voit que les siennes', async () => {
