@@ -13,6 +13,13 @@ const consoleSender: SmsSender = {
   },
 };
 
+/** Production : aucun fournisseur branché. Les SMS ne partent pas, un avertissement est loggé. */
+const disabledSender: SmsSender = {
+  async send(to) {
+    log.warn('SMS non envoyé : aucun fournisseur configuré (SMS_PROVIDER=disabled)', { to });
+  },
+};
+
 let override: SmsSender | null = null;
 
 /** Tests : capture les SMS au lieu de les afficher. */
@@ -25,6 +32,8 @@ export function smsSender(): SmsSender {
   switch (env().SMS_PROVIDER) {
     case 'console':
       return consoleSender;
+    case 'disabled':
+      return disabledSender;
   }
 }
 

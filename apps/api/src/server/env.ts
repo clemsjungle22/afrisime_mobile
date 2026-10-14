@@ -13,7 +13,8 @@ const Env = z.object({
   AUTH_SECRET: z.string().min(32, 'AUTH_SECRET doit faire au moins 32 caractères'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   /** Envoi des SMS : « console » = code affiché dans le terminal du serveur (développement uniquement). */
-  SMS_PROVIDER: z.enum(['console']).default('console'),
+  /** Envoi des SMS : « console » = code affiché dans le terminal du serveur (développement uniquement). */
+SMS_PROVIDER: z.enum(['console', 'disabled']).default('console'),
   /** Code OTP fixe pour les tests manuels (ex. 123456). Refusé en production. */
   OTP_DEV_CODE: z
     .string()
@@ -21,7 +22,8 @@ const Env = z.object({
     .optional()
     .or(z.literal('').transform(() => undefined)),
   /** Prestataire de paiement. « simulated » : paiements simulés (développement uniquement). */
-  PAYMENT_PROVIDER: z.enum(['simulated']).default('simulated'),
+  /** Prestataire de paiement. « simulated » : paiements simulés (développement uniquement). */
+PAYMENT_PROVIDER: z.enum(['simulated', 'disabled']).default('simulated'),
   /** Secret de signature des webhooks de paiement. Par défaut, dérivé d'AUTH_SECRET (développement). */
   PAYMENT_WEBHOOK_SECRET: z.string().min(32).optional().or(z.literal('').transform(() => undefined)),
   /** Développement : les commandes avancent seules (préparation, livraison…). Interdit en production. */
