@@ -1,19 +1,21 @@
-import { isSafeKey, mediaStorage } from '@/server/media';
+import { NextResponse } from 'next/server';
 
-/**
- * Photos du catalogue. Chaque photo a un nom unique (remplacer = nouveau nom) :
- * elle peut être gardée en cache un an par le téléphone et par un CDN.
- */
-export async function GET(_req: Request, ctx: { params: Promise<{ key: string[] }> }) {
-  const key = (await ctx.params).key.join('/');
-  // Les pièces d'identité (kyc/) ne sont jamais publiques : adresses signées seulement (/v1/kyc-photo).
-  const file = isSafeKey(key) && !key.startsWith('kyc/') ? await mediaStorage().get(key) : null;
-  if (!file) return new Response('Introuvable', { status: 404 });
-  return new Response(new Uint8Array(file.data), {
-    headers: {
-      'content-type': file.contentType,
-      'cache-control': 'public, max-age=31536000, immutable',
-      'x-content-type-options': 'nosniff',
-    },
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  let envError: string | null = null;
+  try {
+    const { env } = await import('@/server/env');
+    env();
+  } catch (e: any) {
+    envError = e?.message ?? String(e);
+  }
+
+  return NextResponse.json({
+    hasRawEnv: !!process.env.DATABASE_URL,
+    rawPrefix: process.env.DATABASE_URL?.slice(0, 55) ?? null,
+    rawLength: process.env.DATABASE_URL?.length ?? 0,
+    envError,
+    vercelEnv: process.env.VERCEL_ENV,
   });
 }
