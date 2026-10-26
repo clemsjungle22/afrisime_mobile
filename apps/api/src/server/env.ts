@@ -56,12 +56,16 @@ export function env(): Env {
     const lines = parsed.error.issues.map((i) => `- ${i.path.join('.')}: ${i.message}`);
     throw new Error(`Configuration invalide :\n${lines.join('\n')}`);
   }
-  const d = parsed.data;
-  if (d.NODE_ENV === 'production' && !d.ADMIN_ENCRYPTION_KEY) {
+    const d = parsed.data;
+  
+  // Distingue la vraie production Vercel de la préversion
+  const isActualProduction = process.env.VERCEL_ENV === 'production' || (d.NODE_ENV === 'production' && !process.env.VERCEL_ENV);
+
+  if (isActualProduction && !d.ADMIN_ENCRYPTION_KEY) {
     throw new Error('Configuration invalide : ADMIN_ENCRYPTION_KEY est obligatoire en production.');
   }
   if (
-    d.NODE_ENV === 'production' &&
+    isActualProduction &&
     (d.OTP_DEV_CODE || d.SMS_PROVIDER === 'console' || d.PAYMENT_PROVIDER === 'simulated' || d.ORDER_SIMULATION)
   ) {
     throw new Error(
